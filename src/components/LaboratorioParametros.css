@@ -1,0 +1,45 @@
+.referencias-nav-btn {
+  font-weight: 600;
+  border: 2px solid #e0e0e0;
+  border-radius: 3px;
+  padding: 8px 20px;
+  transition: background 0.2s, color 0.2s, border 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  outline: none;
+  box-shadow: 0 1px 6px rgba(20,90,50,0.07);
+  margin-right: 8px;
+}
+.referencias-nav-btn:last-child {
+  margin-right: 0;
+}
+.referencias-nav-btn-buscar {
+  background: #145a32;
+  color: #fff;
+  border-color: #145a32;
+}
+.referencias-nav-btn-buscar:hover, .referencias-nav-btn-buscar:focus {
+  background: #218838;
+  color: #fff;
+  border-color: #218838;
+}
+.btn-limpiar {
+  background: #dc3545;
+  color: #fff;
+  border: none;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(220,53,69,0.14);
+}
+.btn-limpiar:hover, .btn-limpiar:focus {
+  background: #a71d2a;
+  color: #fff;
+}
+
+.btn-circular-lab-rojo {
+  background: #a71d2a !important;
+}
+.btn-circular-lab-rojo:hover, .btn-circular-lab-rojo:focus {
+  background: #c82333 !important;
+  box-shadow: 0 2px 8px rgba(167,29,42,0.18);
+  outline: none;
+  transition: background 0.2s, box-shadow 0.2s;
+}

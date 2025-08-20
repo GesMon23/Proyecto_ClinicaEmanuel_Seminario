@@ -1,0 +1,35 @@
+.custom-tab {
+  border-radius: 16px 16px 0 0 !important;
+  margin-right: 8px !important;
+  background: #f1f1f1 !important;
+  border: 2px solid #e0e0e0 !important;
+  border-bottom: none !important;
+  box-shadow: 0 2px 8px rgba(20,90,50,0.08);
+  padding: 10px 28px !important;
+  font-size: 1.15rem !important;
+  color: #444 !important;
+  transition: all 0.2s;
+}
+.custom-tab.active, .custom-tab.nav-link.active {
+  background: #fff !important;
+  color: #145a32 !important;
+  font-weight: bold !important;
+  border-color: #e0e0e0 #e0e0e0 #fff #e0e0e0 !important;
+  border-bottom: 2.5px solid #fff !important;
+  box-shadow: 0 4px 16px rgba(20,90,50,0.12);
+  z-index: 2;
+}
+.custom-tab:not(.active):hover {
+  background: #e0e0e0 !important;
+  color: #145a32 !important;
+  border-color: #bdbdbd !important;
+  cursor: pointer;
+}
+
+/* Quita el borde inferior del contenedor de tabs para simular pestañas flotantes */
+.nav-tabs {
+  border-bottom: none !important;
+  display: flex;
+  justify-content: center;
+  gap: 0;
+}

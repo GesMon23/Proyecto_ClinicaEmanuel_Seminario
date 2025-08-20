@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "../../../../../CascadeProjects/portal-universitario"
+		},
+		{
+			"path": "../../../../../CascadeProjects/portal-hotel"
+		},
+		{
+			"path": "../../.."
+		},
+		{
+			"path": "../../../../PortalAlbum"
+		}
+	],
+	"settings": {}
+}
