@@ -11,7 +11,13 @@ const api = axios.create({
 
 // Interceptor para requests
 api.interceptors.request.use(config => {
-    console.log('Enviando request:', config);
+    const token = localStorage.getItem('token');
+    if (token) {
+        config.headers = config.headers || {};
+        if (!config.headers.Authorization) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+    }
     return config;
 }, error => {
     console.error('Error en request:', error);

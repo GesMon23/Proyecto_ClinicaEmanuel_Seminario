@@ -9,6 +9,8 @@ import GestionReportes from "@/views/GestionReportes.jsx";
 import GestionReferencias from "@/views/GestionReferencias.jsx";
 import GestionLaboratorios from "@/views/GestionLaboratorios.jsx"; 
 import LoginComponent from "@/Login.jsx"; 
+import { AuthProvider } from "@/contexts/auth-context";
+import ProtectedRoute from "@/routes/ProtectedRoute";
 function App() {
     const router = createBrowserRouter([
         {
@@ -18,8 +20,12 @@ function App() {
                 element: <LoginComponent />,
               },  
               {
-            path: "layout",
-            element: <Layout />,
+            path: "layout/",
+            element: (
+                <ProtectedRoute>
+                    <Layout />
+                </ProtectedRoute>
+            ),
             children: [
                 {
                     path: "dashboard",
@@ -63,9 +69,12 @@ function App() {
 
     return (
         <ThemeProvider storageKey="theme">
-            <RouterProvider router={router} />
+            <AuthProvider>
+                <RouterProvider router={router} />
+            </AuthProvider>
         </ThemeProvider>
     );
 }
 
 export default App
+
