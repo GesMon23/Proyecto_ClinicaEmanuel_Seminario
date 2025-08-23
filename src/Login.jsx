@@ -2,28 +2,22 @@ import React, { useEffect, useState } from "react";
 import logoClinica from "@/assets/logoClinica2.png"
 import Background from "@/assets/backgroundLogin.png";
 import { useNavigate } from "react-router-dom";
+import api from '@/config/api';
+import { useAuth } from '@/contexts/auth-context';
 
 const LoginComponent = () => {
-  const [usuarios, setUsuarios] = useState([]);
   const [usuario, setUsuario] = useState("");
   const [password, setPassword] = useState("");
   const [mensaje, setMensaje] = useState("");
   const navigate = useNavigate();
+  const { login } = useAuth() || {};
   // Consultar usuarios activos al montar el componente
   useEffect(() => {
-    const obtenerUsuariosActivos = async () => {
-      try {
-        const response = await fetch('http://localhost:3001/api/usuarios-activos');
-        const data = await response.json();
-        setUsuarios(data);
-      } catch (error) {
-        console.error('Error al obtener usuarios activos:', error);
-      }
-    };
-    obtenerUsuariosActivos();
+    // Podrías limpiar mensajes al cargar
+    setMensaje("");
   }, []);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (/[A-Z]/.test(usuario)) {
       setMensaje("Todos los caracteres del usuario deben ir en minúsculas");
@@ -36,14 +30,15 @@ const LoginComponent = () => {
       setMensaje("La contraseña debe tener al menos 8 caracteres");
       return;
     }
-    const usuarioEncontrado = usuarios.find(
-      (u) => u.nombre_usuario === usuario && u.contrasenia === password && u.estado
-    );
-    if (usuarioEncontrado) {
-      navigate('/layout');
-      // Aquí puedes redirigir o guardar info del usuario
-    } else {
-      setMensaje("Usuario o contraseña incorrectos o usuario inactivo.");
+    try {
+      const { data } = await api.post('/auth/login', { usuario, password });
+      // Guardar sesión
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      if (typeof login === 'function') login(data.token, data.user);
+      navigate('/layout/dashboard');
+    } catch (err) {
+      setMensaje(err?.response?.data?.error || 'No fue posible iniciar sesión');
     }
   };
 
