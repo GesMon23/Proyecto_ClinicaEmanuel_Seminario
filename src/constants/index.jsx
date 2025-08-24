@@ -54,7 +54,7 @@ export const navbarLinks = [
                 label: "Laboratorios",
                 icon: Atom     ,
                 path: "/gestion-laboratorios",
-                allowedRoles: ["RolLaboratorios"],
+                allowedRoles: ["RolLaboratorio"],
             },
         ],
     },
