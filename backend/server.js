@@ -1,15 +1,16 @@
 const express = require('express');
 const cors = require('cors');
-const { Pool } = require('pg');
 const app = express();
 const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
 const PDFDocument = require('pdfkit');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
 // Importar router para actualización masiva de pacientes
 const updateMasivoPacientesRouter = require('./update-masivo-pacientes');
+// Importar router de login/roles centralizado
+const backLoginRouter = require('./BackLogin');
+// Pool compartido
+const pool = require('./db/pool');
 
 // Definir colores usados en el PDF
 const VERDE = '#16a085';
@@ -35,6 +36,8 @@ if (!fs.existsSync(fotosDir)) {
 app.use('/fotos', express.static(fotosDir));
 // Usar el router para actualización masiva de pacientes
 app.use(updateMasivoPacientesRouter);
+// Usar router de login/roles (centralizado en BackLogin.js)
+app.use(backLoginRouter);
 
 // Endpoint para subir/reemplazar foto de paciente
 app.post('/upload-foto/:noAfiliacion', async (req, res) => {
@@ -65,103 +68,7 @@ app.post('/upload-foto/:noAfiliacion', async (req, res) => {
         res.status(500).json({ detail: 'Error al guardar la foto.' });
     }
 });
-// Endpoint para consultar usuarios activos
-app.get('/api/usuarios-activos', async (req, res) => {
-    try {
-        const result = await pool.query("SELECT id_usuario, nombre_usuario, contrasenia, id_empleado, estado FROM tbl_usuarios WHERE estado=true");
-        res.json(result.rows);
-    } catch (error) {
-        console.error('Error al consultar usuarios activos:', error);
-        res.status(500).json({ error: 'Error al consultar usuarios activos' });
-    }
-});
-
-// Puedes agregar aquí otros endpoints relacionados con login
-// ===================== AUTH =====================
-const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
-
-// Middleware para verificar JWT
-function verifyJWT(req, res, next) {
-    const auth = req.headers.authorization || '';
-    const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-    if (!token) return res.status(401).json({ error: 'Token requerido' });
-    try {
-        req.user = jwt.verify(token, JWT_SECRET);
-        return next();
-    } catch (err) {
-        return res.status(401).json({ error: 'Token inválido' });
-    }
-}
-
-// Login: valida usuario y devuelve token + roles
-app.post('/auth/login', async (req, res) => {
-    try {
-        const { usuario, password } = req.body || {};
-        if (!usuario || !password) {
-            return res.status(400).json({ error: 'usuario y password son requeridos' });
-        }
-        const ures = await pool.query(
-            'SELECT id_usuario, nombre_usuario, contrasenia, estado FROM tbl_usuarios WHERE nombre_usuario = $1 LIMIT 1',
-            [usuario]
-        );
-        const user = ures.rows[0];
-        if (!user || !user.estado) return res.status(401).json({ error: 'Credenciales inválidas' });
-
-        // Comparar contraseña. Si tus contraseñas están hasheadas con bcrypt, usa bcrypt.compare.
-        let ok = false;
-        if (user.contrasenia && user.contrasenia.startsWith('$2')) {
-            // Parece hash bcrypt
-            ok = await bcrypt.compare(password, user.contrasenia);
-        } else {
-            // Texto plano (no recomendado)
-            ok = user.contrasenia === password;
-        }
-        if (!ok) return res.status(401).json({ error: 'Credenciales inválidas' });
-
-        // Roles del usuario
-        const rres = await pool.query(
-            `SELECT r.nombre
-             FROM tbl_roles r
-             JOIN tbl_usuario_rol ur ON ur.id_rol = r.id_rol
-             WHERE ur.id_usuario = $1 AND r.estado = true`,
-            [user.id_usuario]
-        );
-        const roles = rres.rows.map(r => r.nombre);
-
-        const token = jwt.sign({ sub: user.id_usuario, roles }, JWT_SECRET, { expiresIn: '8h' });
-        return res.json({ token, user: { id_usuario: user.id_usuario, nombre_usuario: user.nombre_usuario, roles } });
-    } catch (err) {
-        console.error('Error en /auth/login:', err);
-        return res.status(500).json({ error: 'Error en login' });
-    }
-});
-
-// Perfil del usuario autenticado
-app.get('/auth/me', verifyJWT, async (req, res) => {
-    try {
-        const { sub } = req.user || {};
-        if (!sub) return res.status(401).json({ error: 'No autorizado' });
-        const ures = await pool.query(
-            'SELECT id_usuario, nombre_usuario, estado FROM tbl_usuarios WHERE id_usuario = $1 LIMIT 1',
-            [sub]
-        );
-        const user = ures.rows[0];
-        if (!user || !user.estado) return res.status(401).json({ error: 'No autorizado' });
-        const rres = await pool.query(
-            `SELECT r.nombre
-             FROM tbl_roles r
-             JOIN tbl_usuario_rol ur ON ur.id_rol = r.id_rol
-             WHERE ur.id_usuario = $1 AND r.estado = true`,
-            [user.id_usuario]
-        );
-        const roles = rres.rows.map(r => r.nombre);
-        return res.json({ id_usuario: user.id_usuario, nombre_usuario: user.nombre_usuario, roles });
-    } catch (err) {
-        console.error('Error en /auth/me:', err);
-        return res.status(500).json({ error: 'Error al obtener perfil' });
-    }
-});
-// =====================
+// Endpoints de auth/usuarios ahora están en BackLogin.js
 
 
 
@@ -223,12 +130,6 @@ app.get('/check-photo/:filename', (req, res) => {
 
 // Configuración de la base de datos
 const ExcelJS = require("exceljs");
-const pool = new Pool({
-    host: 'localhost',
-    database: 'db_clinicaemanuel',
-    user: 'postgres',
-    password: 'root'
-});
 
 // Endpoint para registrar una nueva referencia
 app.post('/api/referencias', async (req, res) => {

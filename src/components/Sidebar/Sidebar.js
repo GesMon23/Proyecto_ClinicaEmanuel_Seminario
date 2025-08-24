@@ -16,13 +16,16 @@
 
 */
 import React, { useState } from "react";
-import { useLocation, NavLink } from "react-router-dom";
+import { useLocation, NavLink, useNavigate } from "react-router-dom";
 import { Nav } from "react-bootstrap";
 import logo from "assets/img/reactlogo.png";
 import "./Sidebar.css";
+import { useAuth } from "@/contexts/auth-context";
 
 function Sidebar({ color, image, routes, collapsed, setCollapsed }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth() || {};
   const activeRoute = (routeName) => {
     return location.pathname.indexOf(routeName) > -1 ? "active" : "";
   };
@@ -79,7 +82,10 @@ function Sidebar({ color, image, routes, collapsed, setCollapsed }) {
         <button
           className="sidebar-logout-btn"
           title="Cerrar sesión"
-          onClick={() => { window.location.href = '/login'; }}
+          onClick={() => {
+            if (typeof logout === 'function') logout();
+            navigate('/');
+          }}
           style={{
             background: 'none',
             border: 'none',
@@ -97,7 +103,7 @@ function Sidebar({ color, image, routes, collapsed, setCollapsed }) {
           }}
         >
           <i className="nc-icon nc-button-power" />
-          {!collapsed && <span className="sidebar-logout-text">Logout</span>}
+          {!collapsed && <span className="sidebar-logout-text">Cerrar sesión</span>}
         </button>
       </div>
     </div>
