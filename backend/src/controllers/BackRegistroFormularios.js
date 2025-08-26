@@ -1,5 +1,11 @@
+const express = require('express');
+const pool = require('../../db/pool');
+const router = express.Router();
+router.use(express.json());
+
+
 // Endpoint para obtener jornadas
-app.get('/jornadas', async (req, res) => {
+router.get('/jornadas', async (req, res) => {
     try {
         const result = await pool.query('SELECT * from FN_mostrar_jornadas()');
         res.json(result.rows);
@@ -24,7 +30,7 @@ router.put('/api/pacientes/masivo', async (req, res) => {
 
     try {
         // Llamar al Stored Procedure
-        await pool.query('CALL sp_actualizar_pacientes_masivo($1, $2)', [
+        await pool.query('CALL sp_registro_formularios($1, $2)', [
             JSON.stringify(pacientes),
             usuario
         ]);
@@ -39,26 +45,13 @@ router.put('/api/pacientes/masivo', async (req, res) => {
     }
 });
 
-
-// Endpoint para verificar si existe una foto
-app.get('/check-photo/:filename', (req, res) => {
-    const filename = req.params.filename;
-    const filePath = path.join(__dirname, 'fotos', filename);
-
-    if (fs.existsSync(filePath)) {
-        res.json({ exists: true });
-    } else {
-        res.json({ exists: false });
-    }
-});
-
-
 // Endpoint para obtener paciente por número de afiliación con descripciones de llaves foráneas
-app.get('/pacientes/:noafiliacion', async (req, res) => {
+router.get('/consulta_pacientes_formularios/:noafiliacion', async (req, res) => {
     try {
+        const noaf = String(req.params.noafiliacion || '').trim();
         const result = await pool.query(
-            'SELECT * FROM fn_Mostrar_Pacientes_Tabla_Formularios($1)',
-            [req.params.noafiliacion]
+            'SELECT * FROM fn_Mostrar_Pacientes_Tabla_Formularios($1::text)',
+            [noaf]
         );
 
         if (result.rows.length === 0) {
@@ -67,6 +60,9 @@ app.get('/pacientes/:noafiliacion', async (req, res) => {
 
         res.json(result.rows[0]);
     } catch (error) {
+        console.error('Error en /consulta_pacientes_formularios:', error);
         res.status(500).json({ error: 'Error al obtener paciente.', detalle: error.message });
     }
 });
+
+module.exports = router;

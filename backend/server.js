@@ -5,10 +5,12 @@ const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
 const PDFDocument = require('pdfkit');
-// Importar router para actualización masiva de pacientes
-const updateMasivoPacientesRouter = require('./update-masivo-pacientes');
+// (Desmontado) Router legacy de actualización masiva para evitar conflicto de rutas
+// const updateMasivoPacientesRouter = require('./update-masivo-pacientes');
 // Importar router de login/roles centralizado
 const backLoginRouter = require('./BackLogin');
+// Importar router de registro de formularios
+const backRegistroFormulariosRouter = require('./src/controllers/BackRegistroFormularios');
 // Pool compartido
 const pool = require('./db/pool');
 
@@ -34,11 +36,12 @@ if (!fs.existsSync(fotosDir)) {
 
 // Servir archivos estáticos desde la carpeta 'fotos'
 app.use('/fotos', express.static(fotosDir));
-// Usar el router para actualización masiva de pacientes
-app.use(updateMasivoPacientesRouter);
+// (Desmontado) Usar el router legacy para actualización masiva de pacientes
+// app.use(updateMasivoPacientesRouter);
 // Usar router de login/roles (centralizado en BackLogin.js)
 app.use(backLoginRouter);
-
+// Usar router de registro de formularios
+app.use(backRegistroFormulariosRouter);
 // Endpoint para subir/reemplazar foto de paciente
 app.post('/upload-foto/:noAfiliacion', async (req, res) => {
     const { noAfiliacion } = req.params;
