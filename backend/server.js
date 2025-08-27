@@ -9,6 +9,7 @@ const PDFDocument = require('pdfkit');
 // const updateMasivoPacientesRouter = require('./update-masivo-pacientes');
 // Importar router de login/roles centralizado
 const backLoginRouter = require('./BackLogin');
+const backEgresoRouter = require('./src/controllers/BackEgresoPacientes');
 // Importar router de registro de formularios
 const backRegistroFormulariosRouter = require('./src/controllers/BackRegistroFormularios');
 // Pool compartido
@@ -42,6 +43,8 @@ app.use('/fotos', express.static(fotosDir));
 app.use(backLoginRouter);
 // Usar router de registro de formularios
 app.use(backRegistroFormulariosRouter);
+
+app.use(backEgresoRouter);
 // Endpoint para subir/reemplazar foto de paciente
 app.post('/upload-foto/:noAfiliacion', async (req, res) => {
     const { noAfiliacion } = req.params;
