@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import api from '../config/api';
 import CustomModal from '@/components/CustomModal.jsx';
 import logoClinica from "@/assets/logoClinica2.png"
+import defaultAvatar from "@/assets/img/default-avatar.png";
+
 
 // Calcula la edad a partir de la fecha de nacimiento (YYYY-MM-DD)
 function calcularEdad(fechaNacimiento) {
@@ -86,7 +88,7 @@ const EgresoPacientes = () => {
 
   // Cargar causas de egreso al montar el componente
   React.useEffect(() => {
-    api.get('/causas-egreso')
+    api.get('/causas_egreso')
       .then(res => setCausasEgreso(res.data))
       .catch(() => setCausasEgreso([]));
   }, []);
@@ -166,65 +168,38 @@ const EgresoPacientes = () => {
     setError('');
   };
 
-  const handleEgresoSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    if (!formData.causaegreso || !formData.fechaegreso || !formData.numerocasoconcluido) {
-      setModalMessage('Por favor, completa todos los campos obligatorios.');
-      setModalTitle('Campos requeridos');
-      setModalType('error');
+ const handleInsertEgreso = async (e) => {
+  e.preventDefault();
+  setError('');
+
+  try {
+    const payload = {
+      no_afiliacion: resultados[0]?.no_afiliacion, // paciente seleccionado
+      id_causa_egreso: formData.causaegreso,
+      descripcion: formData.descripcion,
+      fecha_egreso: formData.fechaegreso,
+      observaciones: formData.observaciones
+    };
+
+    const response = await api.post('/egresos', payload);
+
+    if (response.data.success) {
+      setModalMessage('Egreso insertado correctamente.');
+      setModalTitle('Éxito');
+      setModalType('success');
       setShowModal(true);
-      return;
+      handleLimpiarEgreso(); // aquí limpias después de insertar
+    } else {
+      throw new Error('No se pudo insertar el egreso.');
     }
-    try {
-      // Buscar la causa seleccionada
-      const causaSeleccionada = causasEgreso.find(c => String(c.idcausa) === String(formData.causaegreso));
-      const esFallecimiento = causaSeleccionada && causaSeleccionada.descripcion && causaSeleccionada.descripcion.toLowerCase().includes('fallecimiento');
-      const payload = {
-        idestado: 3,
-        idcausa: formData.causaegreso,
-        causaegreso: causaSeleccionada ? causaSeleccionada.descripcion : '',
-        fechaegreso: formData.fechaegreso,
-        nocasoconcluido: formData.numerocasoconcluido,
-        observaciones: formData.observaciones,
-        desdeEgreso: true,
-        // Solo enviar datos de fallecimiento si es fallecimiento
-        comorbilidades: esFallecimiento ? formData.comorbilidades : null,
-        fechafallecimiento: esFallecimiento ? formData.fechafallecimiento : null,
-        lugarfallecimiento: esFallecimiento ? formData.lugarfallecimiento : null,
-        causafallecimiento: esFallecimiento ? formData.causafallecimiento : null
-      };
-      const response = await api.put(`/pacientes/${resultados[0].noafiliacion}`, payload);
-      if (response.data.success) {
-        setModalMessage('Egreso guardado exitosamente.');
-        setModalTitle('Éxito');
-        setModalType('success');
-        setShowModal(true);
-        setResultados([]);
-        setFormData({
-          causaegreso: '',
-          descripcion: '',
-          fechaegreso: '',
-          numerocasoconcluido: '',
-          observaciones: '',
-          fechafallecimiento: '',
-          comorbilidades: '',
-          lugarfallecimiento: '',
-          causafallecimiento: ''
-        });
-      } else {
-        setModalMessage('No se pudo guardar el egreso.');
-        setModalTitle('Error');
-        setModalType('error');
-        setShowModal(true);
-      }
-    } catch (err) {
-      setModalMessage('Error al guardar el egreso.');
-      setModalTitle('Error');
-      setModalType('error');
-      setShowModal(true);
-    }
-  };
+  } catch (err) {
+    console.log("==== ERROR AL INSERTAR EGRESO ====" + err);
+    setModalMessage('Error al insertar el egreso.');
+    setModalTitle('Error');
+    setModalType('error');
+    setShowModal(true);
+  }
+};
 
   return (
     <Container fluid>
@@ -302,217 +277,322 @@ const EgresoPacientes = () => {
 
         {/* Bloque de datos del paciente (idéntico a ReingresoPacientes) */}
         {resultados.length > 0 && resultados.map((p) => (
-          <div key={p.noafiliacion || p.dpi}
-            style={{
-              display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-              gap: '3rem', marginBottom: '2.5rem', border: '1px solid #eee', borderRadius: 16, padding: 32,
-              boxShadow: '0 4px 16px rgba(0,0,0,0.07)', background: '#fff', width: '100%', marginLeft: 0, marginRight: 0, maxWidth: 'none', minHeight: 380
-            }}
+          <div
+            key={p.no_afiliacion || p.dpi}
+            className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 overflow-hidden mb-6 transition-all duration-200 hover:shadow-xl"
           >
-            {/* Foto a la izquierda */}
-            <div style={{
-              width: '340px', height: '340px', borderRadius: '16px', overflow: 'hidden',
-              border: '2px solid #bdbdbd', boxShadow: '0 2px 12px rgba(0,0,0,0.10)',
-              backgroundColor: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              <img
-                alt="Foto del paciente"
-                src={p.urlfoto ? `http://localhost:3001/fotos/${p.urlfoto.split(/[\\\/]/).pop()}?${Date.now()}` : require("../assets/img/default-avatar.png")}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                onError={e => {
-                  e.target.onerror = null;
-                  e.target.src = require("../assets/img/default-avatar.png");
-                }}
-              />
-            </div>
-            {/* Datos a la derecha, estilo anterior con dos columnas */}
-            <div style={{ textAlign: 'left', flex: 1, paddingLeft: 32 }}>
-              <h2 style={{ marginBottom: 18, fontWeight: 700, fontSize: 32, color: '#2d6a4f', textTransform: 'uppercase', letterSpacing: 1 }}>
-                {`${p.primernombre || ''} ${p.segundonombre || ''} ${p.otrosnombres || ''} ${p.primerapellido || ''} ${p.segundoapellido || ''} ${p.apellidocasada || ''}`.replace(/ +/g, ' ').trim()}
-              </h2>
-              <div style={{ display: 'flex', gap: 32, fontSize: 22 }}>
-                {/* Columna 1 */}
-                <div style={{ flex: 1 }}>
-                  <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>No. Afiliación:</b> {p.noafiliacion}</div>
-                  <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>DPI:</b> {p.dpi}</div>
-                  <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>No. Paciente Proveedor:</b> {p.nopacienteproveedor || ''}</div>
-                  <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>Fecha de Ingreso:</b> {p.fechaingreso ? new Date(p.fechaingreso).toLocaleDateString() : ''}</div>
-                  <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>Estancia en el programa:</b> {calcularEstancia && p.fechaingreso ? calcularEstancia(p.fechaingreso) : ''}</div>
-                  <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>Último Periodo Autorizado:</b> {p.fechainicioperiodo && p.fechafinperiodo ? `Del ${new Date(p.fechainicioperiodo).toLocaleDateString()} al ${new Date(p.fechafinperiodo).toLocaleDateString()}` : 'No registrado'}</div>
-                </div>
-                {/* Columna 2 */}
-                <div style={{ flex: 1 }}>
-                  <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>Sexo:</b> {p.sexo || ''}</div>
-                  <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>Dirección:</b> {p.direccion || ''}</div>
-                  <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>Departamento:</b> {p.departamento_nombre || '-'}</div>
-                  <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>Estado:</b> {p.estado_descripcion || '-'}</div>
-                  <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>Jornada:</b> {p.jornada_descripcion || '-'}</div>
-                  <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>Acceso Vascular:</b> {p.acceso_descripcion || '-'}</div>
-                  <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>Observaciones:</b> {p.observaciones || '-'}</div>
+            {/* Header con foto y nombre */}
+            <div className="flex flex-col lg:flex-row gap-6 p-6">
+              {/* Contenedor de la foto */}
+              <div className="flex-shrink-0 mx-auto lg:mx-0">
+                <div className="w-48 h-48 lg:w-56 lg:h-56 rounded-xl overflow-hidden border-4 border-green-700 dark:border-green-600 shadow-lg bg-gray-100 dark:bg-slate-800">
+                  <img
+                    alt="Foto del paciente"
+                    src={p.url_foto ? `http://localhost:3001/fotos/${p.url_foto}` : defaultAvatar}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = defaultAvatar;
+                    }}
+                  />
                 </div>
               </div>
+
+              {/* Información principal */}
+              <div className="flex-1 min-w-0">
+                {/* Nombre del paciente */}
+                <div className="text-center lg:text-left mb-6">
+                  <h2 className="text-2xl lg:text-3xl font-bold text-green-700 dark:text-white uppercase tracking-wide break-words leading-tight">
+                    {`${p.primer_nombre || ''} ${p.segundo_nombre || ''} ${p.otros_nombres || ''} ${p.primer_apellido || ''} ${p.segundo_apellido || ''} ${p.apellido_casada || ''}`.replace(
+                      / +/g,
+                      ' '
+                    ).trim()}
+                  </h2>
+                  <div className="w-24 h-1 bg-green-600 dark:bg-white mx-auto lg:mx-0 mt-2 rounded-full"></div>
+                </div>
+
+                {/* Información básica en cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6 px-2 sm:px-0">
+                  <div className="bg-green-50 dark:bg-slate-800 rounded-lg p-4 sm:p-6 border-l-4 border-green-600 min-w-0 min-h-[155px] flex flex-col justify-center">
+                    <div className="text-xs sm:text-sm font-medium text-green-800 dark:text-green-400 mb-2">
+                      No. Afiliación
+                    </div>
+                    <div className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 dark:text-white break-all">
+                      {p.no_afiliacion}
+                    </div>
+                  </div>
+
+                  <div className="bg-green-50 dark:bg-slate-800 rounded-lg p-4 sm:p-6 border-l-4 border-green-600 min-w-0 min-h-[155px] flex flex-col justify-center">
+                    <div className="text-xs sm:text-sm font-medium text-green-800 dark:text-green-400 mb-2">
+                      DPI
+                    </div>
+                    <div className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 dark:text-white break-all">
+                      {p.dpi}
+                    </div>
+                  </div>
+
+                  <div className="bg-green-50 dark:bg-slate-800 rounded-lg p-4 sm:p-6 border-l-4 border-green-600 min-w-0 min-h-[100px] flex flex-col justify-center sm:col-span-2 xl:col-span-1">
+                    <div className="text-xs sm:text-sm font-medium text-green-800 dark:text-green-400 mb-2">
+                      Sexo
+                    </div>
+                    <div className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 dark:text-white break-all">
+                      {p.sexo || '-'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Separador */}
+            <div className="border-t border-gray-200 dark:border-slate-700"></div>
+
+            {/* Información detallada */}
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                <div className="w-2 h-2 bg-green-600 rounded-full mr-2"></div>
+                Información Detallada
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {/* Lista de información */}
+                {[
+                  { label: 'No. Paciente Proveedor', value: p.no_paciente_proveedor },
+                  { label: 'Dirección', value: p.direccion },
+                  { label: 'Departamento', value: p.departamento_nombre },
+                  { label: 'Estado', value: p.estado_descripcion },
+                  { label: 'Jornada', value: p.jornada_descripcion },
+                  { label: 'Acceso Vascular', value: p.acceso_descripcion }
+                ].map((item, index) => (
+                  <div key={index} className="bg-gray-50 dark:bg-slate-800 rounded-lg p-3 border border-gray-200 dark:border-slate-700">
+                    <div className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                      {item.label}
+                    </div>
+                    <div className="text-base text-gray-900 dark:text-white font-medium break-words">
+                      {item.value || '-'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Observaciones en sección separada si existen */}
+              {p.observaciones && (
+                <div className="mt-6 bg-yellow-50 dark:bg-slate-800 rounded-lg p-4 border border-yellow-200 dark:border-yellow-700">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0">
+                      <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center mt-0.5">
+                        <span className="text-xs text-yellow-900">!</span>
+                      </div>
+                    </div>
+                    <div className="ml-3 flex-1">
+                      <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-400 mb-1">
+                        Observaciones
+                      </h4>
+                      <p className="text-sm text-yellow-700 dark:text-yellow-300 break-words">
+                        {p.observaciones}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ))}
 
         {/* Formulario de egreso (visible si hay paciente) */}
         {resultados.length > 0 && (
-          <Card style={{ maxWidth: 1100, margin: '0 auto', marginBottom: 40, boxShadow: '0 4px 16px rgba(44,106,79,0.12)' }}>
-            <Card.Body>
-              <Form onSubmit={handleEgresoSubmit} className="mb-3">
-                <div style={{ display: 'flex', gap: 32 }}>
-                  {/* Columna izquierda */}
-                  <div style={{ flex: 1 }}>
-                    <Form.Group style={{ marginBottom: 24 }}>
-                      <Form.Label style={{ fontSize: 18 }}>Causa del Egreso</Form.Label>
-                      <Form.Control
-                        as="select"
-                        name="causaegreso"
-                        value={formData.causaegreso}
-                        onChange={handleFormChange}
-                        required
-                      >
-                        <option value="">Seleccione una causa...</option>
-                        {causasEgreso.map(c => (
-                          <option key={c.idcausa} value={c.idcausa}>{c.descripcion}</option>
-                        ))}
-                      </Form.Control>
-                      {/* Mostrar campos especiales si la causa seleccionada es Fallecimiento */}
+          <div className="w-full max-w-6xl mx-auto mb-10">
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
+              <div className="p-4 sm:p-6 lg:p-8">
+                <form onSubmit={handleInsertEgreso} className="space-y-6">
+                  {/* Contenedor principal con columnas */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+                    {/* Columna izquierda */}
+                    <div className="space-y-6">
+                      {/* Causa del Egreso */}
+                      <div className="space-y-2">
+                        <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+                          Causa del Egreso
+                        </label>
+                        <select
+                          name="causaegreso"
+                          value={formData.causaegreso}
+                          onChange={handleFormChange}
+                          required
+                          className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
+                        >
+                          <option value="">Seleccione una causa...</option>
+                          {causasEgreso.map(c => (
+                            <option key={c.id_causa} value={c.id_causa}>{c.descripcion}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Campos especiales para Fallecimiento */}
                       {(() => {
-                        const causaSeleccionada = causasEgreso.find(c => String(c.idcausa) === String(formData.causaegreso));
+                        const causaSeleccionada = causasEgreso.find(c => String(c.id_causa) === String(formData.causa_egreso));
                         if (causaSeleccionada && causaSeleccionada.descripcion && causaSeleccionada.descripcion.toLowerCase().includes('fallecimiento')) {
                           return (
-                            <>
-                              <Form.Group style={{ marginTop: 16 }}>
-                                <Form.Label style={{ fontSize: 18 }}>Fecha de Fallecimiento</Form.Label>
-                                <Form.Control
+                            <div className="space-y-6 bg-red-50 dark:bg-red-900/20 p-4 sm:p-6 rounded-lg border-l-4 border-red-500">
+                              <h3 className="text-lg font-semibold text-red-800 dark:text-red-400 mb-4">
+                                Información de Fallecimiento
+                              </h3>
+
+                              {/* Fecha de Fallecimiento */}
+                              <div className="space-y-2">
+                                <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+                                  Fecha de Fallecimiento
+                                </label>
+                                <input
                                   type="date"
                                   name="fechafallecimiento"
                                   value={formData.fechafallecimiento}
                                   onChange={handleFormChange}
                                   required
+                                  className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
                                 />
-                              </Form.Group>
-                              <Form.Group style={{ marginTop: 16 }}>
-                                <Form.Label style={{ fontSize: 18 }}>Comorbilidades (opcional)</Form.Label>
-                                <Form.Control
+                              </div>
+
+                              {/* Comorbilidades */}
+                              <div className="space-y-2">
+                                <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+                                  Comorbilidades <span className="text-sm text-gray-500">(opcional)</span>
+                                </label>
+                                <input
                                   type="text"
                                   name="comorbilidades"
                                   value={formData.comorbilidades}
                                   onChange={handleFormChange}
                                   placeholder="Ingrese comorbilidades (si aplica)"
+                                  className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                                 />
-                              </Form.Group>
-                              <Form.Group style={{ marginTop: 16 }}>
-                                <Form.Label style={{ fontSize: 18 }}>Lugar de Fallecimiento</Form.Label>
-                                <Form.Control
+                              </div>
+
+                              {/* Lugar de Fallecimiento */}
+                              <div className="space-y-2">
+                                <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+                                  Lugar de Fallecimiento
+                                </label>
+                                <input
                                   type="text"
                                   name="lugarfallecimiento"
                                   value={formData.lugarfallecimiento}
                                   onChange={handleFormChange}
                                   placeholder="Ingrese el lugar de fallecimiento"
                                   required
+                                  className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                                 />
-                              </Form.Group>
-                              <Form.Group style={{ marginTop: 16 }}>
-                                <Form.Label style={{ fontSize: 18 }}>Causa de Fallecimiento</Form.Label>
-                                <Form.Control
+                              </div>
+
+                              {/* Causa de Fallecimiento */}
+                              <div className="space-y-2">
+                                <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+                                  Causa de Fallecimiento
+                                </label>
+                                <input
                                   type="text"
                                   name="causafallecimiento"
                                   value={formData.causafallecimiento}
                                   onChange={handleFormChange}
                                   placeholder="Ingrese la causa de fallecimiento"
                                   required
+                                  className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                                 />
-                              </Form.Group>
-                            </>
+                              </div>
+                            </div>
                           );
                         }
                         return null;
                       })()}
-                    </Form.Group>
-                    <Form.Group style={{ marginBottom: 24 }}>
-                      <Form.Label style={{ fontSize: 18 }}>Fecha del egreso</Form.Label>
-                      <Form.Control
-                        type="date"
-                        name="fechaegreso"
-                        value={formData.fechaegreso}
-                        onChange={handleFormChange}
-                        required
-                      />
-                    </Form.Group>
+
+                      {/* Fecha del egreso */}
+                      <div className="space-y-2">
+                        <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+                          Fecha del egreso
+                        </label>
+                        <input
+                          type="date"
+                          name="fechaegreso"
+                          value={formData.fechaegreso}
+                          onChange={handleFormChange}
+                          required
+                          className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Columna derecha */}
+                    <div className="space-y-6">
+                      {/* Descripción */}
+                      <div className="space-y-2">
+                        <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+                          Descripción
+                        </label>
+                        <input
+                          type="text"
+                          name="descripcion"
+                          value={formData.descripcion}
+                          onChange={handleFormChange}
+                          placeholder="Ingrese una descripción"
+                          className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                        />
+                      </div>
+
+                      {/* Número de caso concluido */}
+                      {/* <div className="space-y-2">
+                        <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+                          Número de caso concluido
+                        </label>
+                        <input
+                          type="text"
+                          name="numerocasoconcluido"
+                          value={formData.numerocasoconcluido}
+                          onChange={handleFormChange}
+                          placeholder="Ingrese el número de caso concluido"
+                          className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                        />
+                      </div> */}
+                    </div>
                   </div>
-                  {/* Columna derecha */}
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'stretch' }}>
-                    <Form.Group style={{ marginBottom: 24 }}>
-                      <Form.Label style={{ fontSize: 18 }}>Descripción</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="descripcion"
-                        value={formData.descripcion}
-                        onChange={handleFormChange}
-                        placeholder="Ingrese una descripción"
-                      />
-                    </Form.Group>
-                    <Form.Group style={{ marginBottom: 24 }}>
-                      <Form.Label style={{ fontSize: 18 }}>Número de caso concluido</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="numerocasoconcluido"
-                        value={formData.numerocasoconcluido}
-                        onChange={handleFormChange}
-                        placeholder="Ingrese el número de caso concluido"
-                      />
-                    </Form.Group>
+
+                  {/* Observaciones - Campo completo */}
+                  <div className="space-y-2">
+                    <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+                      Observaciones
+                    </label>
+                    <textarea
+                      name="observaciones"
+                      value={formData.observaciones}
+                      onChange={handleFormChange}
+                      rows={5}
+                      placeholder="Ingrese observaciones"
+                      className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 resize-none"
+                    />
                   </div>
-                </div>
-                <Form.Group style={{ marginBottom: 24 }}>
-                  <Form.Label style={{ fontSize: 18 }}>Observaciones</Form.Label>
-                  <Form.Control
-                    as="textarea"
-                    name="observaciones"
-                    value={formData.observaciones}
-                    onChange={handleFormChange}
-                    rows={5}
-                    placeholder="Ingrese observaciones"
-                  />
-                </Form.Group>
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <Button
-                    type="submit"
-                    style={{
-                      backgroundColor: '#2d6a4f',
-                      borderColor: '#2d6a4f',
-                      color: '#fff',
-                      fontSize: 20,
-                      padding: '10px 32px',
-                      fontWeight: 600,
-                      boxShadow: '0 2px 8px rgba(44, 106, 79, 0.10)',
-                      width: 220
-                    }}
-                  >
-                    Guardar Egreso
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="danger"
-                    style={{
-                      fontSize: 20,
-                      padding: '10px 32px',
-                      fontWeight: 600,
-                      backgroundColor: '#dc3545',
-                      borderColor: '#dc3545',
-                      color: '#fff',
-                      marginLeft: 16
-                    }}
-                    onClick={handleLimpiarEgreso}
-                  >
-                    Limpiar
-                  </Button>
-                </div>
-              </Form>
-            </Card.Body>
-          </Card>
+
+                  {/* Separador */}
+                  <div className="border-t border-gray-200 dark:border-slate-700 pt-6">
+                    {/* Botones */}
+                    <div className="flex flex-col sm:flex-row gap-4 justify-end">
+                      <button
+                        type="submit"
+                        onClick={handleInsertEgreso}
+                        className="w-full sm:w-56 px-8 py-3 bg-green-700 hover:bg-green-800 text-white text-lg font-semibold rounded-lg shadow-md transition duration-200 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
+                      >
+                        Guardar Egreso
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleLimpiarEgreso}
+                        className="w-full sm:w-40 px-8 py-3 bg-red-600 hover:bg-red-700 text-white text-lg font-semibold rounded-lg shadow-md transition duration-200 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
+                      >
+                        Limpiar
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
         )}
 
       </div>
