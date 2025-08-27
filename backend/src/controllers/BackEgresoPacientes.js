@@ -1,40 +1,61 @@
-// Endpoint para obtener causas de egreso activas
-app.get('/causas-egreso', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT idcausa, descripcion FROM tbl_causaegreso WHERE estado=true ORDER BY descripcion ASC');
-        res.json(result.rows);
-    } catch (error) {
-        res.status(500).json({ error: 'Error al obtener causas de egreso.' });
-    }
-});
+// Router de Login/Roles
+const express = require('express');
+const pool = require('../../db/pool');
+
+const router = express.Router();
+router.use(express.json());
 
 // Endpoint para buscar pacientes para egreso
-app.get('/api/pacientes/egreso', async (req, res) => {
+router.get('/api/pacientes/egreso', async (req, res) => {
     const { dpi, noafiliacion } = req.query;
     let baseQuery = `
         SELECT 
-    pac.noafiliacion, pac.dpi, pac.nopacienteproveedor, pac.primernombre, pac.segundonombre, pac.otrosnombres, pac.primerapellido, pac.segundoapellido, pac.apellidocasada, pac.fechanacimiento, pac.sexo, pac.direccion, pac.fechaegreso, pac.nocasoconcluido, pac.idcausa, pac.causaegreso, 
-    cau.descripcion as causaegreso_descripcion,
-    pac.urlfoto, pac.iddepartamento, dep.nombre as departamento_nombre, pac.idestado, est.descripcion as estado_descripcion,
-    pac.idacceso, acc.descripcion as acceso_descripcion,
-    pac.idjornada, jor.descripcion as jornada_descripcion,
-    pac.fechainicioperiodo, pac.fechafinperiodo, pac.sesionesautorizadasmes AS sesionesautorizadas, pac.observaciones
-FROM tbl_pacientes pac
-LEFT JOIN tbl_causaegreso cau ON pac.idcausa = cau.idcausa
-LEFT JOIN tbl_departamentos dep ON pac.iddepartamento = dep.iddepartamento
-LEFT JOIN tbl_estadospaciente est ON pac.idestado = est.idestado
-LEFT JOIN tbl_accesovascular acc ON pac.idacceso = acc.idacceso
-LEFT JOIN tbl_jornadas jor ON pac.idjornada = jor.idjornada
-WHERE pac.idestado != 3`;
+            pac.no_afiliacion, 
+            pac.dpi, 
+            pac.no_paciente_proveedor, 
+            pac.primer_nombre, 
+            pac.segundo_nombre, 
+            pac.otros_nombres, 
+            pac.primer_apellido, 
+            pac.segundo_apellido, 
+            pac.apellido_casada, 
+            pac.fecha_nacimiento, 
+            pac.sexo, 
+            pac.direccion, 
+            --pac.fecha_egreso, 
+            --pac.no_caso_concluido, 
+            --pac.id_causa, 
+            --pac.causa_egreso, 
+            --cau.descripcion as causaegreso_descripcion,
+            pac.url_foto, 
+            pac.id_departamento, 
+            dep.nombre as departamento_nombre, 
+            pac.id_estado, 
+            est.descripcion as estado_descripcion,
+            pac.id_acceso, 
+            acc.descripcion as acceso_descripcion,
+            pac.id_jornada, 
+            jor.descripcion as jornada_descripcion,
+            --pac.fecha_inicio_periodo, 
+            --pac.fecha_fin_periodo, 
+            pac.sesiones_autorizadas_mes AS sesionesautorizadas
+            --pac.observaciones
+        FROM tbl_pacientes pac
+        --LEFT JOIN tbl_causa_egreso cau ON pac.id_causa = cau.id_causa
+        LEFT JOIN tbl_departamento dep ON pac.id_departamento = dep.id_departamento
+        LEFT JOIN tbl_estados_paciente est ON pac.id_estado = est.id_estado
+        LEFT JOIN tbl_acceso_vascular acc ON pac.id_acceso = acc.id_acceso
+        LEFT JOIN tbl_jornadas jor ON pac.id_jornada = jor.id_jornada
+        WHERE pac.id_estado != 3`;
     let params = [];
     if (dpi) {
         baseQuery += ' AND pac.dpi = $1';
         params.push(dpi);
     } else if (noafiliacion) {
-        baseQuery += ' AND pac.noafiliacion = $1';
+        baseQuery += ' AND pac.no_afiliacion = $1';
         params.push(noafiliacion);
     } else {
-        return res.status(400).json({ error: 'Debe proporcionar dpi o noafiliacion.' });
+        return res.status(400).json({ error: 'Debe proporcionar dpi o no_afiliacion.' });
     }
     try {
         const result = await pool.query(baseQuery, params);
@@ -44,7 +65,7 @@ WHERE pac.idestado != 3`;
     }
 });
 
-app.put('/pacientes/:noAfiliacion', async (req, res) => {
+router.put('/pacientes/:noAfiliacion', async (req, res) => {
     const client = await pool.connect();
     try {
         const { noAfiliacion } = req.params;
@@ -130,3 +151,81 @@ app.put('/pacientes/:noAfiliacion', async (req, res) => {
         client.release();
     }
 });
+
+// Endpoint para insertar un egreso
+router.post('/egresos', async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const {
+            no_afiliacion,
+            id_causa_egreso,
+            descripcion,
+            fecha_egreso,
+            observaciones
+        } = req.body;
+
+        await client.query('BEGIN');
+        console.log('Payload recibido para insert:', req.body);
+
+        // 1. Insertar egreso
+        const insertQuery = `
+            INSERT INTO tbl_egresos (
+                no_afiliacion,
+                id_causa_egreso,
+                descripcion,
+                fecha_egreso,
+                observaciones,
+                usuario_creacion,
+                fecha_creacion
+            )
+            VALUES ($1, $2, $3, $4::date, $5, $6, NOW())
+            RETURNING *;
+        `;
+        const insertValues = [
+            no_afiliacion,
+            id_causa_egreso,
+            descripcion || null,
+            fecha_egreso || null,
+            observaciones || null,
+            'nombreUsuario' // Aquí el usuario que realiza el registro
+        ];
+        const resultInsert = await client.query(insertQuery, insertValues);
+
+        // 2. Actualizar estado del paciente
+        const updateQuery = `
+            UPDATE tbl_pacientes
+            SET id_estado = 3,
+                usuario_actualizacion = $2,
+                fecha_actualizacion = NOW()
+            WHERE no_afiliacion = $1
+            RETURNING *;
+        `;
+        const updateValues = [
+            no_afiliacion,
+            'nombreUsuario' // Aquí el usuario que realiza la actualización
+        ];
+        const resultUpdate = await client.query(updateQuery, updateValues);
+
+        await client.query('COMMIT');
+
+        res.json({
+            success: true,
+            message: 'Egreso insertado y paciente actualizado correctamente',
+            egreso: resultInsert.rows[0],
+            paciente: resultUpdate.rows[0]
+        });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Error en POST /api/egresos:', err.message);
+        res.status(500).json({ error: 'Error al insertar egreso', detalle: err.message });
+    } finally {
+        client.release();
+    }
+});
+
+
+
+
+
+
+module.exports = router;

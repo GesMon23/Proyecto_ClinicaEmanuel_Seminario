@@ -9,6 +9,7 @@ const PDFDocument = require('pdfkit');
 const updateMasivoPacientesRouter = require('./update-masivo-pacientes');
 // Importar router de login/roles centralizado
 const backLoginRouter = require('./BackLogin');
+const backEgresoPacientesRouter = require('./src/controllers/BackEgresoPacientes');
 // Pool compartido
 const pool = require('./db/pool');
 
@@ -38,6 +39,8 @@ app.use('/fotos', express.static(fotosDir));
 app.use(updateMasivoPacientesRouter);
 // Usar router de login/roles (centralizado en BackLogin.js)
 app.use(backLoginRouter);
+//EGRESO PACIENTES
+app.use(backEgresoPacientesRouter);
 
 // Endpoint para subir/reemplazar foto de paciente
 app.post('/upload-foto/:noAfiliacion', async (req, res) => {
@@ -211,40 +214,40 @@ app.get('/departamentos', async (req, res) => {
 });
 
 // Endpoint para buscar pacientes para egreso
-app.get('/api/pacientes/egreso', async (req, res) => {
-    const { dpi, noafiliacion } = req.query;
-    let baseQuery = `
-        SELECT 
-    pac.noafiliacion, pac.dpi, pac.nopacienteproveedor, pac.primernombre, pac.segundonombre, pac.otrosnombres, pac.primerapellido, pac.segundoapellido, pac.apellidocasada, pac.fechanacimiento, pac.sexo, pac.direccion, pac.fechaegreso, pac.nocasoconcluido, pac.idcausa, pac.causaegreso, 
-    cau.descripcion as causaegreso_descripcion,
-    pac.urlfoto, pac.iddepartamento, dep.nombre as departamento_nombre, pac.idestado, est.descripcion as estado_descripcion,
-    pac.idacceso, acc.descripcion as acceso_descripcion,
-    pac.idjornada, jor.descripcion as jornada_descripcion,
-    pac.fechainicioperiodo, pac.fechafinperiodo, pac.sesionesautorizadasmes AS sesionesautorizadas, pac.observaciones
-FROM tbl_pacientes pac
-LEFT JOIN tbl_causaegreso cau ON pac.idcausa = cau.idcausa
-LEFT JOIN tbl_departamentos dep ON pac.iddepartamento = dep.iddepartamento
-LEFT JOIN tbl_estadospaciente est ON pac.idestado = est.idestado
-LEFT JOIN tbl_accesovascular acc ON pac.idacceso = acc.idacceso
-LEFT JOIN tbl_jornadas jor ON pac.idjornada = jor.idjornada
-WHERE pac.idestado != 3`;
-    let params = [];
-    if (dpi) {
-        baseQuery += ' AND pac.dpi = $1';
-        params.push(dpi);
-    } else if (noafiliacion) {
-        baseQuery += ' AND pac.noafiliacion = $1';
-        params.push(noafiliacion);
-    } else {
-        return res.status(400).json({ error: 'Debe proporcionar dpi o noafiliacion.' });
-    }
-    try {
-        const result = await pool.query(baseQuery, params);
-        res.json(result.rows);
-    } catch (error) {
-        res.status(500).json({ error: 'Error al buscar pacientes para egreso.', detalle: error.message });
-    }
-});
+// app.get('/api/pacientes/egreso', async (req, res) => {
+//     const { dpi, noafiliacion } = req.query;
+//     let baseQuery = `
+//         SELECT 
+//     pac.noafiliacion, pac.dpi, pac.nopacienteproveedor, pac.primernombre, pac.segundonombre, pac.otrosnombres, pac.primerapellido, pac.segundoapellido, pac.apellidocasada, pac.fechanacimiento, pac.sexo, pac.direccion, pac.fechaegreso, pac.nocasoconcluido, pac.idcausa, pac.causaegreso, 
+//     cau.descripcion as causaegreso_descripcion,
+//     pac.urlfoto, pac.iddepartamento, dep.nombre as departamento_nombre, pac.idestado, est.descripcion as estado_descripcion,
+//     pac.idacceso, acc.descripcion as acceso_descripcion,
+//     pac.idjornada, jor.descripcion as jornada_descripcion,
+//     pac.fechainicioperiodo, pac.fechafinperiodo, pac.sesionesautorizadasmes AS sesionesautorizadas, pac.observaciones
+// FROM tbl_pacientes pac
+// LEFT JOIN tbl_causaegreso cau ON pac.idcausa = cau.idcausa
+// LEFT JOIN tbl_departamentos dep ON pac.iddepartamento = dep.iddepartamento
+// LEFT JOIN tbl_estadospaciente est ON pac.idestado = est.idestado
+// LEFT JOIN tbl_accesovascular acc ON pac.idacceso = acc.idacceso
+// LEFT JOIN tbl_jornadas jor ON pac.idjornada = jor.idjornada
+// WHERE pac.idestado != 3`;
+//     let params = [];
+//     if (dpi) {
+//         baseQuery += ' AND pac.dpi = $1';
+//         params.push(dpi);
+//     } else if (noafiliacion) {
+//         baseQuery += ' AND pac.noafiliacion = $1';
+//         params.push(noafiliacion);
+//     } else {
+//         return res.status(400).json({ error: 'Debe proporcionar dpi o noafiliacion.' });
+//     }
+//     try {
+//         const result = await pool.query(baseQuery, params);
+//         res.json(result.rows);
+//     } catch (error) {
+//         res.status(500).json({ error: 'Error al buscar pacientes para egreso.', detalle: error.message });
+//     }
+// });
 
 // Endpoint para buscar pacientes para reingreso
 app.get('/api/pacientes/reingreso', async (req, res) => {
@@ -1228,14 +1231,14 @@ WHERE 1=1`;
 });
 
 // Endpoint para obtener causas de egreso activas
-app.get('/causas-egreso', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT idcausa, descripcion FROM tbl_causaegreso WHERE estado=true ORDER BY descripcion ASC');
-        res.json(result.rows);
-    } catch (error) {
-        res.status(500).json({ error: 'Error al obtener causas de egreso.' });
-    }
-});
+// app.get('/causas-egreso', async (req, res) => {
+//     try {
+//         const result = await pool.query('SELECT idcausa, descripcion FROM tbl_causaegreso WHERE estado=true ORDER BY descripcion ASC');
+//         res.json(result.rows);
+//     } catch (error) {
+//         res.status(500).json({ error: 'Error al obtener causas de egreso.' });
+//     }
+// });
 
 // Endpoint para obtener accesos vasculares
 app.get('/accesos-vasculares', async (req, res) => {
@@ -1792,13 +1795,13 @@ app.post('/pacientes', async (req, res) => {
     }
 });
 // Obtener causas de egreso activas
-app.get('/causas-egreso', async (req, res) => {
+app.get('/causas_egreso', async (req, res) => {
     try {
-        const result = await pool.query('SELECT idcausa, descripcion FROM tbl_causaegreso WHERE estado = true ORDER BY descripcion');
+        const result = await pool.query('SELECT id_causa, descripcion FROM tbl_causa_egreso WHERE estado=true ORDER BY descripcion DESC');
         res.json(result.rows);
     } catch (error) {
-        console.error('Error al obtener causas de egreso:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        console.error('Error en /causas_egreso:', error);
+        res.status(500).json({ error: 'Error al obtener causas de egreso.' });
     }
 });
 
