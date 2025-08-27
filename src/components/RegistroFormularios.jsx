@@ -100,7 +100,8 @@ const RegistroFormularios = () => {
         fechafinperiodo: formData.periodoHasta,
         sesionesautorizadasmes: formData.sesionesautorizadasmes
       }));
-      const response = await api.put('/api/pacientes/masivo', { pacientes: pacientesPayload });
+      const usuario = localStorage.getItem('usuario') || 'sistema';
+      const response = await api.put('/api/pacientes/masivo', { pacientes: pacientesPayload, usuario });
       if (response.data && response.data.success) {
         setModalMessage("Formulario guardado exitosamente.");
         setModalTitle("Éxito");
@@ -109,13 +110,13 @@ const RegistroFormularios = () => {
         handleLimpiarRegistroFormulario();
         setPacientesCargados([]);
       } else {
-        setModalMessage(response.data?.detail || "Error al guardar el formulario.");
+        setModalMessage(response.data?.detalle || response.data?.error || "Error al guardar el formulario.");
         setModalTitle("Error");
         setModalType("error");
         setShowModal(true);
       }
     } catch (err) {
-      setModalMessage(err.response?.data?.detail || err.message || "Error inesperado.");
+      setModalMessage(err.response?.data?.detalle || err.response?.data?.error || err.message || "Error inesperado.");
       setModalTitle("Error");
       setModalType("error");
       setShowModal(true);
@@ -142,25 +143,20 @@ const RegistroFormularios = () => {
     setResultados([]);
     setLoading(true);
     try {
-      let params = {};
-      if (busqueda.dpi) params.dpi = busqueda.dpi;
-      if (busqueda.noafiliacion) params.noafiliacion = busqueda.noafiliacion;
-      if (!params.dpi && !params.noafiliacion) {
-        setError('Debe ingresar DPI o No. Afiliación');
+      // Buscar solo por No. Afiliación
+      const noaf = (busqueda.noafiliacion || '').trim();
+      if (!noaf && (busqueda.dpi || '').trim()) {
+        setError('La búsqueda por DPI no está soportada en esta pantalla. Use No. Afiliación.');
+        setLoading(false);
+        return;
+      }
+      if (!noaf) {
+        setError('Debe ingresar No. Afiliación');
         setLoading(false);
         return;
       }
       try {
-        let response;
-        if (busqueda.noafiliacion.trim() !== '') {
-          response = await api.get(`/pacientes/${busqueda.noafiliacion}`);
-        } else if (busqueda.dpi.trim() !== '') {
-          response = await api.get(`/pacientes/dpi/${busqueda.dpi}`);
-        } else {
-          setError('Debe ingresar el número de afiliación o el DPI');
-          setLoading(false);
-          return;
-        }
+        const response = await api.get(`/consulta_pacientes_formularios/${noaf}`);
         if (response.data) {
           if (response.data.idestado === 3) {
             setModalMessage('El paciente no está activo');
@@ -208,7 +204,7 @@ const RegistroFormularios = () => {
     if (!nuevoPaciente.noafiliacion) return;
     try {
       // Lógica de búsqueda de paciente (AJAX)
-      const response = await api.get(`/pacientes/${nuevoPaciente.noafiliacion}`);
+      const response = await api.get(`/consulta_pacientes_formularios/${nuevoPaciente.noafiliacion}`);
       const paciente = response.data;
       if (!paciente) {
         setModalTitle('No encontrado');
