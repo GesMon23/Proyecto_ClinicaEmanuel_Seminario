@@ -11,6 +11,8 @@ import GestionLaboratorios from "@/views/GestionLaboratorios.jsx";
 import LoginComponent from "@/Login.jsx"; 
 import { AuthProvider } from "@/contexts/auth-context";
 import ProtectedRoute from "@/routes/ProtectedRoute";
+import RequireRole from "@/routes/RequireRole";
+import GestionUsuarios from "@/views/GestionUsuarios.jsx";
 function App() {
     const router = createBrowserRouter([
         {
@@ -57,8 +59,20 @@ function App() {
                 },
                 {
                     path: "gestion-laboratorios",
-                    element: <GestionLaboratorios/>,
+                    element: (
+                        <RequireRole roles={["RolLaboratorio"]}>
+                            <GestionLaboratorios/>
+                        </RequireRole>
+                    ),
                 }, 
+                {
+                    path: "gestion-usuarios",
+                    element: (
+                        <RequireRole roles={["RolGestionUsuarios"]}>
+                            <GestionUsuarios/>
+                        </RequireRole>
+                    ),
+                },
                 {
                     path: "cerrarsesion",
                     element: <h1 className="title">Serrar Sesion</h1>,

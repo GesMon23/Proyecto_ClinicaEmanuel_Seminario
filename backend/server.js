@@ -11,6 +11,10 @@ const PDFDocument = require('pdfkit');
 const backLoginRouter = require('./BackLogin');
 // Importar router de registro de formularios
 const backRegistroFormulariosRouter = require('./src/controllers/BackRegistroFormularios');
+// Importar router de registro de empleados
+const backRegistroEmpleadosRouter = require('./src/controllers/BackRegistroEmpleados');
+// Importar router de gestión de empleados (listar/editar/estado)
+const backGestionEmpleadosRouter = require('./src/controllers/BackGestionEmpleados');
 // Pool compartido
 const pool = require('./db/pool');
 
@@ -20,7 +24,7 @@ const ROJO = '#e74c3c';
 
 app.use(cors({
     origin: 'http://localhost:3000',
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
 }));
@@ -42,6 +46,10 @@ app.use('/fotos', express.static(fotosDir));
 app.use(backLoginRouter);
 // Usar router de registro de formularios
 app.use(backRegistroFormulariosRouter);
+// Usar router de registro de empleados
+app.use(backRegistroEmpleadosRouter);
+// Usar router de gestión de empleados (GET/PUT/PATCH)
+app.use(backGestionEmpleadosRouter);
 // Endpoint para subir/reemplazar foto de paciente
 app.post('/upload-foto/:noAfiliacion', async (req, res) => {
     const { noAfiliacion } = req.params;

@@ -38,6 +38,35 @@ router.get('/api/usuarios-activos', async (req, res) => {
   }
 });
 
+// Confirmación de contraseña para acciones sensibles
+router.post('/auth/confirm-password', async (req, res) => {
+  try {
+    const { usuario, password } = req.body || {};
+    if (!usuario || !password) {
+      return res.status(400).json({ error: 'usuario y password son requeridos' });
+    }
+    const ures = await pool.query(
+      'SELECT * from fn_buscar_usuario_auth($1)',
+      [usuario]
+    );
+    const user = ures.rows[0];
+    if (!user || !user.estado) return res.status(401).json({ error: 'Credenciales inválidas' });
+
+    let ok = false;
+    if (user.contrasenia && user.contrasenia.startsWith('$2')) {
+      ok = await bcrypt.compare(password, user.contrasenia);
+    } else {
+      ok = user.contrasenia === password;
+    }
+    if (!ok) return res.status(401).json({ error: 'Credenciales inválidas' });
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('Error en /auth/confirm-password:', err);
+    return res.status(500).json({ error: 'Error al confirmar contraseña' });
+  }
+});
+
 // Login: valida usuario y devuelve token + roles
 router.post('/auth/login', async (req, res) => {
   try {
