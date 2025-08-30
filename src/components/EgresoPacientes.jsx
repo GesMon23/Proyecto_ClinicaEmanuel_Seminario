@@ -85,6 +85,7 @@ const EgresoPacientes = () => {
   const [modalTitle, setModalTitle] = useState('');
   const [modalMessage, setModalMessage] = useState('');
   const [modalType, setModalType] = useState('info');
+  const [toast, setToast] = useState({ show: false, message: '', type: 'error' });
 
   // Cargar causas de egreso al montar el componente
   React.useEffect(() => {
@@ -92,6 +93,12 @@ const EgresoPacientes = () => {
       .then(res => setCausasEgreso(res.data))
       .catch(() => setCausasEgreso([]));
   }, []);
+  const showToast = (message, type = 'error', duration = 3000) => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ ...toast, show: false });
+    }, duration);
+  };
 
   const handleBusquedaChange = (e) => {
     setBusqueda({ ...busqueda, [e.target.name]: e.target.value });
@@ -168,39 +175,67 @@ const EgresoPacientes = () => {
     setError('');
   };
 
- const handleInsertEgreso = async (e) => {
-  e.preventDefault();
-  setError('');
+  const handleInsertEgreso = async (e) => {
+    e.preventDefault();
+    setError('');
 
-  try {
-    const payload = {
-      no_afiliacion: resultados[0]?.no_afiliacion, // paciente seleccionado
-      id_causa_egreso: formData.causaegreso,
-      descripcion: formData.descripcion,
-      fecha_egreso: formData.fechaegreso,
-      observaciones: formData.observaciones
-    };
-
-    const response = await api.post('/egresos', payload);
-
-    if (response.data.success) {
-      setModalMessage('Egreso insertado correctamente.');
-      setModalTitle('Éxito');
-      setModalType('success');
-      setShowModal(true);
-      handleLimpiarEgreso(); // aquí limpias después de insertar
-    } else {
-      throw new Error('No se pudo insertar el egreso.');
+    // Validación manual
+    if (!formData.causaegreso) {
+      showToast('Debe seleccionar la causa de egreso');
+      return;
     }
-  } catch (err) {
-    console.log("==== ERROR AL INSERTAR EGRESO ====" + err);
-    setModalMessage('Error al insertar el egreso.');
-    setModalTitle('Error');
-    setModalType('error');
-    setShowModal(true);
-  }
-};
+    if (!esFallecimiento && !formData.fechaegreso) {
+      showToast('Debe ingresar la fecha de egreso');
+      return;
+    }
+    if (!esFallecimiento && !formData.descripcion) {
+      showToast('Debe ingresar una descripción');
+      return;
+    }
+    if (esFallecimiento) {
+      if (!formData.fechafallecimiento || !formData.comorbilidades || !formData.lugarfallecimiento || !formData.causafallecimiento) {
+        showToast('Debe completar todos los campos de fallecimiento');
+        return;
+      }
+    }
 
+    try {
+      const payload = {
+        no_afiliacion: resultados[0]?.no_afiliacion, // paciente seleccionado
+        id_causa_egreso: formData.causaegreso,
+        descripcion: formData.descripcion,
+        fecha_egreso: formData.fechaegreso,
+        observaciones: formData.observaciones,
+        fechafallecimiento: formData.fechafallecimiento,
+        comorbilidades: formData.comorbilidades,
+        lugarfallecimiento: formData.lugarfallecimiento,
+        causafallecimiento: formData.causafallecimiento
+      };
+
+      const response = await api.post('/egresos', payload);
+
+      if (response.data.success) {
+        setModalMessage('Egreso insertado correctamente.');
+        setModalTitle('Éxito');
+        setModalType('success');
+        setShowModal(true);
+        handleLimpiarEgreso(); // aquí limpias después de insertar
+      } else {
+        throw new Error('No se pudo insertar el egreso.');
+      }
+    } catch (err) {
+      console.log("==== ERROR AL INSERTAR EGRESO ====" + err);
+      setModalMessage('Error al insertar el egreso.');
+      setModalTitle('Error');
+      setModalType('error');
+      setShowModal(true);
+    }
+  };
+  const causaSeleccionada = causasEgreso.find(c => String(c.id_causa) === String(formData.causaegreso));
+  const esFallecimiento =
+    causaSeleccionada &&
+    causaSeleccionada.descripcion &&
+    causaSeleccionada.descripcion.toLowerCase().includes("fallecimiento");
   return (
     <Container fluid>
       <CustomModal
@@ -217,6 +252,37 @@ const EgresoPacientes = () => {
             <div className="p-6">
               {/* Formulario de búsqueda */}
               <form onSubmit={handleSubmit} className="mb-6">
+                {toast.show && (
+                  <div className="fixed top-5 right-5 z-50 flex flex-col w-80 rounded-lg shadow-lg overflow-hidden bg-white dark:bg-slate-600">
+                    <div className="flex items-center">
+                      {/* Franja izquierda */}
+                      <div className="w-1 h-full bg-cyan-400"></div>
+                      {/* Contenido */}
+                      <div className="flex-1 px-4 py-3 flex items-center space-x-3">
+                        {/* Icono info */}
+                        <svg
+                          className="w-6 h-6 text-cyan-500 flex-shrink-0"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" />
+                        </svg>
+                        {/* Mensaje */}
+                        <div className="flex-1 text-sm dark:text-white">{toast.message}</div>
+                      </div>
+                    </div>
+                    {/* Barra de progreso */}
+                    <div
+                      className="h-1 bg-cyan-400"
+                      style={{
+                        animation: `progressBar ${toast.duration}ms linear forwards`
+                      }}
+                    ></div>
+                  </div>
+                )}
+
                 <div className="w-full text-center mb-6">
                   <div className="flex items-center justify-center gap-6 flex-wrap">
                     <img
@@ -404,6 +470,7 @@ const EgresoPacientes = () => {
             <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
               <div className="p-4 sm:p-6 lg:p-8">
                 <form onSubmit={handleInsertEgreso} className="space-y-6">
+                  <span className="text-sm text-gray-500">Coloque 0 si no desea llenar los campos</span>
                   {/* Contenedor principal con columnas */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
                     {/* Columna izquierda */}
@@ -427,102 +494,27 @@ const EgresoPacientes = () => {
                         </select>
                       </div>
 
-                      {/* Campos especiales para Fallecimiento */}
-                      {(() => {
-                        const causaSeleccionada = causasEgreso.find(c => String(c.id_causa) === String(formData.causa_egreso));
-                        if (causaSeleccionada && causaSeleccionada.descripcion && causaSeleccionada.descripcion.toLowerCase().includes('fallecimiento')) {
-                          return (
-                            <div className="space-y-6 bg-red-50 dark:bg-red-900/20 p-4 sm:p-6 rounded-lg border-l-4 border-red-500">
-                              <h3 className="text-lg font-semibold text-red-800 dark:text-red-400 mb-4">
-                                Información de Fallecimiento
-                              </h3>
 
-                              {/* Fecha de Fallecimiento */}
-                              <div className="space-y-2">
-                                <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-                                  Fecha de Fallecimiento
-                                </label>
-                                <input
-                                  type="date"
-                                  name="fechafallecimiento"
-                                  value={formData.fechafallecimiento}
-                                  onChange={handleFormChange}
-                                  required
-                                  className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
-                                />
-                              </div>
-
-                              {/* Comorbilidades */}
-                              <div className="space-y-2">
-                                <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-                                  Comorbilidades <span className="text-sm text-gray-500">(opcional)</span>
-                                </label>
-                                <input
-                                  type="text"
-                                  name="comorbilidades"
-                                  value={formData.comorbilidades}
-                                  onChange={handleFormChange}
-                                  placeholder="Ingrese comorbilidades (si aplica)"
-                                  className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                                />
-                              </div>
-
-                              {/* Lugar de Fallecimiento */}
-                              <div className="space-y-2">
-                                <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-                                  Lugar de Fallecimiento
-                                </label>
-                                <input
-                                  type="text"
-                                  name="lugarfallecimiento"
-                                  value={formData.lugarfallecimiento}
-                                  onChange={handleFormChange}
-                                  placeholder="Ingrese el lugar de fallecimiento"
-                                  required
-                                  className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                                />
-                              </div>
-
-                              {/* Causa de Fallecimiento */}
-                              <div className="space-y-2">
-                                <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-                                  Causa de Fallecimiento
-                                </label>
-                                <input
-                                  type="text"
-                                  name="causafallecimiento"
-                                  value={formData.causafallecimiento}
-                                  onChange={handleFormChange}
-                                  placeholder="Ingrese la causa de fallecimiento"
-                                  required
-                                  className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                                />
-                              </div>
-                            </div>
-                          );
-                        }
-                        return null;
-                      })()}
 
                       {/* Fecha del egreso */}
-                      <div className="space-y-2">
-                        <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-                          Fecha del egreso
-                        </label>
-                        <input
-                          type="date"
-                          name="fechaegreso"
-                          value={formData.fechaegreso}
-                          onChange={handleFormChange}
-                          required
-                          className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
-                        />
-                      </div>
+                      {!esFallecimiento && (
+                        <div className="space-y-2">
+                          <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+                            Fecha del egreso
+                          </label>
+                          <input
+                            type="date"
+                            name="fechaegreso"
+                            value={formData.fechaegreso}
+                            onChange={handleFormChange}
+                            required={!esFallecimiento}
+                            className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
+                          />
+                        </div>
+                      )}
                     </div>
 
-                    {/* Columna derecha */}
-                    <div className="space-y-6">
-                      {/* Descripción */}
+                    {!esFallecimiento && (
                       <div className="space-y-2">
                         <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
                           Descripción
@@ -532,27 +524,89 @@ const EgresoPacientes = () => {
                           name="descripcion"
                           value={formData.descripcion}
                           onChange={handleFormChange}
+                          required={!esFallecimiento}
                           placeholder="Ingrese una descripción"
                           className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                         />
                       </div>
-
-                      {/* Número de caso concluido */}
-                      {/* <div className="space-y-2">
-                        <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-                          Número de caso concluido
-                        </label>
-                        <input
-                          type="text"
-                          name="numerocasoconcluido"
-                          value={formData.numerocasoconcluido}
-                          onChange={handleFormChange}
-                          placeholder="Ingrese el número de caso concluido"
-                          className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                        />
-                      </div> */}
-                    </div>
+                    )}
                   </div>
+
+                  {/* Campos especiales para Fallecimiento */}
+                  {esFallecimiento && (
+                    <div className="space-y-6 bg-red-50 dark:bg-red-900/20 p-4 sm:p-6 rounded-lg border-l-4 border-red-500">
+                      <h3 className="text-lg font-semibold text-red-800 dark:text-red-400">
+                        Información de Fallecimiento
+                      </h3>
+                      {/* Grid de dos columnas */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Fecha de Fallecimiento */}
+                        <div className="space-y-2">
+                          <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+                            Fecha de Fallecimiento
+                          </label>
+                          <input
+                            type="date"
+                            name="fechafallecimiento"
+                            value={formData.fechafallecimiento}
+                            onChange={handleFormChange}
+                            required={esFallecimiento}
+                            className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
+                          />
+                        </div>
+
+                        {/* Comorbilidades */}
+                        <div className="space-y-2">
+                          <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+                            Comorbilidades
+                          </label>
+                          <input
+                            type="text"
+                            name="comorbilidades"
+                            value={formData.comorbilidades}
+                            onChange={handleFormChange}
+                            required={esFallecimiento}
+                            placeholder="Ingrese comorbilidades (si aplica)"
+                            className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                          />
+                        </div>
+
+                        {/* Lugar de Fallecimiento */}
+                        <div className="space-y-2">
+                          <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+                            Lugar de Fallecimiento
+                          </label>
+                          <input
+                            type="text"
+                            name="lugarfallecimiento"
+                            value={formData.lugarfallecimiento}
+                            onChange={handleFormChange}
+                            placeholder="Ingrese el lugar de fallecimiento"
+                            required={esFallecimiento}
+                            className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                          />
+                        </div>
+
+                        {/* Causa de Fallecimiento */}
+                        <div className="space-y-2">
+                          <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+                            Causa de Fallecimiento
+                          </label>
+                          <input
+                            type="text"
+                            name="causafallecimiento"
+                            value={formData.causafallecimiento}
+                            onChange={handleFormChange}
+                            placeholder="Ingrese la causa de fallecimiento"
+                            required={esFallecimiento}
+                            className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+
 
                   {/* Observaciones - Campo completo */}
                   <div className="space-y-2">
@@ -563,6 +617,7 @@ const EgresoPacientes = () => {
                       name="observaciones"
                       value={formData.observaciones}
                       onChange={handleFormChange}
+                      required
                       rows={5}
                       placeholder="Ingrese observaciones"
                       className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 resize-none"

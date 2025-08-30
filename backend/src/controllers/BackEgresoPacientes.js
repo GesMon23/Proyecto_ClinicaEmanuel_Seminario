@@ -154,76 +154,123 @@ router.put('/pacientes/:noAfiliacion', async (req, res) => {
 
 // Endpoint para insertar un egreso
 router.post('/egresos', async (req, res) => {
-    const client = await pool.connect();
-    try {
-        const {
-            no_afiliacion,
-            id_causa_egreso,
-            descripcion,
-            fecha_egreso,
-            observaciones
-        } = req.body;
+  const client = await pool.connect();
+  let idEstado = 0;
+  try {
+    const {
+      no_afiliacion,
+      id_causa_egreso,
+      descripcion,
+      fecha_egreso,
+      observaciones,
+      fechafallecimiento,
+      comorbilidades,
+      lugarfallecimiento,
+      causafallecimiento
+    } = req.body;
 
-        await client.query('BEGIN');
-        console.log('Payload recibido para insert:', req.body);
+    
+    let resultInsert = null;
 
-        // 1. Insertar egreso
-        const insertQuery = `
-            INSERT INTO tbl_egresos (
-                no_afiliacion,
-                id_causa_egreso,
-                descripcion,
-                fecha_egreso,
-                observaciones,
-                usuario_creacion,
-                fecha_creacion
-            )
-            VALUES ($1, $2, $3, $4::date, $5, $6, NOW())
-            RETURNING *;
-        `;
-        const insertValues = [
-            no_afiliacion,
-            id_causa_egreso,
-            descripcion || null,
-            fecha_egreso || null,
-            observaciones || null,
-            'nombreUsuario' // Aquí el usuario que realiza el registro
-        ];
-        const resultInsert = await client.query(insertQuery, insertValues);
+    await client.query('BEGIN');
 
-        // 2. Actualizar estado del paciente
-        const updateQuery = `
-            UPDATE tbl_pacientes
-            SET id_estado = 3,
-                usuario_actualizacion = $2,
-                fecha_actualizacion = NOW()
-            WHERE no_afiliacion = $1
-            RETURNING *;
-        `;
-        const updateValues = [
-            no_afiliacion,
-            'nombreUsuario' // Aquí el usuario que realiza la actualización
-        ];
-        const resultUpdate = await client.query(updateQuery, updateValues);
-
-        await client.query('COMMIT');
-
-        res.json({
-            success: true,
-            message: 'Egreso insertado y paciente actualizado correctamente',
-            egreso: resultInsert.rows[0],
-            paciente: resultUpdate.rows[0]
-        });
-    } catch (err) {
-        await client.query('ROLLBACK');
-        console.error('Error en POST /api/egresos:', err.message);
-        res.status(500).json({ error: 'Error al insertar egreso', detalle: err.message });
-    } finally {
-        client.release();
+    if (id_causa_egreso === '2') {  // Egreso normal
+      idEstado = 3; // Paciente Egresado
+      const insertQuery = `
+        INSERT INTO tbl_egresos (
+          no_afiliacion,
+          id_causa_egreso,
+          descripcion,
+          fecha_egreso,
+          observaciones,
+          usuario_creacion,
+          fecha_creacion
+        )
+        VALUES ($1, $2, $3, $4::date, $5, $6, NOW())
+        RETURNING *;
+      `;
+      const insertValues = [
+        no_afiliacion,
+        id_causa_egreso,
+        descripcion || null,
+        fecha_egreso || null,
+        observaciones || null,
+        'nombreUsuario'
+      ];
+      resultInsert = await client.query(insertQuery, insertValues);
     }
+
+    if (id_causa_egreso === '1') {  // Fallecimiento
+      idEstado = 5; // Paciente fallecido
+      const insertQuery = `
+        INSERT INTO tbl_fallecimientos (
+          no_afiliacion,
+          comorbilidades,
+          fechafallecido,
+          lugarfallecimiento,
+          causafallecimiento,
+          observaciones,
+          usuario_creacion,
+          fecha_creacion
+        )
+        VALUES ($1, $2, $3::date, $4, $5, $6, $7, NOW())
+        RETURNING *;
+      `;
+      const insertValues = [
+        no_afiliacion,
+        comorbilidades || null,
+        fechafallecimiento || null,
+        lugarfallecimiento || null,
+        causafallecimiento || null,
+        observaciones || null,
+        'nombreUsuario'
+      ];
+      resultInsert = await client.query(insertQuery, insertValues);
+    }
+
+    // Actualizar estado del paciente con el valor correcto
+    const updateQuery = `
+      UPDATE tbl_pacientes
+      SET id_estado = $2,
+          usuario_actualizacion = $3,
+          fecha_actualizacion = NOW()
+      WHERE no_afiliacion = $1
+      RETURNING *;
+    `;
+    const updateValues = [
+      no_afiliacion,
+      idEstado,
+      'nombreUsuario'
+    ];
+    const resultUpdate = await client.query(updateQuery, updateValues);
+
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      message: 'Proceso Exitoso!!',
+      egreso: resultInsert.rows[0],
+      paciente: resultUpdate.rows[0]
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error("Error en POST /egresos:", err.message, req.body, idEstado);
+    res.status(500).json({ error: 'Error al insertar egreso', detalle: err.message });
+  } finally {
+    client.release();
+  }
 });
 
 
+router.get('/causas_egreso', async (req, res) => {
+    let baseQuery = `select * from  tbl_causa_egreso where estado = true;`;
+    try {
+        const result = await pool.query(baseQuery);
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ error: 'Error al buscar pacientes para egreso.', detalle: error.message });
+    }
+});
 
 
 

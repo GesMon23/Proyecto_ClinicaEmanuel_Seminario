@@ -1,15 +1,28 @@
-app.get('/departamentos', async (req, res) => {
+// Router de Login/Roles
+const express = require('express');
+const pool = require('../../db/pool');
+const fs = require('fs');
+const path = require('path');
+
+const router = express.Router();
+router.use(express.json());
+const fotosDir = path.join(__dirname, '../../fotos');
+if (!fs.existsSync(fotosDir)) {
+    fs.mkdirSync(fotosDir, { recursive: true });
+}
+
+router.get('/Adepartamento', async (req, res) => {
     try {
-        const result = await pool.query('SELECT * from FN_mostrar_departamentos()');
+        const result = await pool.query('SELECT id_departamento, nombre FROM tbl_departamento ORDER BY id_departamento ASC');
         res.json(result.rows);
     } catch (error) {
         res.status(500).json({ error: 'Error al obtener departamentos.' });
     }
 });
 
-app.get('/accesos-vasculares', async (req, res) => {
+router.get('/Aaccesos-vascular', async (req, res) => {
     try {
-        const result = await pool.query('SELECT * from FN_mostrar_accesos_vascular()');
+        const result = await pool.query('SELECT id_acceso, descripcion FROM tbl_acceso_vascular WHERE estado = true ORDER BY id_acceso ASC;');
         res.json(result.rows);
     } catch (error) {
         res.status(500).json({ error: 'Error al obtener accesos vasculares.' });
@@ -17,27 +30,18 @@ app.get('/accesos-vasculares', async (req, res) => {
 });
 
 // Endpoint para obtener jornadas
-app.get('/jornadas', async (req, res) => {
+router.get('/Ajornada', async (req, res) => {
     try {
-        const result = await pool.query('SELECT * from FN_mostrar_jornadas()');
+        const result = await pool.query('SELECT id_jornada, descripcion FROM tbl_jornadas WHERE estado = true ORDER BY id_jornada ASC;');
         res.json(result.rows);
     } catch (error) {
         res.status(500).json({ error: 'Error al obtener jornadas.' });
     }
 });
 
-// Endpoint para obtener los estados de paciente
-app.get('/estados-paciente', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM FN_mostrar_estados_paciente()');
-res.json(result.rows);
-    } catch (error) {
-        res.status(500).json({ error: 'Error al obtener los estados de paciente.', detalle: error.message });
-    }
-});
 
 // Endpoint para verificar si existe una foto
-app.get('/check-photo/:filename', (req, res) => {
+router.get('/Acheck-photo/:filename', (req, res) => {
     const filename = req.params.filename;
     const filePath = path.join(__dirname, 'fotos', filename);
 
@@ -48,88 +52,99 @@ app.get('/check-photo/:filename', (req, res) => {
     }
 });
 
-// Endpoint para obtener paciente por número de afiliación O DPI
-app.get('/paciente/:identificador', async (req, res) => {
-    const { identificador } = req.params;
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-        await client.query('CALL SP_Mostrar_paciente_actualizacion($1, $2)', [identificador, 'paciente_cursor']);
-        const result = await client.query('FETCH ALL FROM paciente_cursor');
-        await client.query('COMMIT');
-        res.json(result.rows);
-    } catch (error) {
-        await client.query('ROLLBACK');
-        res.status(500).json({ error: 'Error al obtener datos del paciente', detalle: error.message });
-    } finally {
-        client.release();
-    }
-});
+
 
 
 // Actualizar paciente por No. Afiliación
-app.put('/pacientes/:noafiliacion', async (req, res) => {
-    console.log('--- [PUT /pacientes/:noafiliacion] ---');
-    console.log('NoAfiliacion (URL param):', req.params.noafiliacion);
-    console.log('Body recibido:', req.body);
-
-    const { noafiliacion } = req.params;
-const {
-    usuarioActualizacion,
+router.put('/Apacientes/:no_afiliacion', async (req, res) => {
+  const { no_afiliacion } = req.params;
+  const {
     dpi,
-    primerNombre,
-    segundoNombre,
-    otrosNombres,
-    primerApellido,
-    segundoApellido,
-    apellidoCasada,
-    fechaNacimiento,
+    primer_nombre,
+    segundo_nombre,
+    otros_nombres,
+    primer_apellido,
+    segundo_apellido,
+    apellido_casada,
+    edad,
+    fecha_nacimiento,
     sexo,
     direccion,
-    idDepartamento,
-    idAcceso,
-    idJornada
-} = req.body;
-    try {
-        const result = await pool.query('CALL actualizar_datos_paciente($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)', [
-            usuarioActualizacion || 'sistema', // reemplaza por usuario autenticado
-            noafiliacion,
-            dpi || null,
-            primerNombre || null,
-            segundoNombre || null,
-            otrosNombres || null,
-            primerApellido || null,
-            segundoApellido || null,
-            apellidoCasada || null,
-            fechaNacimiento || null,
-            sexo || null,
-            direccion || null,
-            idDepartamento || null,
-            idAcceso || null,
-            idJornada || null
-          ]);
-        console.log('Resultado de la query:', result);
-        console.log('Filas afectadas:', result.rowCount);
+    fecha_ingreso,
+    id_departamento,
+    id_acceso,
+    numero_formulario_activo,
+    id_jornada,
+    sesiones_autorizadas_mes,
+    url_foto
+  } = req.body;
 
-        if (result.rowCount > 0) {
-            console.log('Paciente actualizado correctamente');
-            res.json({ success: true });
-        } else {
-            console.warn('No se encontró el paciente con noafiliacion:', noafiliacion);
-            res.status(404).json({ success: false, detail: 'Paciente no encontrado' });
-        }
-    } catch (error) {
-        console.error('Error al actualizar paciente:', error);
-        res.status(500).json({ success: false, detail: 'Error al actualizar paciente', error: error.message });
+  try {
+    const query = `
+      UPDATE tbl_pacientes
+      SET 
+        dpi = $1,
+        primer_nombre = $2,
+        segundo_nombre = $3,
+        otros_nombres = $4,
+        primer_apellido = $5,
+        segundo_apellido = $6,
+        apellido_casada = $7,
+        edad = $8,
+        fecha_nacimiento = $9,
+        sexo = $10,
+        direccion = $11,
+        fecha_ingreso = $12,
+        id_departamento = $13,
+        id_acceso = $14,
+        numero_formulario_activo = $15,
+        id_jornada = $16,
+        sesiones_autorizadas_mes = $17,
+        url_foto = $18
+      WHERE no_afiliacion = $19
+      RETURNING *;
+    `;
+
+    const values = [
+      dpi,
+      primer_nombre,
+      segundo_nombre,
+      otros_nombres,
+      primer_apellido,
+      segundo_apellido,
+      apellido_casada,
+      edad,
+      fecha_nacimiento,
+      sexo,
+      direccion,
+      fecha_ingreso,
+      id_departamento,
+      id_acceso,
+      numero_formulario_activo,
+      id_jornada,
+      sesiones_autorizadas_mes,
+      url_foto,
+      no_afiliacion
+    ];
+
+    const result = await pool.query(query, values);
+
+    if (result.rowCount > 0) {
+      res.json({ success: true, paciente: result.rows[0] });
+    } else {
+      res.status(404).json({ success: false, detail: 'Paciente no encontrado' });
     }
-    console.log('--- [FIN PUT /pacientes/:noafiliacion] ---');
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, detail: 'Error al actualizar paciente' });
+  }
 });
 
 // Endpoint para subir/reemplazar foto de paciente
 
 //Pendiente Arreglar SP
-app.post('/upload-foto/:noAfiliacion', async (req, res) => {
-    const { noAfiliacion } = req.params;
+router.post('/Aupload-foto/:no_Afiliacion', async (req, res) => {
+    const { no_Afiliacion } = req.params;
     const { imagenBase64 } = req.body;
     if (!imagenBase64) {
         return res.status(400).json({ detail: 'No se recibió la imagen.' });
@@ -143,16 +158,73 @@ app.post('/upload-foto/:noAfiliacion', async (req, res) => {
         const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
         const data = matches[2];
         const buffer = Buffer.from(data, 'base64');
-        const filename = `${noAfiliacion}.${ext}`;
+        const filename = `${no_Afiliacion}.${ext}`;
         const filePath = path.join(fotosDir, filename);
         // Guardar/reemplazar archivo
         fs.writeFileSync(filePath, buffer);
 
         // Actualizar urlfoto en la base de datos
-        await pool.query('CALL actualizar_urlfoto_paciente($1, $2)', [filename, noAfiliacion]);
-        res.json({ success: true, url: `/fotos/${filename}` });
+        await pool.query('UPDATE tbl_pacientes SET url_foto = $1 WHERE no_afiliacion = $2', [filename, no_Afiliacion]);
+        res.json({ success: true, url: `${filename}` });
     } catch (err) {
         console.error('Error al subir foto:', err);
         res.status(500).json({ detail: 'Error al guardar la foto.' });
     }
 });
+
+
+
+
+
+router.get('/api/Apacientes/actualizacion', async (req, res) => {
+    const { dpi, no_afiliacion } = req.query;
+
+    let baseQuery = `
+        SELECT 
+            pac.no_afiliacion,
+            pac.dpi,
+            pac.primer_nombre,
+            pac.segundo_nombre,
+            pac.otros_nombres,
+            pac.primer_apellido,
+            pac.segundo_apellido,
+            pac.apellido_casada,
+            pac.edad,
+            pac.fecha_nacimiento,
+            pac.sexo,
+            pac.direccion,
+            pac.fecha_ingreso,
+            pac.id_departamento,
+            pac.id_acceso,
+            pac.numero_formulario_activo,
+            pac.id_jornada,
+            pac.sesiones_autorizadas_mes,
+            pac.url_foto
+        FROM tbl_pacientes pac
+        WHERE pac.id_estado != 3
+    `;
+
+    let params = [];
+    if (dpi) {
+        baseQuery += ' AND pac.dpi = $1';
+        params.push(dpi);
+    } else if (no_afiliacion) {
+        baseQuery += ' AND pac.no_afiliacion = $1';
+        params.push(no_afiliacion);
+    } else {
+        return res.status(400).json({ error: 'Debe proporcionar dpi o no_afiliacion.' });
+    }
+
+    try {
+        const result = await pool.query(baseQuery, params);
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ error: 'Error al buscar pacientes para egreso.', detalle: error.message });
+    }
+});
+
+
+
+
+
+module.exports = router;
