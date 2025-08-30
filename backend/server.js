@@ -10,6 +10,7 @@ const PDFDocument = require('pdfkit');
 // Importar router de login/roles centralizado
 const backLoginRouter = require('./BackLogin');
 const backEgresoRouter = require('./src/controllers/BackEgresoPacientes');
+const backActualizacionRouter = require('./src/controllers/BackActualizacionPacientes');
 // Importar router de registro de formularios
 const backRegistroFormulariosRouter = require('./src/controllers/BackRegistroFormularios');
 // Pool compartido
@@ -43,37 +44,11 @@ app.use('/fotos', express.static(fotosDir));
 app.use(backLoginRouter);
 // Usar router de registro de formularios
 app.use(backRegistroFormulariosRouter);
-
+//Egreso pacientes
 app.use(backEgresoRouter);
-// Endpoint para subir/reemplazar foto de paciente
-app.post('/upload-foto/:noAfiliacion', async (req, res) => {
-    const { noAfiliacion } = req.params;
-    const { imagenBase64 } = req.body;
-    if (!imagenBase64) {
-        return res.status(400).json({ detail: 'No se recibió la imagen.' });
-    }
-    try {
-        // Decodificar base64
-        const matches = imagenBase64.match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/);
-        if (!matches) {
-            return res.status(400).json({ detail: 'Formato de imagen inválido.' });
-        }
-        const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
-        const data = matches[2];
-        const buffer = Buffer.from(data, 'base64');
-        const filename = `${noAfiliacion}.${ext}`;
-        const filePath = path.join(fotosDir, filename);
-        // Guardar/reemplazar archivo
-        fs.writeFileSync(filePath, buffer);
+//Actualizacion pacientes;
+app.use(backActualizacionRouter);
 
-        // Actualizar urlfoto en la base de datos
-        await pool.query('UPDATE tbl_pacientes SET urlfoto = $1 WHERE noafiliacion = $2', [filename, noAfiliacion]);
-        res.json({ success: true, url: `/fotos/${filename}` });
-    } catch (err) {
-        console.error('Error al subir foto:', err);
-        res.status(500).json({ detail: 'Error al guardar la foto.' });
-    }
-});
 // Endpoints de auth/usuarios ahora están en BackLogin.js
 
 
@@ -1256,7 +1231,7 @@ app.get('/accesos-vasculares', async (req, res) => {
 // Endpoint para obtener jornadas
 app.get('/jornadas', async (req, res) => {
     try {
-        const result = await pool.query('SELECT idjornada, descripcion, dias FROM tbl_jornadas where estado=true ORDER BY descripcion ASC');
+        const result = await pool.query('SELECT id_jornada, descripcion, dias FROM tbl_jornadas where estado=true ORDER BY id_jornada ASC');
         res.json(result.rows);
     } catch (error) {
         res.status(500).json({ error: 'Error al obtener jornadas.' });

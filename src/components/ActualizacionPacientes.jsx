@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import api from '../config/api';
-import { Container, Row, Col, Card, Form, Button, Spinner } from 'react-bootstrap';
+import { Spinner } from 'react-bootstrap';
 import CustomModal from '@/components/CustomModal.jsx';
 import WebcamFoto from '@/components/WebcamFoto.jsx';
 import logoClinica from "@/assets/logoClinica2.png"
+import defaultAvatar from "@/assets/img/default-avatar.png";
+import { Edit, BrushCleaning, Save, XIcon, Camera, Image } from "lucide-react";
 
 const formatearFechaInput = (fecha) => {
   if (!fecha) return '';
@@ -12,16 +14,16 @@ const formatearFechaInput = (fecha) => {
 };
 
 const ActualizacionPacientes = () => {
-  // ...
+  // ... (toda la lógica original permanece igual)
   const handleLimpiarTodo = () => {
     setPaciente(null);
     setFormData({});
-    setBusqueda({ noafiliacion: '', dpi: '' });
+    setBusqueda({ no_afiliacion: '', dpi: '' });
     setEditando(false);
     setShowWebcam(false);
     setError(null);
   };
-  const [busqueda, setBusqueda] = useState({ noafiliacion: '', dpi: '' });
+  const [busqueda, setBusqueda] = useState({ no_afiliacion: '', dpi: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [paciente, setPaciente] = useState(null);
@@ -39,9 +41,9 @@ const ActualizacionPacientes = () => {
     const cargarCatalogos = async () => {
       try {
         const [deptosRes, accesosRes, jornadasRes] = await Promise.all([
-          api.get('/departamentos'),
-          api.get('/accesos-vasculares'),
-          api.get('/jornadas')
+          api.get('/Adepartamento'),
+          api.get('/Aaccesos-vascular'),
+          api.get('/Ajornada')
         ]);
         setDepartamentos(deptosRes.data);
         setAccesosVasculares(accesosRes.data);
@@ -58,12 +60,12 @@ const ActualizacionPacientes = () => {
   };
 
   const handleLimpiarBusqueda = () => {
-    setBusqueda({ noafiliacion: '', dpi: '' });
+    setBusqueda({ no_afiliacion: '', dpi: '' });
   };
 
   const verificarExistenciaFoto = async (filename) => {
     try {
-      const response = await api.get(`/check-photo/${filename}`);
+      const response = await api.get(`/Acheck-photo/${filename}`);
       return response.data.exists;
     } catch (error) {
       return false;
@@ -74,13 +76,13 @@ const ActualizacionPacientes = () => {
     if (e) e.preventDefault();
     setLoading(true);
     setError(null);
-    setBusqueda({ noafiliacion: '', dpi: '' }); // Limpiar campos de búsqueda después de buscar
+
     try {
-      let response;
-      if (busqueda.noafiliacion.trim() !== '') {
-        response = await api.get(`/pacientes/${busqueda.noafiliacion}`);
+      let url = '/api/Apacientes/actualizacion?';
+      if (busqueda.no_afiliacion.trim() !== '') {
+        url += `no_afiliacion=${busqueda.no_afiliacion.trim()}`;
       } else if (busqueda.dpi.trim() !== '') {
-        response = await api.get(`/pacientes/dpi/${busqueda.dpi}`);
+        url += `dpi=${busqueda.dpi.trim()}`;
       } else {
         setShowModal(true);
         setModalMessage('Debe ingresar el número de afiliación o el DPI');
@@ -88,24 +90,27 @@ const ActualizacionPacientes = () => {
         setLoading(false);
         return;
       }
-      if (response.data) {
-        let pacienteData = { ...response.data };
-        // No permitir pacientes egresados (idestado=3)
-        if (pacienteData.idestado === 3) {
+
+      const response = await api.get(url);
+
+      if (response.data.length > 0) {
+        let pacienteData = response.data[0]; // tu backend devuelve un array
+        if (pacienteData.id_estado === 3) {
           setPaciente(null);
           setShowModal(true);
           setModalMessage('No se puede actualizar un paciente egresado.');
           setModalType('error');
           return;
         }
-        // Procesar foto como en ConsultaPacientes
-        if (pacienteData.urlfoto) {
-          const filename = pacienteData.urlfoto.replace(/^.*[\\\/]/, '');
-          const fotoExists = await verificarExistenciaFoto(filename);
-          pacienteData.urlfoto = fotoExists ? `/fotos/${filename}` : null;
+        console.log("📸 url_foto crudo desde backend:", pacienteData.url_foto);
+        // Procesar foto si existe
+        if (pacienteData.url_foto) {
+          const filename = pacienteData.url_foto.replace(/^.*[\\\/]/, '');
+          pacienteData.url_foto = `/fotos/${filename}`;
         } else {
-          pacienteData.urlfoto = null;
+          pacienteData.url_foto = null;
         }
+        console.log("✅ url_foto procesado:", pacienteData.url_foto);
         setPaciente(pacienteData);
         setFormData(pacienteData);
         setEditando(false);
@@ -115,6 +120,7 @@ const ActualizacionPacientes = () => {
         setModalMessage('Paciente no encontrado');
         setModalType('error');
       }
+
     } catch (err) {
       setPaciente(null);
       setShowModal(true);
@@ -124,6 +130,7 @@ const ActualizacionPacientes = () => {
       setLoading(false);
     }
   };
+
 
   const handleEditClick = () => {
     setEditando(true);
@@ -135,44 +142,43 @@ const ActualizacionPacientes = () => {
   };
 
   const handleGuardar = async () => {
-    // Validación frontend: primernombre obligatorio
-    if (!formData.primernombre || formData.primernombre.trim() === '') {
+    if (!formData.primer_nombre || formData.primer_nombre.trim() === '') {
       setShowModal(true);
       setModalMessage('El campo "Primer Nombre" es obligatorio.');
       setModalType('error');
       return;
     }
+
     setLoading(true);
+
     try {
-      // Nunca enviar null, solo string vacía si falta
-      // Mapear a camelCase para el backend
-      const payload = {
-        primerNombre: formData.primernombre || '',
-        segundoNombre: formData.segundonombre || '',
-        primerApellido: formData.primerapellido || '',
-        segundoApellido: formData.segundoapellido || '',
-        numeroformulario: formData.numeroformulario || '',
-        sesionesautorizadasmes: formData.sesionesautorizadasmes || '',
-        fechainicioperiodo: formData.fechainicioperiodo || '',
-        fechafinperiodo: formData.fechafinperiodo || '',
-        observaciones: formData.observaciones || ''
-        // Agrega aquí otros campos requeridos por el endpoint
+      let payload = {
+        dpi: formData.dpi || '',
+        primer_nombre: formData.primer_nombre || '',
+        segundo_nombre: formData.segundo_nombre || '',
+        otros_nombres: formData.otros_nombres || '',
+        primer_apellido: formData.primer_apellido || '',
+        segundo_apellido: formData.segundo_apellido || '',
+        apellido_casada: formData.apellido_casada || '',
+        edad: formData.edad || null,
+        fecha_nacimiento: formData.fecha_nacimiento || null,
+        sexo: formData.sexo || '',
+        direccion: formData.direccion || '',
+        fecha_ingreso: formData.fecha_ingreso || null,
+        id_departamento: formData.id_departamento || null,
+        id_acceso: formData.id_acceso || null,
+        numero_formulario_activo: formData.numero_formulario_activo || '',
+        id_jornada: formData.id_jornada || null,
+        sesiones_autorizadas_mes: formData.sesiones_autorizadas_mes || null
       };
-      // Subir la foto si es base64 (nueva captura)
+
+      // Si se tomó una nueva foto en base64, subirla primero
       if (formData.urlfoto && formData.urlfoto.startsWith('data:image')) {
-        try {
-          const resFoto = await api.post(`/upload-foto/${formData.noafiliacion}`, { imagenBase64: formData.urlfoto });
-          if (resFoto.data && resFoto.data.success) {
-            payload.urlfoto = resFoto.data.url;
-            setFormData(f => ({ ...f, urlfoto: resFoto.data.url }));
-          } else {
-            setShowModal(true);
-            setModalMessage('Error al subir la foto.');
-            setModalType('error');
-            setLoading(false);
-            return;
-          }
-        } catch (err) {
+        const resFoto = await api.post(`/Aupload-foto/${formData.no_afiliacion}`, { imagenBase64: formData.urlfoto });
+        if (resFoto.data && resFoto.data.success) {
+          payload.url_foto = resFoto.data.url; // url devuelta por backend
+          setFormData(f => ({ ...f, url_foto: resFoto.data.url }));
+        } else {
           setShowModal(true);
           setModalMessage('Error al subir la foto.');
           setModalType('error');
@@ -180,40 +186,24 @@ const ActualizacionPacientes = () => {
           return;
         }
       }
-      const response = await api.put(`/pacientes/${formData.noafiliacion}`, payload);
+
+      // Hacer update del paciente
+      const response = await api.put(`/Apacientes/${formData.no_afiliacion}`, payload);
+
       if (response.data && response.data.success) {
         setShowModal(true);
         setModalMessage('Paciente actualizado exitosamente.');
         setModalType('success');
-        // Volver a consultar el paciente actualizado y mostrarlo
-        setTimeout(async () => {
-          try {
-            const response = await api.get(`/pacientes/${formData.noafiliacion}`);
-            if (response.data) {
-              let pacienteData = { ...response.data };
-              // Procesar foto si existe
-              if (pacienteData.urlfoto) {
-                const filename = pacienteData.urlfoto.replace(/^.*[\\\/]/, '');
-                const fotoExists = await verificarExistenciaFoto(filename);
-                pacienteData.urlfoto = fotoExists ? `/fotos/${filename}` : null;
-              } else {
-                pacienteData.urlfoto = null;
-              }
-              setPaciente(pacienteData);
-              setFormData(pacienteData);
-              setEditando(false);
-            }
-          } catch (e) {
-            setShowModal(true);
-            setModalMessage('Error al recargar paciente actualizado.');
-            setModalType('error');
-          }
-        }, 800);
+
+        // Refrescar datos del paciente actualizado
+        setPaciente(prev => ({ ...prev, ...payload }));
+        setEditando(false);
       } else {
         setShowModal(true);
         setModalMessage(response.data?.detail || 'Error al actualizar paciente');
         setModalType('error');
       }
+
     } catch (err) {
       setShowModal(true);
       setModalMessage(err.response?.data?.detail || err.message || 'Error inesperado');
@@ -223,232 +213,499 @@ const ActualizacionPacientes = () => {
     }
   };
 
+
   return (
-    <div className="w-full px-4 md:px-8 py-6 max-w-[1000px] mx-auto">
-  <CustomModal
-    show={showModal}
-    onClose={() => setShowModal(false)}
-    title={modalType === 'success' ? 'Éxito' : 'Error'}
-    message={modalMessage}
-    type={modalType}
-  />
-
-  <div className="flex flex-col lg:flex-row items-center lg:items-start justify-between gap-6 mt-8 mb-6">
-    {/* Logo y título */}
-    <div className="w-full lg:w-1/2 flex flex-col justify-center items-center lg:items-start mb-6 lg:mb-0">
-      <img
-        src={logoClinica}
-        alt="Logo de la clínica"
-        className="max-w-xs sm:max-w-sm mb-2"
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <CustomModal
+        show={showModal}
+        onClose={() => setShowModal(false)}
+        title={modalType === 'success' ? 'Éxito' : 'Error'}
+        message={modalMessage}
+        type={modalType}
       />
-      <h2 className="font-extrabold text-[#1b4332] dark:text-white text-xl sm:text-2xl tracking-wide truncate text-center lg:text-left">
-        Actualización de Pacientes
-      </h2>
-    </div>
 
-    {/* Formulario de búsqueda */}
-    <div className="w-full lg:w-1/2 min-w-[300px]">
-      <form onSubmit={buscarPaciente} className="flex flex-col gap-4">
-        <input
-          type="text"
-          name="noafiliacion"
-          placeholder="Número de Afiliación"
-          value={busqueda.noafiliacion}
-          onChange={handleBusquedaChange}
-          className="w-full text-lg px-4 py-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-slate-800 dark:text-white"
-        />
+      {/* Header con logo y formulario de búsqueda */}
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 overflow-hidden mb-8">
+        <div className="p-6">
+          {/* Logo y título */}
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center gap-6 flex-wrap mb-4">
+              <img
+                src={logoClinica}
+                alt="Logo Clínica"
+                className="h-[140px] sm:h-[160px] lg:h-[180px] max-w-[280px] sm:max-w-[320px] object-contain bg-white rounded-xl shadow-md p-2 dark:bg-slate-800"
+              />
+              <h1 className="text-2xl sm:text-3xl font-bold text-green-800 dark:text-white">
+                Actualización de Pacientes
+              </h1>
+            </div>
+            <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-slate-600 to-transparent"></div>
+          </div>
 
-        <input
-          type="text"
-          name="dpi"
-          placeholder="DPI"
-          value={busqueda.dpi}
-          onChange={handleBusquedaChange}
-          className="w-full text-lg px-4 py-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-slate-800 dark:text-white"
-        />
-
-        <div className="flex gap-2">
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-1/2 bg-[#2d6a4f] hover:bg-[#24543d] text-white font-semibold py-2 rounded shadow-sm transition"
-          >
-            {loading ? 'Buscando...' : 'Buscar'}
-          </button>
-
-          <button
-            type="button"
-            onClick={handleLimpiarBusqueda}
-            className="w-1/2 bg-[#dc3545] hover:bg-[#b02a37] text-white font-semibold py-2 rounded shadow-sm transition"
-          >
-            Limpiar
-          </button>
-        </div>
-      </form>
-
-
-          {loading && <Spinner animation="border" />}
-          {paciente && (
-            <Form>
-              <Row>
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label>Primer Nombre</Form.Label>
-                    <Form.Control type="text" name="primernombre" value={formData.primernombre || ''} onChange={handleInputChange} disabled={!editando} />
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label>Segundo Nombre</Form.Label>
-                    <Form.Control type="text" name="segundonombre" value={formData.segundonombre || ''} onChange={handleInputChange} disabled={!editando} />
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label>Primer Apellido</Form.Label>
-                    <Form.Control type="text" name="primerapellido" value={formData.primerapellido || ''} onChange={handleInputChange} disabled={!editando} />
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label>Segundo Apellido</Form.Label>
-                    <Form.Control type="text" name="segundoapellido" value={formData.segundoapellido || ''} onChange={handleInputChange} disabled={!editando} />
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label>Apellido Casada</Form.Label>
-                    <Form.Control type="text" name="apellidocasada" value={formData.apellidocasada || ''} onChange={handleInputChange} disabled={!editando || formData.sexo !== 'Femenino'} />
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label>Sexo</Form.Label>
-                    <Form.Control as="select" name="sexo" value={formData.sexo || ''} onChange={handleInputChange} disabled={!editando}>
-                      <option value="">Seleccione</option>
-                      <option value="Masculino">Masculino</option>
-                      <option value="Femenino">Femenino</option>
-                    </Form.Control>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label>Fecha de Nacimiento</Form.Label>
-                    <Form.Control type="date" name="fechanacimiento" value={formatearFechaInput(formData.fechanacimiento)} onChange={handleInputChange} disabled={!editando} />
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label>DPI</Form.Label>
-                    <Form.Control type="text" name="dpi" value={formData.dpi || ''} onChange={handleInputChange} disabled={!editando} />
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label>No. Afiliación</Form.Label>
-                    <Form.Control type="text" name="noafiliacion" value={formData.noafiliacion || ''} onChange={handleInputChange} disabled />
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label>Dirección</Form.Label>
-                    <Form.Control type="text" name="direccion" value={formData.direccion || ''} onChange={handleInputChange} disabled={!editando} />
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label>Departamento</Form.Label>
-                    <Form.Control as="select" name="iddepartamento" value={formData.iddepartamento || ''} onChange={handleInputChange} disabled={!editando}>
-                      <option value="">Seleccione</option>
-                      {departamentos.map(dep => (
-                        <option key={dep.iddepartamento} value={dep.iddepartamento}>{dep.nombre}</option>
-                      ))}
-                    </Form.Control>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label>Acceso Vascular</Form.Label>
-                    <Form.Control as="select" name="idacceso" value={formData.idacceso || ''} onChange={handleInputChange} disabled={!editando}>
-                      <option value="">Seleccione</option>
-                      {accesosVasculares.map(acc => (
-                        <option key={acc.idacceso} value={acc.idacceso}>{acc.descripcion}</option>
-                      ))}
-                    </Form.Control>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label>Jornada</Form.Label>
-                    <Form.Control as="select" name="idjornada" value={formData.idjornada || ''} onChange={handleInputChange} disabled={!editando}>
-                      <option value="">Seleccione</option>
-                      {jornadas.map(j => (
-                        <option key={j.idjornada} value={j.idjornada}>{j.descripcion}</option>
-                      ))}
-                    </Form.Control>
-                  </Form.Group>
-                </Col>
-              </Row>
-            </Form>
-          )}
-          {/* Foto al final del formulario y opción de tomar nueva foto */}
-          {paciente && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 36, marginBottom: 24 }}>
-              <div style={{
-                width: '200px', height: '200px', borderRadius: '24px', overflow: 'hidden',
-                border: '4px solid #2d6a4f', boxShadow: '0 8px 32px rgba(0,0,0,0.16)',
-                backgroundColor: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16
-              }}>
-                <img
-                  alt="Foto del paciente"
-                  src={formData.urlfoto && formData.urlfoto.startsWith('data:')
-                    ? formData.urlfoto
-                    : (formData.urlfoto
-                      ? `http://localhost:3001/fotos/${formData.urlfoto.split(/[\\\/]/).pop()}?${Date.now()}`
-                      : require('assets/img/default-avatar.png'))}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={e => {
-                    e.target.onerror = null;
-                    e.target.src = require('assets/img/default-avatar.png');
-                  }}
+          {/* Formulario de búsqueda */}
+          <form onSubmit={buscarPaciente} className="max-w-md mx-auto">
+            <div className="space-y-4">
+              {/* numero de afiliacion */}
+              <div>
+                <input
+                  type="text"
+                  name="no_afiliacion"
+                  placeholder="Número de Afiliación"
+                  value={busqueda.no_afiliacion}
+                  onChange={handleBusquedaChange}
+                  className="w-full text-lg px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 />
               </div>
-              <Button variant="info" onClick={() => setShowWebcam(true)} style={{ fontWeight: 600, fontSize: 17, marginBottom: 12, backgroundColor: '#007bff', borderColor: '#007bff', color: '#fff' }} disabled={!editando}>Tomar nueva foto</Button>
-              {/* Botón Editar/Guardar debajo de la foto */}
-              <div style={{ display: 'flex', gap: 12 }}>
-                {!editando ? (
-                  <>
-                    <Button variant="success" onClick={handleEditClick} style={{ width: 180, backgroundColor: '#2d6a4f', borderColor: '#2d6a4f', color: '#fff' }}>Editar</Button>
-                    <Button variant="danger" onClick={handleLimpiarTodo} style={{ width: 120, backgroundColor: '#dc3545', borderColor: '#dc3545', color: '#fff' }}>Limpiar</Button>
-                  </>
-                ) : (
-                  <>
-                    <Button variant="success" onClick={handleGuardar} disabled={loading} style={{ width: 220 }}>Guardar Cambios</Button>
-                    <Button variant="danger" onClick={handleLimpiarTodo} style={{ width: 120, backgroundColor: '#dc3545', borderColor: '#dc3545', color: '#fff' }}>Limpiar</Button>
-                  </>
-                )}
+              {/* dpi */}
+              <div>
+                <input
+                  type="text"
+                  name="dpi"
+                  placeholder="DPI"
+                  value={busqueda.dpi}
+                  onChange={handleBusquedaChange}
+                  className="w-full text-lg px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                />
               </div>
-              {/* Modal flotante para la cámara */}
-              {showWebcam && (
-                <div style={{
-                  position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 9999,
-                  background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  <div style={{ background: '#fff', borderRadius: 12, padding: 24, boxShadow: '0 4px 32px rgba(0,0,0,0.18)' }}>
-                    <WebcamFoto
-                      onCapture={img => {
-                        setShowWebcam(false);
-                        setFormData(f => ({ ...f, urlfoto: img })); // Guarda la imagen base64 temporalmente
-                      }}
-                      onCancel={() => setShowWebcam(false)}
-                    />
-                  </div>
-                </div>
-              )}
+
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 bg-green-700 hover:bg-green-800 disabled:opacity-70 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
+                >
+                  {loading ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <Spinner animation="border" size="sm" />
+                      Buscando...
+                    </div>
+                  ) : (
+                    'Buscar'
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleLimpiarBusqueda}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
+                >
+                  Limpiar
+                </button>
+              </div>
             </div>
-          )}
+          </form>
         </div>
       </div>
+
+      {/* Formulario del paciente */}
+      {paciente && (
+        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
+          <div className="p-6">
+            {/* Título del formulario */}
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                Información del Paciente
+              </h2>
+              <div className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${editando ? 'bg-orange-500' : 'bg-green-500'}`}></div>
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                  {editando ? 'Modo Edición' : 'Solo Lectura'}
+                </span>
+              </div>
+            </div>
+            {/* Botones de acción */}
+            <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md mt-0 mb-4">
+              {!editando ? (
+                <>
+                  <button
+                    onClick={handleEditClick}
+                    className="flex-1 flex items-center justify-center gap-2 bg-green-700 hover:bg-green-800 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
+                  >
+                    <Edit /> Editar
+                  </button>
+                  <button
+                    onClick={handleLimpiarTodo}
+                    className="flex-1 flex items-center justify-center gap-2 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200 focus:outline-none focus:ring-2 focus:ring-gray-600 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
+                  >
+                    <BrushCleaning /> Limpiar
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={handleGuardar}
+                    disabled={loading}
+                    className="flex-1 flex items-center justify-center gap-2 bg-green-700 hover:bg-green-800 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
+                  >
+                    {loading ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <Spinner animation="border" size="sm" />
+                        Guardando...
+                      </div>
+                    ) : (
+                      <><Save />Guardar Cambios</>
+                    )}
+                  </button>
+                  <button
+                    onClick={handleLimpiarTodo}
+                    className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200 focus:outline-none focus:ring-2 focus:ring-gray-600 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
+                  >
+                    <XIcon /> Cancelar
+                  </button>
+                </>
+              )}
+            </div>
+            {/* Grid del formulario */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              {/* Primer Nombre */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Primer Nombre *
+                </label>
+                <input
+                  type="text"
+                  name="primer_nombre"
+                  value={formData.primer_nombre || ''}
+                  onChange={handleInputChange}
+                  disabled={!editando}
+                  className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent ${!editando
+                    ? 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-400'
+                    : 'bg-white dark:bg-slate-700 border-gray-300 dark:border-slate-500 text-gray-900 dark:text-white'
+                    }`}
+                />
+              </div>
+
+              {/* Segundo Nombre */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Segundo Nombre
+                </label>
+                <input
+                  type="text"
+                  name="segundo_nombre"
+                  value={formData.segundo_nombre || ''}
+                  onChange={handleInputChange}
+                  disabled={!editando}
+                  className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent ${!editando
+                    ? 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-400'
+                    : 'bg-white dark:bg-slate-700 border-gray-300 dark:border-slate-500 text-gray-900 dark:text-white'
+                    }`}
+                />
+              </div>
+
+              {/* Primer Apellido */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Primer Apellido
+                </label>
+                <input
+                  type="text"
+                  name="primer_apellido"
+                  value={formData.primer_apellido || ''}
+                  onChange={handleInputChange}
+                  disabled={!editando}
+                  className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent ${!editando
+                    ? 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-400'
+                    : 'bg-white dark:bg-slate-700 border-gray-300 dark:border-slate-500 text-gray-900 dark:text-white'
+                    }`}
+                />
+              </div>
+
+              {/* Segundo Apellido */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Segundo Apellido
+                </label>
+                <input
+                  type="text"
+                  name="segundo_apellido"
+                  value={formData.segundo_apellido || ''}
+                  onChange={handleInputChange}
+                  disabled={!editando}
+                  className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent ${!editando
+                    ? 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-400'
+                    : 'bg-white dark:bg-slate-700 border-gray-300 dark:border-slate-500 text-gray-900 dark:text-white'
+                    }`}
+                />
+              </div>
+
+              {/* Apellido Casada */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Apellido Casada
+                </label>
+                <input
+                  type="text"
+                  name="apellido_casada"
+                  value={formData.apellido_casada || ''}
+                  onChange={handleInputChange}
+                  disabled={!editando || formData.sexo !== 'Femenino'}
+                  className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent ${!editando || formData.sexo !== 'Femenino'
+                    ? 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-400'
+                    : 'bg-white dark:bg-slate-700 border-gray-300 dark:border-slate-500 text-gray-900 dark:text-white'
+                    }`}
+                />
+              </div>
+
+              {/* Otros Nombres */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Otros Nombres
+                </label>
+                <input
+                  type="text"
+                  name="otros_nombres"
+                  value={formData.otros_nombres || ''}
+                  onChange={handleInputChange}
+                  disabled={!editando}
+                  className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent ${!editando || formData.sexo !== 'Femenino'
+                    ? 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-400'
+                    : 'bg-white dark:bg-slate-700 border-gray-300 dark:border-slate-500 text-gray-900 dark:text-white'
+                    }`}
+                />
+              </div>
+
+              {/* Sexo */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Sexo
+                </label>
+                <select
+                  name="sexo"
+                  value={formData.sexo || ''}
+                  onChange={handleInputChange}
+                  disabled={!editando}
+                  className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent ${!editando
+                    ? 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-400'
+                    : 'bg-white dark:bg-slate-700 border-gray-300 dark:border-slate-500 text-gray-900 dark:text-white'
+                    }`}
+                >
+                  <option value="">Seleccione</option>
+                  <option value="Masculino">Masculino</option>
+                  <option value="Femenino">Femenino</option>
+                </select>
+              </div>
+
+              {/* Fecha de Nacimiento */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Fecha de Nacimiento
+                </label>
+                <input
+                  type="date"
+                  name="fecha_nacimiento"
+                  value={formatearFechaInput(formData.fecha_nacimiento)}
+                  onChange={handleInputChange}
+                  disabled={!editando}
+                  className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent ${!editando
+                    ? 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-400'
+                    : 'bg-white dark:bg-slate-700 border-gray-300 dark:border-slate-500 text-gray-900 dark:text-white'
+                    }`}
+                />
+              </div>
+
+              {/* DPI */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  DPI
+                </label>
+                <input
+                  type="text"
+                  name="dpi"
+                  value={formData.dpi || ''}
+                  onChange={handleInputChange}
+                  disabled={!editando}
+                  className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent ${!editando
+                    ? 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-400'
+                    : 'bg-white dark:bg-slate-700 border-gray-300 dark:border-slate-500 text-gray-900 dark:text-white'
+                    }`}
+                />
+              </div>
+
+              {/* No. Afiliación */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  No. Afiliación
+                </label>
+                <input
+                  type="text"
+                  name="no_afiliacion"
+                  value={formData.no_afiliacion || ''}
+                  onChange={handleInputChange}
+                  disabled
+                  className="w-full px-4 py-3 border bg-gray-100 dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-gray-500 rounded-lg shadow-sm cursor-not-allowed"
+                />
+              </div>
+
+              {/* Dirección */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Dirección
+                </label>
+                <input
+                  type="text"
+                  name="direccion"
+                  value={formData.direccion || ''}
+                  onChange={handleInputChange}
+                  disabled={!editando}
+                  className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent ${!editando
+                    ? 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-400'
+                    : 'bg-white dark:bg-slate-700 border-gray-300 dark:border-slate-500 text-gray-900 dark:text-white'
+                    }`}
+                />
+              </div>
+
+              {/* Departamento */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Departamento
+                </label>
+                <select
+                  name="id_departamento"
+                  value={formData.id_departamento || ''}
+                  onChange={handleInputChange}
+                  disabled={!editando}
+                  className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-greselect focus:border-transparent ${!editando
+                    ? 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-400'
+                    : 'bg-white dark:bg-slate-700 border-gray-300 dark:border-slate-500 text-gray-900 dark:text-white'
+                    }`}
+                >
+                  <option value="">Seleccione</option>
+                  {departamentos.map(dep => (
+                    <option key={dep.id_departamento} value={dep.id_departamento}>{dep.nombre}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Acceso Vascular */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Acceso Vascular
+                </label>
+                <select
+                  name="id_acceso"
+                  value={formData.id_acceso?.toString() || ''}
+                  onChange={handleInputChange}
+                  disabled={!editando}
+                  className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent ${!editando
+                    ? 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-400'
+                    : 'bg-white dark:bg-slate-700 border-gray-300 dark:border-slate-500 text-gray-900 dark:text-white'
+                    }`}
+                >
+                  <option value="">Seleccione</option>
+                  {accesosVasculares.map(acc => (
+                    <option key={acc.id_acceso} value={acc.id_acceso}>{acc.descripcion}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Jornada */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Jornada
+                </label>
+                <select
+                  name="id_jornada"
+                  value={formData.id_jornada?.toString() || ''}
+                  onChange={handleInputChange}
+                  disabled={!editando}
+                  className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent ${!editando
+                    ? 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-400'
+                    : 'bg-white dark:bg-slate-700 border-gray-300 dark:border-slate-500 text-gray-900 dark:text-white'
+                    }`}
+                >
+                  <option value="">Seleccione</option>
+                  {jornadas.map(j => (
+                    <option key={j.id_jornada} value={j.id_jornada}>{j.descripcion}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Separador */}
+            <div className="border-t border-gray-200 dark:border-slate-700 my-8"></div>
+
+            {/* Sección de foto */}
+            <div className="flex flex-col items-center space-y-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Fotografía del Paciente
+              </h3>
+
+              {/* Contenedor de la foto */}
+              <div className="relative">
+                <div className="w-48 h-48 sm:w-56 sm:h-56 lg:w-64 lg:h-64 rounded-2xl overflow-hidden border-4 border-green-600 dark:border-green-400 shadow-xl bg-gray-100 dark:bg-slate-800">
+                  {console.log("🖼️ URL usada para mostrar foto:", formData.urlfoto || formData.url_foto)}
+                  <img
+                    alt="Foto del paciente"
+                    src={
+                      formData.urlfoto
+                        ? formData.urlfoto
+                        : formData.url_foto
+                          ? `http://localhost:3001${formData.url_foto}`
+                          : defaultAvatar
+                    }
+                    className="w-full h-full object-cover"
+                    onError={e => {
+                      e.target.onerror = null;
+                      e.target.src = defaultAvatar;
+                    }}
+                  />
+                </div>
+                {editando && (
+                  <div className="absolute -bottom-2 -right-2">
+                    <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">✎</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Botón para tomar nueva foto */}
+              <button
+                onClick={() => setShowWebcam(true)}
+                disabled={!editando}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-900 ${editando
+                  ? 'bg-blue-900 hover:bg-blue-700 text-white focus:ring-blue-600 shadow-md'
+                  : 'bg-gray-300 dark:bg-slate-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                  }`}
+              >
+                <Image /> Tomar Nueva Foto
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para la cámara */}
+      {showWebcam && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 max-w-2xl w-full max-h-[90vh] overflow-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="flex items-center gap-2 text-xl font-bold text-gray-900 dark:text-white">
+                  <Camera className="w-6 h-6" />
+                  Capturar Fotografía
+                </h3>
+                <button
+                  onClick={() => setShowWebcam(false)}
+                  className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition duration-200"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <WebcamFoto
+                onCapture={img => {
+                  setShowWebcam(false);
+                  setFormData(f => ({ ...f, urlfoto: img }));
+                }}
+                onCancel={() => setShowWebcam(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
