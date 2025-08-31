@@ -9,10 +9,16 @@ const PDFDocument = require('pdfkit');
 // const updateMasivoPacientesRouter = require('./update-masivo-pacientes');
 // Importar router de login/roles centralizado
 const backLoginRouter = require('./BackLogin');
-const backEgresoRouter = require('./src/controllers/BackEgresoPacientes');
-const backActualizacionRouter = require('./src/controllers/BackActualizacionPacientes');
 // Importar router de registro de formularios
 const backRegistroFormulariosRouter = require('./src/controllers/BackRegistroFormularios');
+// Importar router de registro de empleados
+const backRegistroEmpleadosRouter = require('./src/controllers/BackRegistroEmpleados');
+// Importar router de gestión de empleados (listar/editar/estado)
+const backGestionEmpleadosRouter = require('./src/controllers/BackGestionEmpleados');
+// Importar router de creación de usuarios (empleados sin usuario, etc.)
+const backCreacionUsuariosRouter = require('./src/controllers/BackCreacionUsuarios');
+// Importar router de roles por usuario (búsqueda, listar y actualizar roles)
+const backRolesUsuariosRouter = require('./src/controllers/BackRolesUsuarios');
 // Pool compartido
 const pool = require('./db/pool');
 
@@ -22,7 +28,7 @@ const ROJO = '#e74c3c';
 
 app.use(cors({
     origin: 'http://localhost:3000',
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
 }));
@@ -44,11 +50,43 @@ app.use('/fotos', express.static(fotosDir));
 app.use(backLoginRouter);
 // Usar router de registro de formularios
 app.use(backRegistroFormulariosRouter);
-//Egreso pacientes
-app.use(backEgresoRouter);
-//Actualizacion pacientes;
-app.use(backActualizacionRouter);
+// Usar router de registro de empleados
+app.use(backRegistroEmpleadosRouter);
+// Usar router de gestión de empleados (GET/PUT/PATCH)
+app.use(backGestionEmpleadosRouter);
+// Usar router de creación de usuarios
+app.use(backCreacionUsuariosRouter);
+// Usar router de roles por usuario
+app.use(backRolesUsuariosRouter);
+// Endpoint para subir/reemplazar foto de paciente
+app.post('/upload-foto/:noAfiliacion', async (req, res) => {
+    const { noAfiliacion } = req.params;
+    const { imagenBase64 } = req.body;
+    if (!imagenBase64) {
+        return res.status(400).json({ detail: 'No se recibió la imagen.' });
+    }
+    try {
+        // Decodificar base64
+        const matches = imagenBase64.match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/);
+        if (!matches) {
+            return res.status(400).json({ detail: 'Formato de imagen inválido.' });
+        }
+        const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+        const data = matches[2];
+        const buffer = Buffer.from(data, 'base64');
+        const filename = `${noAfiliacion}.${ext}`;
+        const filePath = path.join(fotosDir, filename);
+        // Guardar/reemplazar archivo
+        fs.writeFileSync(filePath, buffer);
 
+        // Actualizar urlfoto en la base de datos
+        await pool.query('UPDATE tbl_pacientes SET urlfoto = $1 WHERE noafiliacion = $2', [filename, noAfiliacion]);
+        res.json({ success: true, url: `/fotos/${filename}` });
+    } catch (err) {
+        console.error('Error al subir foto:', err);
+        res.status(500).json({ detail: 'Error al guardar la foto.' });
+    }
+});
 // Endpoints de auth/usuarios ahora están en BackLogin.js
 
 
@@ -1231,7 +1269,7 @@ app.get('/accesos-vasculares', async (req, res) => {
 // Endpoint para obtener jornadas
 app.get('/jornadas', async (req, res) => {
     try {
-        const result = await pool.query('SELECT id_jornada, descripcion, dias FROM tbl_jornadas where estado=true ORDER BY id_jornada ASC');
+        const result = await pool.query('SELECT idjornada, descripcion, dias FROM tbl_jornadas where estado=true ORDER BY descripcion ASC');
         res.json(result.rows);
     } catch (error) {
         res.status(500).json({ error: 'Error al obtener jornadas.' });

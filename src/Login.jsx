@@ -9,6 +9,12 @@ const LoginComponent = () => {
   const [usuario, setUsuario] = useState("");
   const [password, setPassword] = useState("");
   const [mensaje, setMensaje] = useState("");
+  // Cambio de contraseña forzado
+  const [showChangePwd, setShowChangePwd] = useState(false);
+  const [newPwd, setNewPwd] = useState('');
+  const [newPwd2, setNewPwd2] = useState('');
+  const [changeError, setChangeError] = useState('');
+  const [changeLoading, setChangeLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth() || {};
   // Consultar usuarios activos al montar el componente
@@ -32,13 +38,45 @@ const LoginComponent = () => {
     }
     try {
       const { data } = await api.post('/auth/login', { usuario, password });
-      // Guardar sesión
+      // Guardar sesión siempre para poder autorizar /auth/change-password si aplica
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       if (typeof login === 'function') login(data.token, data.user);
-      navigate('/layout/dashboard');
+      if (data.mustChangePassword) {
+        // Abrir modal de cambio, usando la contraseña actual ingresada
+        setShowChangePwd(true);
+      } else {
+        navigate('/layout/dashboard');
+      }
     } catch (err) {
       setMensaje(err?.response?.data?.error || 'No fue posible iniciar sesión');
+    }
+  };
+
+  const doChangePassword = async () => {
+    try {
+      setChangeError('');
+      if (!newPwd || newPwd.length < 8) {
+        setChangeError('La nueva contraseña debe tener al menos 8 caracteres');
+        return;
+      }
+      if (newPwd !== newPwd2) {
+        setChangeError('Las contraseñas no coinciden');
+        return;
+      }
+      setChangeLoading(true);
+      // Usamos la contraseña actual que el usuario ingresó en el login
+      const token = localStorage.getItem('token');
+      await api.post('/auth/change-password', { actual: password, nueva: newPwd }, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+      // Cerrar modal y navegar al dashboard
+      setShowChangePwd(false);
+      setNewPwd('');
+      setNewPwd2('');
+      navigate('/layout/dashboard');
+    } catch (e) {
+      setChangeError(e?.response?.data?.error || e.message || 'No fue posible cambiar la contraseña');
+    } finally {
+      setChangeLoading(false);
     }
   };
 
@@ -113,6 +151,52 @@ const LoginComponent = () => {
           </div>
         </div>
       </div>
+      {/* Modal Cambio de Contraseña */}
+      {showChangePwd && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-md p-6">
+            <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-2">Cambiar contraseña</h3>
+            <p className="text-slate-600 dark:text-slate-300 mb-4">Debes cambiar tu contraseña genérica antes de continuar.</p>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Nueva contraseña</label>
+            <input
+              type="password"
+              value={newPwd}
+              onChange={(e) => setNewPwd(e.target.value)}
+              className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+            />
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mt-3">Confirmar nueva contraseña</label>
+            <input
+              type="password"
+              value={newPwd2}
+              onChange={(e) => setNewPwd2(e.target.value)}
+              className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+            />
+            {changeError && (
+              <div className="mt-2 p-2 rounded border border-red-300 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-900/20 dark:text-red-300">
+                {changeError}
+              </div>
+            )}
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                type="button"
+                disabled={changeLoading}
+                onClick={() => { setShowChangePwd(false); setNewPwd(''); setNewPwd2(''); }}
+                className="px-4 py-2 rounded-md border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={changeLoading}
+                onClick={doChangePassword}
+                className="px-4 py-2 rounded-md bg-green-700 text-white hover:bg-green-800 disabled:opacity-50"
+              >
+                {changeLoading ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

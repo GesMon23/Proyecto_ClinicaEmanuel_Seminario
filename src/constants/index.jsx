@@ -56,6 +56,12 @@ export const navbarLinks = [
                 path: "/gestion-laboratorios",
                 allowedRoles: ["RolLaboratorio"],
             },
+            {
+                label: "Gestión de Usuarios",
+                icon: Settings,
+                path: "/gestion-usuarios",
+                allowedRoles: ["RolGestionUsuarios"],
+            },
         ],
     },
     {
