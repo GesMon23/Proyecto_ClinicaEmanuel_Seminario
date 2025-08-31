@@ -10,7 +10,7 @@ const fotosDir = path.join(__dirname, '../../fotos');
 if (!fs.existsSync(fotosDir)) {
     fs.mkdirSync(fotosDir, { recursive: true });
 }
-
+//prueba
 router.get('/Adepartamento', async (req, res) => {
     try {
         const result = await pool.query('SELECT id_departamento, nombre FROM tbl_departamento ORDER BY id_departamento ASC');
