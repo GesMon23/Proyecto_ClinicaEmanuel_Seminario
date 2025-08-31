@@ -25,6 +25,32 @@ function verifyJWT(req, res, next) {
 }
 // ========================================================
 
+// Confirmación de contraseña del usuario autenticado
+router.post('/auth/confirm-password', verifyJWT, async (req, res) => {
+  try {
+    const { sub } = req.user || {};
+    if (!sub) return res.status(401).json({ error: 'No autorizado' });
+    const { password } = req.body || {};
+    if (!password) return res.status(400).json({ error: 'password es requerido' });
+
+    const ures = await pool.query('SELECT id_usuario, contrasenia, estado FROM tbl_usuarios WHERE id_usuario = $1', [sub]);
+    const user = ures.rows[0];
+    if (!user || user.estado === false) return res.status(401).json({ error: 'No autorizado' });
+
+    let ok = false;
+    if (user.contrasenia && user.contrasenia.startsWith('$2')) {
+      ok = await bcrypt.compare(password, user.contrasenia);
+    } else {
+      ok = user.contrasenia === password;
+    }
+    if (!ok) return res.status(401).json({ error: 'Contraseña incorrecta' });
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('Error en /auth/confirm-password:', err);
+    return res.status(500).json({ error: 'No fue posible confirmar la contraseña' });
+  }
+});
+
 // Endpoint para consultar usuarios activos
 router.get('/api/usuarios-activos', async (req, res) => {
   try {
@@ -38,34 +64,7 @@ router.get('/api/usuarios-activos', async (req, res) => {
   }
 });
 
-// Confirmación de contraseña para acciones sensibles
-router.post('/auth/confirm-password', async (req, res) => {
-  try {
-    const { usuario, password } = req.body || {};
-    if (!usuario || !password) {
-      return res.status(400).json({ error: 'usuario y password son requeridos' });
-    }
-    const ures = await pool.query(
-      'SELECT * from fn_buscar_usuario_auth($1)',
-      [usuario]
-    );
-    const user = ures.rows[0];
-    if (!user || !user.estado) return res.status(401).json({ error: 'Credenciales inválidas' });
-
-    let ok = false;
-    if (user.contrasenia && user.contrasenia.startsWith('$2')) {
-      ok = await bcrypt.compare(password, user.contrasenia);
-    } else {
-      ok = user.contrasenia === password;
-    }
-    if (!ok) return res.status(401).json({ error: 'Credenciales inválidas' });
-
-    return res.json({ ok: true });
-  } catch (err) {
-    console.error('Error en /auth/confirm-password:', err);
-    return res.status(500).json({ error: 'Error al confirmar contraseña' });
-  }
-});
+// (Eliminado endpoint no autenticado de confirmación de contraseña)
 
 // Login: valida usuario y devuelve token + roles
 router.post('/auth/login', async (req, res) => {
@@ -98,7 +97,16 @@ router.post('/auth/login', async (req, res) => {
     const roles = rres.rows.map(r => r.nombre);
 
     const token = jwt.sign({ sub: user.id_usuario, roles }, JWT_SECRET, { expiresIn: '8h' });
-    return res.json({ token, user: { id_usuario: user.id_usuario, nombre_usuario: user.nombre_usuario, roles } });
+    // Considerar genérica si la contraseña del usuario coincide con 'Clinica1.' (hash o texto)
+    let mustChangePassword = false;
+    try {
+      if (user.contrasenia && user.contrasenia.startsWith('$2')) {
+        mustChangePassword = await bcrypt.compare('Clinica1.', user.contrasenia);
+      } else {
+        mustChangePassword = user.contrasenia === 'Clinica1.';
+      }
+    } catch (_) { /* noop */ }
+    return res.json({ token, user: { id_usuario: user.id_usuario, nombre_usuario: user.nombre_usuario, roles }, mustChangePassword });
   } catch (err) {
     console.error('Error en /auth/login:', err);
     return res.status(500).json({ error: 'Error en login' });
@@ -129,4 +137,39 @@ router.get('/auth/me', verifyJWT, async (req, res) => {
 });
 
 module.exports = router;
+// Cambio de contraseña del usuario autenticado
+router.post('/auth/change-password', verifyJWT, async (req, res) => {
+  try {
+    const { sub } = req.user || {};
+    if (!sub) return res.status(401).json({ error: 'No autorizado' });
+    const { actual, nueva } = req.body || {};
+    if (!actual || !nueva) return res.status(400).json({ error: 'actual y nueva son requeridas' });
+    if (String(nueva).length < 8) return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 8 caracteres' });
+
+    const ures = await pool.query('SELECT id_usuario, contrasenia, estado FROM tbl_usuarios WHERE id_usuario = $1', [sub]);
+    const user = ures.rows[0];
+    if (!user || user.estado === false) return res.status(401).json({ error: 'No autorizado' });
+
+    // Verificar contraseña actual
+    let ok = false;
+    if (user.contrasenia && user.contrasenia.startsWith('$2')) {
+      ok = await bcrypt.compare(actual, user.contrasenia);
+    } else {
+      ok = user.contrasenia === actual;
+    }
+    if (!ok) return res.status(401).json({ error: 'Contraseña actual incorrecta' });
+
+    const hash = await bcrypt.hash(String(nueva), 10);
+    await pool.query(
+      `UPDATE tbl_usuarios 
+       SET contrasenia = $1
+       WHERE id_usuario = $2`,
+      [hash, sub]
+    );
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('Error en /auth/change-password:', err);
+    return res.status(500).json({ error: 'No fue posible cambiar la contraseña' });
+  }
+});
 

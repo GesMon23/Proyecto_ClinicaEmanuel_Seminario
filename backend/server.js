@@ -15,6 +15,10 @@ const backRegistroFormulariosRouter = require('./src/controllers/BackRegistroFor
 const backRegistroEmpleadosRouter = require('./src/controllers/BackRegistroEmpleados');
 // Importar router de gestión de empleados (listar/editar/estado)
 const backGestionEmpleadosRouter = require('./src/controllers/BackGestionEmpleados');
+// Importar router de creación de usuarios (empleados sin usuario, etc.)
+const backCreacionUsuariosRouter = require('./src/controllers/BackCreacionUsuarios');
+// Importar router de roles por usuario (búsqueda, listar y actualizar roles)
+const backRolesUsuariosRouter = require('./src/controllers/BackRolesUsuarios');
 // Pool compartido
 const pool = require('./db/pool');
 
@@ -50,6 +54,10 @@ app.use(backRegistroFormulariosRouter);
 app.use(backRegistroEmpleadosRouter);
 // Usar router de gestión de empleados (GET/PUT/PATCH)
 app.use(backGestionEmpleadosRouter);
+// Usar router de creación de usuarios
+app.use(backCreacionUsuariosRouter);
+// Usar router de roles por usuario
+app.use(backRolesUsuariosRouter);
 // Endpoint para subir/reemplazar foto de paciente
 app.post('/upload-foto/:noAfiliacion', async (req, res) => {
     const { noAfiliacion } = req.params;
