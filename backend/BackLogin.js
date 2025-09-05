@@ -33,8 +33,11 @@ router.post('/auth/confirm-password', verifyJWT, async (req, res) => {
     const { password } = req.body || {};
     if (!password) return res.status(400).json({ error: 'password es requerido' });
 
-    const ures = await pool.query('SELECT id_usuario, contrasenia, estado FROM tbl_usuarios WHERE id_usuario = $1', [sub]);
-    const user = ures.rows[0];
+    const { rows } = await pool.query(
+      'SELECT * FROM public.fn_confirmar_password_usuario($1)',
+      [sub]
+    );
+    const user = rows[0];
     if (!user || user.estado === false) return res.status(401).json({ error: 'No autorizado' });
 
     let ok = false;
@@ -136,7 +139,6 @@ router.get('/auth/me', verifyJWT, async (req, res) => {
   }
 });
 
-module.exports = router;
 // Cambio de contraseña del usuario autenticado
 router.post('/auth/change-password', verifyJWT, async (req, res) => {
   try {
@@ -146,8 +148,11 @@ router.post('/auth/change-password', verifyJWT, async (req, res) => {
     if (!actual || !nueva) return res.status(400).json({ error: 'actual y nueva son requeridas' });
     if (String(nueva).length < 8) return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 8 caracteres' });
 
-    const ures = await pool.query('SELECT id_usuario, contrasenia, estado FROM tbl_usuarios WHERE id_usuario = $1', [sub]);
-    const user = ures.rows[0];
+    const { rows } = await pool.query(
+      'SELECT * FROM public.fn_confirmar_password_usuario($1)',
+      [sub]
+    );
+    const user = rows[0];
     if (!user || user.estado === false) return res.status(401).json({ error: 'No autorizado' });
 
     // Verificar contraseña actual
@@ -160,12 +165,7 @@ router.post('/auth/change-password', verifyJWT, async (req, res) => {
     if (!ok) return res.status(401).json({ error: 'Contraseña actual incorrecta' });
 
     const hash = await bcrypt.hash(String(nueva), 10);
-    await pool.query(
-      `UPDATE tbl_usuarios 
-       SET contrasenia = $1
-       WHERE id_usuario = $2`,
-      [hash, sub]
-    );
+    await pool.query('SELECT public.fn_actualizar_password_usuario($1, $2)', [sub, hash]);
     return res.json({ ok: true });
   } catch (err) {
     console.error('Error en /auth/change-password:', err);
@@ -173,3 +173,5 @@ router.post('/auth/change-password', verifyJWT, async (req, res) => {
   }
 });
 
+
+module.exports = router;
