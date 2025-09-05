@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import logoClinica from '@/assets/logoClinica2.png';
 import api from '@/config/api';
 
 const CreacionUsuarios = () => {
@@ -190,9 +191,26 @@ const CreacionUsuarios = () => {
   };
 
   return (
-    <div className="w-full">
-      <h3 className="text-2xl font-semibold text-green-800 dark:text-white mb-4">Creación de Usuarios</h3>
-      <div className="bg-white dark:bg-slate-900 rounded-lg shadow p-6">
+    <div className="w-full px-4 md:px-8">
+      <div className="w-full">
+        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-md mt-8 w-full">
+          <div className="p-6 min-w-[280px]">
+            {/* Encabezado */}
+            <div className="w-full text-center mb-6">
+              <div className="flex items-center justify-center gap-6 flex-wrap">
+                <img
+                  src={logoClinica}
+                  alt="Logo Clínica"
+                  className="h-[160px] max-w-[260px] object-contain bg-white rounded-xl shadow-md p-2 dark:bg-slate-800"
+                />
+                <span className="text-3xl font-bold text-green-800 dark:text-white mb-4">
+                  Creación de Usuarios
+                </span>
+              </div>
+              <hr className="mt-4 border-gray-300 dark:border-gray-600" />
+            </div>
+            
+            <div className="bg-white dark:bg-slate-900 rounded-lg shadow p-6">
         <form onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-1">
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Empleado</label>
@@ -309,6 +327,9 @@ const CreacionUsuarios = () => {
           </div>
         </div>
       )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
