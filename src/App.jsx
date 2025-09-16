@@ -13,6 +13,8 @@ import { AuthProvider } from "@/contexts/auth-context";
 import ProtectedRoute from "@/routes/ProtectedRoute";
 import RequireRole from "@/routes/RequireRole";
 import GestionUsuarios from "@/views/GestionUsuarios.jsx";
+import Nutricion from "@/views/Nutricion.jsx";
+import Psicologia from "@/views/Psicologia.jsx";
 function App() {
     const router = createBrowserRouter([
         {
@@ -70,6 +72,22 @@ function App() {
                     element: (
                         <RequireRole roles={["RolGestionUsuarios"]}>
                             <GestionUsuarios/>
+                        </RequireRole>
+                    ),
+                },
+                {
+                    path: "nutricion",
+                    element: (
+                        <RequireRole roles={["RolNutricion"]}>
+                            <Nutricion/>
+                        </RequireRole>
+                    ),
+                },
+                {
+                    path: "psicologia",
+                    element: (
+                        <RequireRole roles={["RolPsicologia"]}>
+                            <Psicologia/>
                         </RequireRole>
                     ),
                 },

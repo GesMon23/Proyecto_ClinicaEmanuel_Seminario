@@ -1,4 +1,4 @@
-import { SquareUser , Home, User , Megaphone , ListTodo , Settings, ClipboardList , FileChartPie , Atom, BadgeAlert   } from "lucide-react";
+import { SquareUser , Home, User , Megaphone , ListTodo , Settings, ClipboardList , FileChartPie , Atom, BadgeAlert, Apple, Brain   } from "lucide-react";
 
 // import ProfileImage from "@/assets/profile-image.jpg";
 // import ProductImage from "@/assets/product-image.jpg";
@@ -61,6 +61,18 @@ export const navbarLinks = [
                 icon: Settings,
                 path: "/gestion-usuarios",
                 allowedRoles: ["RolGestionUsuarios"],
+            },
+            {
+                label: "Nutrición",
+                icon: Apple,
+                path: "/nutricion",
+                allowedRoles: ["RolNutricion"],
+            },
+            {
+                label: "Psicología",
+                icon: Brain,
+                path: "/psicologia",
+                allowedRoles: ["RolPsicologia"],
             },
         ],
     },

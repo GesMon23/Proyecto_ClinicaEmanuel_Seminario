@@ -16,7 +16,7 @@ import LlamadoTurnos from "views/LlamadoPaciente.js";
 import ActualizacionPacientes from "views/ActualizacionPacientes.js";
 import GestionReportes from "views/GestionReportes.js";
 import GestionReferencias from "views/GestionReferencias.js";
-import GestionLaboratorios from "views/GestionLaboratorios.js";
+import GestionLaboratorios from "views/GestionLaboratorios.jsx";
 import LoginComponent from "views/Login.js";
 
 var routes = [
