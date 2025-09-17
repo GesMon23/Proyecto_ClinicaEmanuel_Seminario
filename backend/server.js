@@ -19,6 +19,10 @@ const backGestionEmpleadosRouter = require('./src/controllers/BackGestionEmplead
 const backCreacionUsuariosRouter = require('./src/controllers/BackCreacionUsuarios');
 // Importar router de roles por usuario (búsqueda, listar y actualizar roles)
 const backRolesUsuariosRouter = require('./src/controllers/BackRolesUsuarios');
+// Importar router de psicología
+const backPsicologiaRouter = require('./src/controllers/BackPsicologia');
+// Importar router de nutrición
+const backNutricionRouter = require('./src/controllers/BackNutricion');
 const backEgresoPacientes = require('./src/controllers/BackEgresoPacientes');
 const backActualizacionPacientes = require('./src/controllers/BackActualizacionPacientes');
 // Pool compartido
@@ -60,6 +64,10 @@ app.use(backGestionEmpleadosRouter);
 app.use(backCreacionUsuariosRouter);
 // Usar router de roles por usuario
 app.use(backRolesUsuariosRouter);
+// Usar router de psicología
+app.use('/api/psicologia', backPsicologiaRouter);
+// Usar router de nutrición
+app.use('/api/nutricion', backNutricionRouter);
 // Endpoint para subir/reemplazar foto de paciente
 
 
@@ -1462,20 +1470,7 @@ app.get('/api/faltistas', async (req, res) => {
 app.get('/pacientes/:noafiliacion', async (req, res) => {
     try {
         const query = `
-            SELECT 
-                p.*, 
-                d.nombre AS departamento_nombre,
-                e.descripcion AS estado_descripcion,
-                a.descripcion AS acceso_descripcion,
-                c.descripcion AS causaegreso_descripcion,
-                j.descripcion AS jornada_descripcion
-            FROM tbl_pacientes p
-            LEFT JOIN tbl_departamentos d ON p.iddepartamento = d.iddepartamento
-            LEFT JOIN tbl_estadospaciente e ON p.idestado = e.idestado
-            LEFT JOIN tbl_accesovascular a ON p.idacceso = a.idacceso
-            LEFT JOIN tbl_causaegreso c ON p.idcausa = c.idcausa
-            LEFT JOIN tbl_jornadas j ON p.idjornada = j.idjornada
-            WHERE p.noafiliacion = $1
+            SELECT * FROM tbl_pacientes WHERE no_afiliacion = $1
         `;
         const result = await pool.query(query, [req.params.noafiliacion]);
         if (!result.rows.length) {
@@ -1483,6 +1478,7 @@ app.get('/pacientes/:noafiliacion', async (req, res) => {
         }
         res.json(result.rows[0]);
     } catch (error) {
+        console.error('Error en /pacientes/:noafiliacion:', error);
         res.status(500).json({ error: 'Error al obtener paciente.', detalle: error.message });
     }
 });
@@ -1520,18 +1516,6 @@ app.get('/carnet/:noafiliacion', async (req, res) => {
     }
 });
 
-// Buscar paciente por número de afiliación
-app.get('/pacientes/:noafiliacion', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM tbl_pacientes WHERE noafiliacion = $1', [req.params.noafiliacion]);
-        if (!result.rows.length) {
-            return res.status(404).json({ error: 'Paciente no encontrado.' });
-        }
-        res.json(result.rows[0]);
-    } catch (error) {
-        res.status(500).json({ error: 'Error al buscar paciente por número de afiliación.' });
-    }
-});
 
 // Buscar paciente por DPI
 app.get('/pacientes/dpi/:dpi', async (req, res) => {
