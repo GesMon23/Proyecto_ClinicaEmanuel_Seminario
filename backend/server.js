@@ -23,6 +23,10 @@ const backRolesUsuariosRouter = require('./src/controllers/BackRolesUsuarios');
 const backPsicologiaRouter = require('./src/controllers/BackPsicologia');
 // Importar router de nutrición
 const backNutricionRouter = require('./src/controllers/BackNutricion');
+// Importar router de registro de referencias
+const backRegistroReferenciasRouter = require('./src/controllers/BackRegistroReferencias');
+// Importar router de catálogos (médicos, etc.)
+const backCatalogosRouter = require('./src/controllers/BackCatalogos');
 const backEgresoPacientes = require('./src/controllers/BackEgresoPacientes');
 const backActualizacionPacientes = require('./src/controllers/BackActualizacionPacientes');
 // Pool compartido
@@ -68,6 +72,10 @@ app.use(backRolesUsuariosRouter);
 app.use('/api/psicologia', backPsicologiaRouter);
 // Usar router de nutrición
 app.use('/api/nutricion', backNutricionRouter);
+// Usar router de registro de referencias
+app.use(backRegistroReferenciasRouter);
+// Usar router de catálogos
+app.use(backCatalogosRouter);
 // Endpoint para subir/reemplazar foto de paciente
 
 
@@ -166,75 +174,7 @@ app.get('/check-photo/:filename', (req, res) => {
 // Configuración de la base de datos
 const ExcelJS = require("exceljs");
 
-// Endpoint para registrar una nueva referencia
-app.post('/api/referencias', async (req, res) => {
-    const { noafiliacion, fechareferencia, motivotraslado, idmedico, especialidadreferencia } = req.body;
-    if (!noafiliacion || !fechareferencia || !motivotraslado || !idmedico || !especialidadreferencia) {
-        return res.status(400).json({ detail: 'Todos los campos son obligatorios.' });
-    }
-    try {
-        // Obtener el último idreferencia
-        const result = await pool.query('SELECT MAX(idreferencia) as maxid FROM tbl_referencias');
-        const lastId = result.rows[0].maxid || 0;
-        const newId = lastId + 1;
-        await pool.query(
-            `INSERT INTO tbl_referencias (idreferencia, noafiliacion, fechareferencia, motivotraslado, idmedico, especialidadreferencia)
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            [newId, noafiliacion, fechareferencia, motivotraslado, idmedico, especialidadreferencia]
-        );
-        res.json({ success: true });
-    } catch (err) {
-        console.error('Error al registrar referencia:', err);
-        res.status(500).json({ detail: 'Error al registrar referencia.' });
-    }
-});
-
-// Endpoint para consultar referencias
-app.get('/api/referencias', async (req, res) => {
-    try {
-        let baseQuery = `
-            SELECT r.idreferencia, r.noafiliacion, p.primernombre, p.segundonombre, p.primerapellido, p.segundoapellido,
-                   r.fechareferencia, r.motivotraslado, r.idmedico, m.nombrecompleto AS nombremedico, r.especialidadreferencia
-            FROM tbl_referencias r
-            LEFT JOIN tbl_pacientes p ON r.noafiliacion = p.noafiliacion
-            LEFT JOIN tbl_medicos m ON r.idmedico = m.idmedico
-            WHERE 1=1
-        `;
-        const params = [];
-        let idx = 1;
-        if (req.query.desde) {
-            baseQuery += ` AND r.fechareferencia >= $${idx}`;
-            params.push(req.query.desde);
-            idx++;
-        }
-        if (req.query.hasta) {
-            baseQuery += ` AND r.fechareferencia <= $${idx}`;
-            params.push(req.query.hasta);
-            idx++;
-        }
-        if (req.query.idmedico) {
-            baseQuery += ` AND r.idmedico = $${idx}`;
-            params.push(req.query.idmedico);
-            idx++;
-        }
-        baseQuery += ' ORDER BY r.idreferencia DESC';
-        const result = await pool.query(baseQuery, params);
-        res.json(result.rows);
-    } catch (err) {
-        console.error('Error al consultar referencias:', err);
-        res.status(500).json({ detail: 'Error al consultar referencias.' });
-    }
-});
-
-// Endpoint para obtener departamentos
-app.get('/medicos', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT idmedico, nombrecompleto FROM tbl_medicos WHERE estado = true ORDER BY nombrecompleto ASC');
-        res.json(result.rows);
-    } catch (error) {
-        res.status(500).json({ detail: error.message });
-    }
-});
+// Endpoints de referencias movidos a BackRegistroReferencias.js
 
 app.get('/departamentos', async (req, res) => {
     try {
