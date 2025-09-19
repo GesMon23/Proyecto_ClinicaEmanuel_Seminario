@@ -20,6 +20,22 @@ const RegistroReferencias = () => {
   };
 
 
+  const calcularEdad = (fechaNacimiento) => {
+    if (!fechaNacimiento) return 0;
+    const hoy = new Date();
+    const nacimiento = new Date(fechaNacimiento);
+    if (isNaN(nacimiento.getTime())) return 0;
+    let edad = hoy.getFullYear() - nacimiento.getFullYear();
+    const mesActual = hoy.getMonth();
+    const mesNacimiento = nacimiento.getMonth();
+    const diaActual = hoy.getDate();
+    const diaNacimiento = nacimiento.getDate();
+    if (mesActual < mesNacimiento || (mesActual === mesNacimiento && diaActual < diaNacimiento)) {
+      edad--;
+    }
+    return edad >= 0 ? edad : 0;
+  };
+
   const handleBuscarAfiliado = async () => {
     setBusquedaError('');
     setPaciente(null);
@@ -29,22 +45,25 @@ const RegistroReferencias = () => {
     }
     try {
       const response = await api.get(`/pacientes/${form.noafiliacion}`);
-      if (response.data && response.data.primernombre) {
-        // Verificar si el paciente está egresado (idestado === 3)
-        if (response.data.idestado === 3) {
+      if (response.data && response.data.primer_nombre) {
+        if (response.data.id_estado === 3) {
           setBusquedaError('El paciente está egresado y no puede ser referenciado.');
           setPaciente(null);
           return;
         }
         const nombreCompleto = [
-          response.data.primernombre,
-          response.data.segundonombre,
-          response.data.otrosnombres,
-          response.data.primerapellido,
-          response.data.segundoapellido,
-          response.data.apellidocasada
+          response.data.primer_nombre,
+          response.data.segundo_nombre,
+          response.data.otros_nombres,
+          response.data.primer_apellido,
+          response.data.segundo_apellido,
+          response.data.apellido_casada
         ].filter(Boolean).join(' ');
-        setPaciente(nombreCompleto);
+        setPaciente({
+          nombre: nombreCompleto,
+          edad: calcularEdad(response.data.fecha_nacimiento),
+          sexo: response.data.sexo
+        });
       } else {
         setBusquedaError('No se encontró el paciente con ese número de afiliación.');
       }
@@ -74,10 +93,25 @@ const RegistroReferencias = () => {
     fetchMedicos();
   }, []);
   const [loading, setLoading] = useState(false);
-  const [mensaje, setMensaje] = useState('');
   const [error, setError] = useState(false);
   const [paciente, setPaciente] = useState(null);
   const [busquedaError, setBusquedaError] = useState('');
+
+  // Estado de modal (similar a Psicologia.jsx)
+  const [modal, setModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info'
+  });
+
+  const showModal = (title, message, type = 'info') => {
+    setModal({ isOpen: true, title, message, type });
+  };
+
+  const closeModal = () => {
+    setModal({ isOpen: false, title: '', message: '', type: 'info' });
+  };
 
   const handleChange = e => {
     const { name, value } = e.target;
@@ -87,13 +121,12 @@ const RegistroReferencias = () => {
   const handleSubmit = async e => {
     e.preventDefault();
     setLoading(true);
-    setMensaje('');
     setError(false);
     try {
       // Validación básica
       if (!form.noafiliacion || !form.FechaReferencia || !form.MotivoTraslado || !form.idMedico || !form.EspecialidadReferencia) {
-        setMensaje('Todos los campos son obligatorios.');
         setError(true);
+        showModal('Campos requeridos', 'Todos los campos son obligatorios.', 'error');
         setLoading(false);
         return;
       }
@@ -107,7 +140,8 @@ const RegistroReferencias = () => {
       };
       const response = await api.post('/api/referencias', payload);
       if (response.data && response.data.success) {
-        setMensaje('Referencia registrada exitosamente.');
+        const idRef = response?.data?.referencia?.id_referencia || '';
+        showModal('Éxito', idRef ? `Referencia registrada exitosamente. ID: ${idRef}` : 'Referencia registrada exitosamente.', 'success');
         setError(false);
         setForm({
           noafiliacion: '',
@@ -116,13 +150,14 @@ const RegistroReferencias = () => {
           idMedico: '',
           EspecialidadReferencia: ''
         });
+        setPaciente(null);
       } else {
-        setMensaje(response.data?.detail || 'Error al registrar la referencia.');
         setError(true);
+        showModal('Error', response.data?.detail || 'Error al registrar la referencia.', 'error');
       }
     } catch (err) {
-      setMensaje(err.response?.data?.detail || err.message || 'Error inesperado.');
       setError(true);
+      showModal('Error', err.response?.data?.detail || err.message || 'Error inesperado.', 'error');
     } finally {
       setLoading(false);
     }
@@ -147,8 +182,13 @@ const RegistroReferencias = () => {
 
           {/* Paciente */}
           {paciente && (
-            <div className="mt-4 text-center text-[22px] font-semibold rounded-xl py-3 px-2 bg-green-100 text-green-900 border-[1.5px] border-green-800">
-              {paciente}
+            <div className="bg-green-100 text-green-900 dark:bg-green-900 dark:text-green-200 border border-green-700 dark:border-green-400 rounded-xl py-4 mb-2 text-center">
+              <div className="text-lg font-semibold">
+                <strong>Paciente:</strong> {paciente.nombre}
+              </div>
+              <div className="text-md mt-2">
+                <strong>Edad:</strong> {paciente.edad} años | <strong>Sexo:</strong> {paciente.sexo}
+              </div>
             </div>
           )}
 
@@ -167,7 +207,7 @@ const RegistroReferencias = () => {
                 </label>
                 <div className="flex gap-2">
                   <input
-                    type="number"
+                    type="text"
                     name="noafiliacion"
                     className="focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 w-full border rounded-md px-4 py-2 dark:bg-slate-800 dark:text-white dark:border-slate-600"
                     value={form.noafiliacion}
@@ -215,11 +255,15 @@ const RegistroReferencias = () => {
                   disabled={!paciente}
                 >
                   <option value="">Seleccione un médico</option>
-                  {medicos.map((medico) => (
-                    <option key={medico.idmedico} value={medico.idmedico}>
-                      {medico.nombrecompleto}
-                    </option>
-                  ))}
+                  {medicos.map((medico) => {
+                    const value = medico.idmedico ?? medico.id_medico ?? medico.id;
+                    const label = medico.nombrecompleto ?? medico.nombre_completo ?? medico.nombre ?? `${value}`;
+                    return (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
             </div>
@@ -285,14 +329,39 @@ const RegistroReferencias = () => {
             </div>
 
             
-            {mensaje && (
-              <div
-                className={`mt-6 px-4 py-3 text-center text-[22px] font-semibold rounded-xl border ${error
-                    ? 'bg-red-100 text-red-700 border-red-700'
-                    : 'bg-green-100 text-green-900 border-green-800'
-                  }`}
-              >
-                {mensaje}
+            {/* Modal de resultado */}
+            {modal.isOpen && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className={`text-lg font-semibold ${
+                        modal.type === 'success' ? 'text-green-600 dark:text-green-400' :
+                        modal.type === 'error' ? 'text-red-600 dark:text-red-400' :
+                        'text-blue-600 dark:text-blue-400'
+                      }`}>
+                        {modal.title}
+                      </h3>
+                      <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                      </button>
+                    </div>
+                    <div className="mb-6">
+                      <p className="text-slate-700 dark:text-slate-300">{modal.message}</p>
+                    </div>
+                    <div className="flex justify-end">
+                      <button onClick={closeModal} className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                        modal.type === 'success' ? 'bg-green-600 hover:bg-green-700 text-white' :
+                        modal.type === 'error' ? 'bg-red-600 hover:bg-red-700 text-white' :
+                        'bg-blue-600 hover:bg-blue-700 text-white'
+                      }`}>
+                        Aceptar
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </form>
