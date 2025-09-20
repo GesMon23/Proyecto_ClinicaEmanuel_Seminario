@@ -5,6 +5,9 @@ const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
 const PDFDocument = require('pdfkit');
+
+const nz = (v) => (v === undefined || v === null || v === '' ? null : v);
+
 // (Desmontado) Router legacy de actualización masiva para evitar conflicto de rutas
 // const updateMasivoPacientesRouter = require('./update-masivo-pacientes');
 // Importar router de login/roles centralizado
@@ -29,6 +32,7 @@ const backRegistroReferenciasRouter = require('./src/controllers/BackRegistroRef
 const backCatalogosRouter = require('./src/controllers/BackCatalogos');
 const backEgresoPacientes = require('./src/controllers/BackEgresoPacientes');
 const backActualizacionPacientes = require('./src/controllers/BackActualizacionPacientes');
+//const backRegistroPacientes = require('./src/controllers/BackRegistroPacientes');
 // Pool compartido
 const pool = require('./db/pool');
 
@@ -81,7 +85,7 @@ app.use(backCatalogosRouter);
 
 app.use(backActualizacionPacientes);
 app.use(backEgresoPacientes);
-
+//app.use('/api/pacientes', backRegistroPacientes); // ✅ una sola montura
 
 app.post('/upload-foto/:noAfiliacion', async (req, res) => {
     const { noAfiliacion } = req.params;
@@ -104,7 +108,7 @@ app.post('/upload-foto/:noAfiliacion', async (req, res) => {
         fs.writeFileSync(filePath, buffer);
 
         // Actualizar urlfoto en la base de datos
-        await pool.query('UPDATE tbl_pacientes SET urlfoto = $1 WHERE noafiliacion = $2', [filename, noAfiliacion]);
+        await pool.query('UPDATE public.tbl_pacientes SET url_foto = $1 WHERE no_afiliacion = $2', [filename, noAfiliacion]);
         res.json({ success: true, url: `/fotos/${filename}` });
     } catch (err) {
         console.error('Error al subir foto:', err);
@@ -136,18 +140,18 @@ app.get('/turnoLlamado', async (req, res) => {
     try {
         // Buscar el turno más reciente cuyo idturnoestado = 3
         const result = await pool.query(`
-            SELECT 
-                t.idturno,
-                CONCAT(p.primernombre, ' ', COALESCE(p.segundonombre, ''), ' ', COALESCE(p.primerapellido, ''), ' ', COALESCE(p.segundoapellido, '')) AS nombrepaciente,
-                c.descripcion AS nombreclinica,
-                p.urlfoto
-            FROM tbl_turnos t
-            INNER JOIN tbl_pacientes p ON t.noafiliacion = p.noafiliacion
-            INNER JOIN tbl_clinica c ON t.idclinica = c.idsala
-            WHERE t.idturnoestado = 3
-            ORDER BY t.fechacreacion DESC
-            LIMIT 1
-        `);
+                SELECT 
+                    t.idturno,
+                    CONCAT(p.primernombre, ' ', COALESCE(p.segundonombre, ''), ' ', COALESCE(p.primerapellido, ''), ' ', COALESCE(p.segundoapellido, '')) AS nombrepaciente,
+                    c.descripcion AS nombreclinica,
+                    p.urlfoto
+                FROM tbl_turnos t
+                INNER JOIN tbl_pacientes p ON t.noafiliacion = p.no_afiliacion
+                INNER JOIN tbl_clinica c ON t.idclinica = c.idsala
+                WHERE t.idturnoestado = 3
+                ORDER BY t.fechacreacion DESC
+                LIMIT 1
+            `);
         if (result.rows.length === 0) {
             return res.json(null);
         }
@@ -158,15 +162,52 @@ app.get('/turnoLlamado', async (req, res) => {
     }
 });
 
-// Endpoint para verificar si existe una foto
-app.get('/check-photo/:filename', (req, res) => {
-    const filename = req.params.filename;
-    const filePath = path.join(__dirname, 'fotos', filename);
+// /check-photo robusto (acepta con o sin extensión y usa resolveFotoPath)
+app.get('/check-photo/:id', async (req, res) => {
+    try {
+        const raw = String(req.params.id || '').trim();
+        const id = raw.replace(/\.[a-zA-Z0-9]+$/, ''); // si vino 123.jpg -> 123
 
-    if (fs.existsSync(filePath)) {
-        res.json({ exists: true });
-    } else {
-        res.json({ exists: false });
+        // Lee desde DB la url_foto (si existe)
+        let dbRow = null;
+        try {
+            const r = await pool.query(
+                'SELECT url_foto FROM public.tbl_pacientes WHERE no_afiliacion = $1',
+                [id]
+            );
+            dbRow = r.rows?.[0] || null;
+        } catch (_) { }
+
+        const paciente = { urlfoto: dbRow?.url_foto || null };
+
+        // Usa helper para resolver la ruta real en /fotos (acepta .jpg/.jpeg/.png/.webp y nombres raros)
+        const fotoPath = resolveFotoPath(paciente, id);
+
+        // Soporte debug opcional
+        const wantDebug = 'debug' in req.query;
+
+        if (fotoPath) {
+            const filename = path.basename(fotoPath);
+            return res.json({
+                exists: true,
+                filename,
+                url: `/fotos/${filename}`,
+                ...(wantDebug ? { fotosDir, resolvedFrom: paciente.urlfoto || null, absolutePath: fotoPath } : {})
+            });
+        }
+
+        let sample = undefined;
+        if (wantDebug) {
+            try { sample = fs.readdirSync(fotosDir).slice(0, 50); } catch (_) { }
+        }
+
+        return res.json({
+            exists: false,
+            ...(wantDebug ? { fotosDir, dbUrl: paciente.urlfoto || null, lookedForId: id, sample } : {})
+        });
+    } catch (e) {
+        console.error('Error en /check-photo:', e);
+        return res.status(500).json({ exists: false, error: 'internal_error' });
     }
 });
 
@@ -174,35 +215,24 @@ app.get('/check-photo/:filename', (req, res) => {
 // Configuración de la base de datos
 const ExcelJS = require("exceljs");
 
-// Endpoints de referencias movidos a BackRegistroReferencias.js
-
-app.get('/departamentos', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT iddepartamento, nombre FROM tbl_departamentos ORDER BY nombre ASC');
-        res.json(result.rows);
-    } catch (error) {
-        res.status(500).json({ error: 'Error al obtener departamentos.' });
-    }
-});
-
 // Endpoint para buscar pacientes para egreso
 app.get('/api/pacientes/egreso', async (req, res) => {
     const { dpi, noafiliacion } = req.query;
     let baseQuery = `
-        SELECT 
-    pac.noafiliacion, pac.dpi, pac.nopacienteproveedor, pac.primernombre, pac.segundonombre, pac.otrosnombres, pac.primerapellido, pac.segundoapellido, pac.apellidocasada, pac.fechanacimiento, pac.sexo, pac.direccion, pac.fechaegreso, pac.nocasoconcluido, pac.idcausa, pac.causaegreso, 
-    cau.descripcion as causaegreso_descripcion,
-    pac.urlfoto, pac.iddepartamento, dep.nombre as departamento_nombre, pac.idestado, est.descripcion as estado_descripcion,
-    pac.idacceso, acc.descripcion as acceso_descripcion,
-    pac.idjornada, jor.descripcion as jornada_descripcion,
-    pac.fechainicioperiodo, pac.fechafinperiodo, pac.sesionesautorizadasmes AS sesionesautorizadas, pac.observaciones
-FROM tbl_pacientes pac
-LEFT JOIN tbl_causaegreso cau ON pac.idcausa = cau.idcausa
-LEFT JOIN tbl_departamentos dep ON pac.iddepartamento = dep.iddepartamento
-LEFT JOIN tbl_estadospaciente est ON pac.idestado = est.idestado
-LEFT JOIN tbl_accesovascular acc ON pac.idacceso = acc.idacceso
-LEFT JOIN tbl_jornadas jor ON pac.idjornada = jor.idjornada
-WHERE pac.idestado != 3`;
+            SELECT 
+        pac.noafiliacion, pac.dpi, pac.nopacienteproveedor, pac.primernombre, pac.segundonombre, pac.otrosnombres, pac.primerapellido, pac.segundoapellido, pac.apellidocasada, pac.fechanacimiento, pac.sexo, pac.direccion, pac.fechaegreso, pac.nocasoconcluido, pac.idcausa, pac.causaegreso, 
+        cau.descripcion as causaegreso_descripcion,
+        pac.urlfoto, pac.iddepartamento, dep.nombre as departamento_nombre, pac.idestado, est.descripcion as estado_descripcion,
+        pac.idacceso, acc.descripcion as acceso_descripcion,
+        pac.idjornada, jor.descripcion as jornada_descripcion,
+        pac.fechainicioperiodo, pac.fechafinperiodo, pac.sesionesautorizadasmes AS sesionesautorizadas, pac.observaciones
+    FROM tbl_pacientes pac
+    LEFT JOIN tbl_causaegreso cau ON pac.idcausa = cau.idcausa
+    LEFT JOIN tbl_departamento dep ON pac.iddepartamento = dep.id_departamento
+    LEFT JOIN tbl_estadospaciente est ON pac.idestado = est.idestado
+    LEFT JOIN tbl_accesovascular acc ON pac.idacceso = acc.idacceso
+    LEFT JOIN tbl_jornadas jor ON pac.idjornada = jor.idjornada
+    WHERE pac.idestado != 3`;
     let params = [];
     if (dpi) {
         baseQuery += ' AND pac.dpi = $1';
@@ -225,11 +255,11 @@ WHERE pac.idestado != 3`;
 app.get('/api/pacientes/reingreso', async (req, res) => {
     const { dpi, noafiliacion } = req.query;
     let baseQuery = `
-        SELECT pac.noafiliacion, pac.dpi, pac.nopacienteproveedor, pac.primernombre, pac.segundonombre, pac.otrosnombres, pac.primerapellido, pac.segundoapellido, pac.apellidocasada, 
-        pac.fechanacimiento, pac.sexo, pac.direccion, pac.fechaegreso, pac.idcausa, pac.causaegreso, cau.descripcion as descripcionEgreso, pac.urlfoto, pac.iddepartamento, pac.idestado, 
-        pac.fechainicioperiodo, pac.fechafinperiodo, pac.sesionesautorizadasmes AS sesionesautorizadas, pac.observaciones 
-        FROM tbl_pacientes pac LEFT JOIN tbl_causaegreso cau ON 
-        pac.idcausa = cau.idcausa WHERE pac.idestado = 3 AND pac.idcausa != 1`;
+            SELECT pac.noafiliacion, pac.dpi, pac.nopacienteproveedor, pac.primernombre, pac.segundonombre, pac.otrosnombres, pac.primerapellido, pac.segundoapellido, pac.apellidocasada, 
+            pac.fechanacimiento, pac.sexo, pac.direccion, pac.fechaegreso, pac.idcausa, pac.causaegreso, cau.descripcion as descripcionEgreso, pac.urlfoto, pac.iddepartamento, pac.idestado, 
+            pac.fechainicioperiodo, pac.fechafinperiodo, pac.sesionesautorizadasmes AS sesionesautorizadas, pac.observaciones 
+            FROM tbl_pacientes pac LEFT JOIN tbl_causaegreso cau ON 
+            pac.idcausa = cau.idcausa WHERE pac.idestado = 3 AND pac.idcausa != 1`;
     let params = [];
     if (dpi) {
         baseQuery += ' AND pac.dpi = $1';
@@ -249,44 +279,42 @@ app.get('/api/pacientes/reingreso', async (req, res) => {
     }
 });
 
-// Endpoint para exportar reporte de pacientes NUEVO INGRESO en Excel
-
 // Endpoint para exportar reporte de egresos en Excel
 app.get('/api/reportes/egreso/excel', async (req, res) => {
     try {
         const { fechainicio, fechafin } = req.query;
         let baseQuery = `
-            SELECT 
-            pac.noafiliacion as noafiliacion,
-            pac.dpi as dpi,
-            pac.nopacienteproveedor as nointernoproveedor,
-            CONCAT_WS(' ', pac.primernombre, pac.segundonombre, pac.otrosnombres, pac.primerapellido, pac.segundoapellido, pac.apellidocasada) as NombreCompleto,
-            TO_CHAR(pac.fechanacimiento, 'YYYY-MM-DD') as FechaNacimiento,
-            pac.sexo as Sexo,
-            pac.direccion as Direccion,
-            dep.nombre as Departamento,
-            TO_CHAR(pac.fechaingreso, 'YYYY-MM-DD') as FechaIngreso,
-            est.descripcion as EstadoPaciente,
-            jor.descripcion as Jornada,
-            acc.descripcion as AccesoVascular,
-            pac.nocasoconcluido as nocasoconcluido,
-            pac.numeroformulario as NumeroFormulario,
-            TO_CHAR(pac.fechainicioperiodo, 'YYYY-MM-DD') as fechainicioperiodo,
-            TO_CHAR(pac.fechafinperiodo, 'YYYY-MM-DD') as fechafinperiodo,
-            pac.sesionesautorizadasmes as NumeroSesionesAutorizadasMes,
-            pac.sesionesrealizadasmes as NumeroSesionesRealizadasMes,
-            pac.observaciones as Observaciones,
-            pac.fechanacimiento as fechanacimiento_raw,
-    pac.idcausa as idcausa,
-    cau.descripcion as causaegreso,
-    TO_CHAR(pac.fechaegreso,'YYYY-MM-DD') as fechaegreso
-        FROM tbl_pacientes pac
-        LEFT JOIN tbl_estadospaciente est ON pac.idestado = est.idestado
-        LEFT JOIN tbl_accesovascular acc ON pac.idacceso = acc.idacceso
-        LEFT JOIN tbl_departamentos dep ON pac.iddepartamento = dep.iddepartamento
-        LEFT JOIN tbl_jornadas jor ON pac.idjornada = jor.idjornada
-LEFT JOIN tbl_causaegreso cau ON pac.idcausa = cau.idcausa
-        WHERE est.descripcion = 'Egreso'`;
+                SELECT 
+                pac.noafiliacion as noafiliacion,
+                pac.dpi as dpi,
+                pac.nopacienteproveedor as nointernoproveedor,
+                CONCAT_WS(' ', pac.primernombre, pac.segundonombre, pac.otrosnombres, pac.primerapellido, pac.segundoapellido, pac.apellidocasada) as NombreCompleto,
+                TO_CHAR(pac.fechanacimiento, 'YYYY-MM-DD') as FechaNacimiento,
+                pac.sexo as Sexo,
+                pac.direccion as Direccion,
+                dep.nombre as Departamento,
+                TO_CHAR(pac.fechaingreso, 'YYYY-MM-DD') as FechaIngreso,
+                est.descripcion as EstadoPaciente,
+                jor.descripcion as Jornada,
+                acc.descripcion as AccesoVascular,
+                pac.nocasoconcluido as nocasoconcluido,
+                pac.numeroformulario as NumeroFormulario,
+                TO_CHAR(pac.fechainicioperiodo, 'YYYY-MM-DD') as fechainicioperiodo,
+                TO_CHAR(pac.fechafinperiodo, 'YYYY-MM-DD') as fechafinperiodo,
+                pac.sesionesautorizadasmes as NumeroSesionesAutorizadasMes,
+                pac.sesionesrealizadasmes as NumeroSesionesRealizadasMes,
+                pac.observaciones as Observaciones,
+                pac.fechanacimiento as fechanacimiento_raw,
+        pac.idcausa as idcausa,
+        cau.descripcion as causaegreso,
+        TO_CHAR(pac.fechaegreso,'YYYY-MM-DD') as fechaegreso
+            FROM tbl_pacientes pac
+            LEFT JOIN tbl_estadospaciente est ON pac.idestado = est.idestado
+            LEFT JOIN tbl_accesovascular acc ON pac.idacceso = acc.idacceso
+            LEFT JOIN tbl_departamento dep ON pac.iddepartamento = dep.id_departamento
+            LEFT JOIN tbl_jornadas jor ON pac.idjornada = jor.idjornada
+    LEFT JOIN tbl_causaegreso cau ON pac.idcausa = cau.idcausa
+            WHERE est.descripcion = 'Egreso'`;
 
         let params = [];
         let idx = 1;
@@ -496,35 +524,35 @@ app.get('/api/reportes/nuevoingreso/excel', async (req, res) => {
     try {
         const { fechainicio, fechafin } = req.query;
         let baseQuery = `SELECT 
-            pac.noafiliacion as noafiliacion,
-            pac.dpi as dpi,
-            pac.nopacienteproveedor as nointernoproveedor,
-            CONCAT_WS(' ', pac.primernombre, pac.segundonombre, pac.otrosnombres, pac.primerapellido, pac.segundoapellido, pac.apellidocasada) as NombreCompleto,
-            TO_CHAR(pac.fechanacimiento, 'YYYY-MM-DD') as FechaNacimiento,
-            pac.sexo as Sexo,
-            pac.direccion as Direccion,
-            dep.nombre as Departamento,
-            TO_CHAR(pac.fechaingreso, 'YYYY-MM-DD') as FechaIngreso,
-            est.descripcion as EstadoPaciente,
-            jor.descripcion as Jornada,
-            acc.descripcion as AccesoVascular,
-            pac.numeroformulario as NumeroFormulario,
-            TO_CHAR(pac.fechainicioperiodo, 'YYYY-MM-DD') as fechainicioperiodo,
-            TO_CHAR(pac.fechafinperiodo, 'YYYY-MM-DD') as fechafinperiodo,
-            pac.sesionesautorizadasmes as NumeroSesionesAutorizadasMes,
-            pac.sesionesrealizadasmes as NumeroSesionesRealizadasMes,
-            pac.observaciones as Observaciones,
-            pac.fechanacimiento as fechanacimiento_raw,
-    pac.idcausa as idcausa,
-    pac.causaegreso as causaegreso,
-    cau.descripcion as causaegreso_descripcion
-        FROM tbl_pacientes pac
-        LEFT JOIN tbl_estadospaciente est ON pac.idestado = est.idestado
-        LEFT JOIN tbl_accesovascular acc ON pac.idacceso = acc.idacceso
-        LEFT JOIN tbl_departamentos dep ON pac.iddepartamento = dep.iddepartamento
-        LEFT JOIN tbl_jornadas jor ON pac.idjornada = jor.idjornada
-LEFT JOIN tbl_causaegreso cau ON pac.idcausa = cau.idcausa
-        WHERE est.descripcion = 'Nuevo Ingreso'`;
+                pac.noafiliacion as noafiliacion,
+                pac.dpi as dpi,
+                pac.nopacienteproveedor as nointernoproveedor,
+                CONCAT_WS(' ', pac.primernombre, pac.segundonombre, pac.otrosnombres, pac.primerapellido, pac.segundoapellido, pac.apellidocasada) as NombreCompleto,
+                TO_CHAR(pac.fechanacimiento, 'YYYY-MM-DD') as FechaNacimiento,
+                pac.sexo as Sexo,
+                pac.direccion as Direccion,
+                dep.nombre as Departamento,
+                TO_CHAR(pac.fechaingreso, 'YYYY-MM-DD') as FechaIngreso,
+                est.descripcion as EstadoPaciente,
+                jor.descripcion as Jornada,
+                acc.descripcion as AccesoVascular,
+                pac.numeroformulario as NumeroFormulario,
+                TO_CHAR(pac.fechainicioperiodo, 'YYYY-MM-DD') as fechainicioperiodo,
+                TO_CHAR(pac.fechafinperiodo, 'YYYY-MM-DD') as fechafinperiodo,
+                pac.sesionesautorizadasmes as NumeroSesionesAutorizadasMes,
+                pac.sesionesrealizadasmes as NumeroSesionesRealizadasMes,
+                pac.observaciones as Observaciones,
+                pac.fechanacimiento as fechanacimiento_raw,
+        pac.idcausa as idcausa,
+        pac.causaegreso as causaegreso,
+        cau.descripcion as causaegreso_descripcion
+            FROM tbl_pacientes pac
+            LEFT JOIN tbl_estadospaciente est ON pac.idestado = est.idestado
+            LEFT JOIN tbl_accesovascular acc ON pac.idacceso = acc.idacceso
+            LEFT JOIN tbl_departamento dep ON pac.iddepartamento = dep.id_departamento
+            LEFT JOIN tbl_jornadas jor ON pac.idjornada = jor.idjornada
+    LEFT JOIN tbl_causaegreso cau ON pac.idcausa = cau.idcausa
+            WHERE est.descripcion = 'Nuevo Ingreso'`;
 
         let params = [];
         let idx = 1;
@@ -715,40 +743,40 @@ app.get('/api/pacientes/excel', async (req, res) => {
     try {
         const { fechainicio, fechafin, estado, numeroformulario } = req.query;
         let baseQuery = `SELECT 
-    pac.noafiliacion as noafiliacion,
-    pac.dpi as dpi,
-    pac.nopacienteproveedor as nopacienteproveedor,
-    pac.primernombre as primernombre,
-pac.segundonombre as segundonombre,
-pac.otrosnombres as otrosnombres,
-pac.primerapellido as primerapellido,
-pac.segundoapellido as segundoapellido,
-pac.apellidocasada as apellidocasada,
-TO_CHAR(pac.fechanacimiento, 'YYYY-MM-DD') as fechanacimiento,
-    pac.sexo as sexo,
-    pac.direccion as direccion,
-    dep.nombre as departamento,
-    TO_CHAR(pac.fechaingreso, 'YYYY-MM-DD') as fechaingreso,
-    est.descripcion as estado,
-    jor.descripcion as jornada,
-    acc.descripcion as accesovascular,
-    pac.numeroformulario as numeroformulario,
-    TO_CHAR(pac.fechainicioperiodo, 'YYYY-MM-DD') as fechainicioperiodo,
-    TO_CHAR(pac.fechafinperiodo, 'YYYY-MM-DD') as fechafinperiodo,
-    pac.sesionesautorizadasmes as sesionesautorizadasmes,
-    pac.sesionesrealizadasmes as sesionesrealizadasmes,
-    pac.observaciones as observaciones,
-    pac.fechanacimiento as fechanacimiento_raw,
-    pac.idcausa as idcausa,
-    pac.causaegreso as causaegreso,
-    cau.descripcion as causaegreso_descripcion
-FROM tbl_pacientes pac
-LEFT JOIN tbl_estadospaciente est ON pac.idestado = est.idestado
-LEFT JOIN tbl_accesovascular acc ON pac.idacceso = acc.idacceso
-LEFT JOIN tbl_departamentos dep ON pac.iddepartamento = dep.iddepartamento
-LEFT JOIN tbl_jornadas jor ON pac.idjornada = jor.idjornada
-LEFT JOIN tbl_causaegreso cau ON pac.idcausa = cau.idcausa
-WHERE 1=1`;
+        pac.noafiliacion as noafiliacion,
+        pac.dpi as dpi,
+        pac.nopacienteproveedor as nopacienteproveedor,
+        pac.primernombre as primernombre,
+    pac.segundonombre as segundonombre,
+    pac.otrosnombres as otrosnombres,
+    pac.primerapellido as primerapellido,
+    pac.segundoapellido as segundoapellido,
+    pac.apellidocasada as apellidocasada,
+    TO_CHAR(pac.fechanacimiento, 'YYYY-MM-DD') as fechanacimiento,
+        pac.sexo as sexo,
+        pac.direccion as direccion,
+        dep.nombre as departamento,
+        TO_CHAR(pac.fechaingreso, 'YYYY-MM-DD') as fechaingreso,
+        est.descripcion as estado,
+        jor.descripcion as jornada,
+        acc.descripcion as accesovascular,
+        pac.numeroformulario as numeroformulario,
+        TO_CHAR(pac.fechainicioperiodo, 'YYYY-MM-DD') as fechainicioperiodo,
+        TO_CHAR(pac.fechafinperiodo, 'YYYY-MM-DD') as fechafinperiodo,
+        pac.sesionesautorizadasmes as sesionesautorizadasmes,
+        pac.sesionesrealizadasmes as sesionesrealizadasmes,
+        pac.observaciones as observaciones,
+        pac.fechanacimiento as fechanacimiento_raw,
+        pac.idcausa as idcausa,
+        pac.causaegreso as causaegreso,
+        cau.descripcion as causaegreso_descripcion
+    FROM tbl_pacientes pac
+    LEFT JOIN tbl_estadospaciente est ON pac.idestado = est.idestado
+    LEFT JOIN tbl_accesovascular acc ON pac.idacceso = acc.idacceso
+    LEFT JOIN tbl_departamento dep ON pac.iddepartamento = dep.id_departamento
+    LEFT JOIN tbl_jornadas jor ON pac.idjornada = jor.idjornada
+    LEFT JOIN tbl_causaegreso cau ON pac.idcausa = cau.idcausa
+    WHERE 1=1`;
 
         let params = [];
         let idx = 1;
@@ -946,45 +974,45 @@ app.get('/api/pacientes/pdf', async (req, res) => {
     try {
         const { fechainicio, fechafin, estado, numeroformulario } = req.query;
         let baseQuery = `SELECT 
-    pac.noafiliacion as noafiliacion,
-    pac.dpi as dpi,
-    pac.nopacienteproveedor as nopacienteproveedor,
-    pac.primernombre as primernombre,
-pac.segundonombre as segundonombre,
-pac.otrosnombres as otrosnombres,
-pac.primerapellido as primerapellido,
-pac.segundoapellido as segundoapellido,
-pac.apellidocasada as apellidocasada,
-TO_CHAR(pac.fechanacimiento, 'YYYY-MM-DD') as fechanacimiento,
-    pac.sexo as sexo,
-    pac.direccion as direccion,
-    dep.nombre as departamento,
-    TO_CHAR(pac.fechaingreso, 'YYYY-MM-DD') as fechaingreso,
-    est.descripcion as estado,
-    jor.descripcion as jornada,
-    acc.descripcion as accesovascular,
-    pac.numeroformulario as numeroformulario,
-    TO_CHAR(pac.fechainicioperiodo, 'YYYY-MM-DD') as fechainicioperiodo,
-    TO_CHAR(pac.fechafinperiodo, 'YYYY-MM-DD') as fechafinperiodo,
-    pac.sesionesautorizadasmes as sesionesautorizadasmes,
-    pac.sesionesrealizadasmes as sesionesrealizadasmes,
-    pac.observaciones as observaciones,
-    pac.fechanacimiento as fechanacimiento_raw,
-    pac.idcausa as idcausa,
-    pac.causaegreso as causaegreso,
-    pac.comorbilidades as comorbilidades,
-pac.lugarfallecimiento as lugarfallecimiento,
-pac.causafallecimiento as causafallecimiento,
-    cau.descripcion as causaegreso_descripcion,
-    To_Char(pac.fechaegreso, 'YYYY-MM-DD') as fechaegreso,
-    pac.nocasoconcluido as nocasoconcluido
-FROM tbl_pacientes pac
-LEFT JOIN tbl_estadospaciente est ON pac.idestado = est.idestado
-LEFT JOIN tbl_accesovascular acc ON pac.idacceso = acc.idacceso
-LEFT JOIN tbl_departamentos dep ON pac.iddepartamento = dep.iddepartamento
-LEFT JOIN tbl_jornadas jor ON pac.idjornada = jor.idjornada
-LEFT JOIN tbl_causaegreso cau ON pac.idcausa = cau.idcausa
-WHERE 1=1`;
+        pac.noafiliacion as noafiliacion,
+        pac.dpi as dpi,
+        pac.nopacienteproveedor as nopacienteproveedor,
+        pac.primernombre as primernombre,
+    pac.segundonombre as segundonombre,
+    pac.otrosnombres as otrosnombres,
+    pac.primerapellido as primerapellido,
+    pac.segundoapellido as segundoapellido,
+    pac.apellidocasada as apellidocasada,
+    TO_CHAR(pac.fechanacimiento, 'YYYY-MM-DD') as fechanacimiento,
+        pac.sexo as sexo,
+        pac.direccion as direccion,
+        dep.nombre as departamento,
+        TO_CHAR(pac.fechaingreso, 'YYYY-MM-DD') as fechaingreso,
+        est.descripcion as estado,
+        jor.descripcion as jornada,
+        acc.descripcion as accesovascular,
+        pac.numeroformulario as numeroformulario,
+        TO_CHAR(pac.fechainicioperiodo, 'YYYY-MM-DD') as fechainicioperiodo,
+        TO_CHAR(pac.fechafinperiodo, 'YYYY-MM-DD') as fechafinperiodo,
+        pac.sesionesautorizadasmes as sesionesautorizadasmes,
+        pac.sesionesrealizadasmes as sesionesrealizadasmes,
+        pac.observaciones as observaciones,
+        pac.fechanacimiento as fechanacimiento_raw,
+        pac.idcausa as idcausa,
+        pac.causaegreso as causaegreso,
+        pac.comorbilidades as comorbilidades,
+    pac.lugarfallecimiento as lugarfallecimiento,
+    pac.causafallecimiento as causafallecimiento,
+        cau.descripcion as causaegreso_descripcion,
+        To_Char(pac.fechaegreso, 'YYYY-MM-DD') as fechaegreso,
+        pac.nocasoconcluido as nocasoconcluido
+    FROM tbl_pacientes pac
+    LEFT JOIN tbl_estadospaciente est ON pac.idestado = est.idestado
+    LEFT JOIN tbl_accesovascular acc ON pac.idacceso = acc.idacceso
+    LEFT JOIN tbl_departamento dep ON pac.iddepartamento = dep.id_departamento
+    LEFT JOIN tbl_jornadas jor ON pac.idjornada = jor.idjornada
+    LEFT JOIN tbl_causaegreso cau ON pac.idcausa = cau.idcausa
+    WHERE 1=1`;
 
         let params = [];
         let idx = 1;
@@ -1128,45 +1156,45 @@ app.get('/api/pacientes', async (req, res) => {
     try {
         const { fechainicio, fechafin, estado, numeroformulario } = req.query;
         let baseQuery = `SELECT 
-    pac.noafiliacion as noafiliacion,
-    pac.dpi as dpi,
-    pac.nopacienteproveedor as nopacienteproveedor,
-    pac.primernombre as primernombre,
-pac.segundonombre as segundonombre,
-pac.otrosnombres as otrosnombres,
-pac.primerapellido as primerapellido,
-pac.segundoapellido as segundoapellido,
-pac.apellidocasada as apellidocasada,
-TO_CHAR(pac.fechanacimiento, 'YYYY-MM-DD') as fechanacimiento,
-    pac.sexo as sexo,
-    pac.direccion as direccion,
-    dep.nombre as departamento,
-    TO_CHAR(pac.fechaingreso, 'YYYY-MM-DD') as fechaingreso,
-    est.descripcion as estado,
-    jor.descripcion as jornada,
-    acc.descripcion as accesovascular,
-    pac.numeroformulario as numeroformulario,
-    TO_CHAR(pac.fechainicioperiodo, 'YYYY-MM-DD') as fechainicioperiodo,
-    TO_CHAR(pac.fechafinperiodo, 'YYYY-MM-DD') as fechafinperiodo,
-    pac.sesionesautorizadasmes as sesionesautorizadasmes,
-    pac.sesionesrealizadasmes as sesionesrealizadasmes,
-    pac.observaciones as observaciones,
-    pac.fechanacimiento as fechanacimiento_raw,
-    pac.idcausa as idcausa,
-    pac.causaegreso as causaegreso,
-    pac.comorbilidades as comorbilidades,
-pac.lugarfallecimiento as lugarfallecimiento,
-pac.causafallecimiento as causafallecimiento,
-    cau.descripcion as causaegreso_descripcion,
-    To_Char(pac.fechaegreso, 'YYYY-MM-DD') as fechaegreso,
-    pac.nocasoconcluido as nocasoconcluido
-FROM tbl_pacientes pac
-LEFT JOIN tbl_estadospaciente est ON pac.idestado = est.idestado
-LEFT JOIN tbl_accesovascular acc ON pac.idacceso = acc.idacceso
-LEFT JOIN tbl_departamentos dep ON pac.iddepartamento = dep.iddepartamento
-LEFT JOIN tbl_jornadas jor ON pac.idjornada = jor.idjornada
-LEFT JOIN tbl_causaegreso cau ON pac.idcausa = cau.idcausa
-WHERE 1=1`;
+        pac.noafiliacion as noafiliacion,
+        pac.dpi as dpi,
+        pac.nopacienteproveedor as nopacienteproveedor,
+        pac.primernombre as primernombre,
+    pac.segundonombre as segundonombre,
+    pac.otrosnombres as otrosnombres,
+    pac.primerapellido as primerapellido,
+    pac.segundoapellido as segundoapellido,
+    pac.apellidocasada as apellidocasada,
+    TO_CHAR(pac.fechanacimiento, 'YYYY-MM-DD') as fechanacimiento,
+        pac.sexo as sexo,
+        pac.direccion as direccion,
+        dep.nombre as departamento,
+        TO_CHAR(pac.fechaingreso, 'YYYY-MM-DD') as fechaingreso,
+        est.descripcion as estado,
+        jor.descripcion as jornada,
+        acc.descripcion as accesovascular,
+        pac.numeroformulario as numeroformulario,
+        TO_CHAR(pac.fechainicioperiodo, 'YYYY-MM-DD') as fechainicioperiodo,
+        TO_CHAR(pac.fechafinperiodo, 'YYYY-MM-DD') as fechafinperiodo,
+        pac.sesionesautorizadasmes as sesionesautorizadasmes,
+        pac.sesionesrealizadasmes as sesionesrealizadasmes,
+        pac.observaciones as observaciones,
+        pac.fechanacimiento as fechanacimiento_raw,
+        pac.idcausa as idcausa,
+        pac.causaegreso as causaegreso,
+        pac.comorbilidades as comorbilidades,
+    pac.lugarfallecimiento as lugarfallecimiento,
+    pac.causafallecimiento as causafallecimiento,
+        cau.descripcion as causaegreso_descripcion,
+        To_Char(pac.fechaegreso, 'YYYY-MM-DD') as fechaegreso,
+        pac.nocasoconcluido as nocasoconcluido
+    FROM tbl_pacientes pac
+    LEFT JOIN tbl_estadospaciente est ON pac.idestado = est.idestado
+    LEFT JOIN tbl_accesovascular acc ON pac.idacceso = acc.idacceso
+    LEFT JOIN tbl_departamento dep ON pac.iddepartamento = dep.id_departamento
+    LEFT JOIN tbl_jornadas jor ON pac.idjornada = jor.idjornada
+    LEFT JOIN tbl_causaegreso cau ON pac.idcausa = cau.idcausa
+    WHERE 1=1`;
 
         let params = [];
         let idx = 1;
@@ -1212,26 +1240,6 @@ app.get('/causas-egreso', async (req, res) => {
     }
 });
 
-// Endpoint para obtener accesos vasculares
-app.get('/accesos-vasculares', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT idacceso, descripcion FROM tbl_accesovascular where estado=true ORDER BY descripcion ASC');
-        res.json(result.rows);
-    } catch (error) {
-        res.status(500).json({ error: 'Error al obtener accesos vasculares.' });
-    }
-});
-
-// Endpoint para obtener jornadas
-app.get('/jornadas', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT idjornada, descripcion, dias FROM tbl_jornadas where estado=true ORDER BY descripcion ASC');
-        res.json(result.rows);
-    } catch (error) {
-        res.status(500).json({ error: 'Error al obtener jornadas.' });
-    }
-});
-
 // Endpoint para obtener los estados de paciente
 app.get('/estados-paciente', async (req, res) => {
     try {
@@ -1243,7 +1251,7 @@ app.get('/estados-paciente', async (req, res) => {
 });
 
 // Endpoint para descargar carné PDF por número de afiliación
-definirCarnetPaciente = async (pacienteData, fotoPath, carnetPath) => {
+const definirCarnetPaciente = async (pacienteData, fotoPath, carnetPath) => {
     const PDFDocument = require('pdfkit');
     const fs = require('fs');
     const path = require('path');
@@ -1265,7 +1273,7 @@ definirCarnetPaciente = async (pacienteData, fotoPath, carnetPath) => {
     if (fotoPath && fs.existsSync(fotoPath)) {
         // Marco blanco
         doc.rect(430, 25, 90, 70).fillAndStroke('white', '#bbb');
-        doc.image(fotoPath, 432, 27, { width: 86, height: 66, fit: [86, 66] });
+        doc.image(fotoPath, 432, 27, { fit: [86, 66], align: 'center', valign: 'center' });
     } else {
         doc.rect(430, 25, 90, 70).fillAndStroke('white', '#bbb');
         doc.font('Helvetica').fontSize(12).fillColor('#888').text('Sin Foto', 450, 60);
@@ -1357,25 +1365,25 @@ app.get('/api/faltistas', async (req, res) => {
     try {
         const { fechainicio, fechafin } = req.query;
         let query = `
-            SELECT 
-                pac.noafiliacion,  
-                pac.primernombre, 
-                pac.segundonombre, 
-                pac.otrosnombres, 
-                pac.primerapellido, 
-                pac.segundoapellido, 
-                pac.apellidocasada,
-                pac.sexo,
-                cli.descripcion as clinica,
-                to_char(fal.fechafalta, 'YYYY-MM-DD') as fechafalta,
-                fal.motivofalta
-            FROM 
-                tbl_faltistas fal
-            INNER JOIN 
-                tbl_clinica cli ON fal.idclinica = cli.idsala
-            INNER JOIN 
-                tbl_pacientes pac ON pac.noafiliacion = fal.noafiliacion
-            WHERE 1=1`;
+                SELECT 
+                    pac.noafiliacion,  
+                    pac.primernombre, 
+                    pac.segundonombre, 
+                    pac.otrosnombres, 
+                    pac.primerapellido, 
+                    pac.segundoapellido, 
+                    pac.apellidocasada,
+                    pac.sexo,
+                    cli.descripcion as clinica,
+                    to_char(fal.fechafalta, 'YYYY-MM-DD') as fechafalta,
+                    fal.motivofalta
+                FROM 
+                    tbl_faltistas fal
+                INNER JOIN 
+                    tbl_clinica cli ON fal.idclinica = cli.idsala
+                INNER JOIN 
+                    tbl_pacientes pac ON pac.noafiliacion = fal.noafiliacion
+                WHERE 1=1`;
         const params = [];
         let idx = 1;
         if (fechainicio) {
@@ -1410,8 +1418,8 @@ app.get('/api/faltistas', async (req, res) => {
 app.get('/pacientes/:noafiliacion', async (req, res) => {
     try {
         const query = `
-            SELECT * FROM tbl_pacientes WHERE no_afiliacion = $1
-        `;
+                SELECT * FROM tbl_pacientes WHERE no_afiliacion = $1
+            `;
         const result = await pool.query(query, [req.params.noafiliacion]);
         if (!result.rows.length) {
             return res.status(404).json({ error: 'Paciente no encontrado.' });
@@ -1423,39 +1431,116 @@ app.get('/pacientes/:noafiliacion', async (req, res) => {
     }
 });
 
+// ---------------------- Helpers de foto ----------------------
+const resolveFotoPath = (paciente, noafiliacion) => {
+    const baseDir = path.join(__dirname, 'fotos');
+    const candidates = [];
+
+    // 1) Si hay valor en DB, normalizarlo a un filename local
+    if (paciente?.urlfoto) {
+        let uf = String(paciente.urlfoto).trim();
+
+        // URL completa -> tomar basename (/fotos/xxxx.jpg)
+        if (/^https?:\/\//i.test(uf)) {
+            try {
+                const u = new URL(uf);
+                uf = decodeURIComponent(path.basename(u.pathname));
+            } catch { }
+        } else {
+            // Quitar / iniciales y el prefijo "fotos/"
+            uf = uf.replace(/^\/+/, '').replace(/^fotos\//i, '');
+        }
+
+        if (uf) candidates.push(path.join(baseDir, uf));
+    }
+
+    // 2) Por número de afiliación con varias extensiones y mayúsculas/minúsculas
+    const exts = ['.jpg', '.jpeg', '.png', '.JPG', '.JPEG', '.PNG'];
+    for (const ext of exts) {
+        candidates.push(path.join(baseDir, `${noafiliacion}${ext}`));
+    }
+
+    // 3) Revisión final del directorio por si la extensión es rara
+    try {
+        const files = fs.readdirSync(baseDir);
+        const hit = files.find(f => path.parse(f).name.toLowerCase() === String(noafiliacion).toLowerCase());
+        if (hit) candidates.push(path.join(baseDir, hit));
+    } catch { }
+
+    // Devolver el primer candidato existente
+    for (const c of candidates) {
+        if (c && fs.existsSync(c)) return c;
+    }
+    return null;
+};
+
+const shouldRegenerateCarnet = (carnetPath, fotoPath) => {
+    const pdfExists = fs.existsSync(carnetPath);
+    if (!pdfExists) return true;
+    if (fotoPath && fs.existsSync(fotoPath)) {
+        try {
+            const fotoM = fs.statSync(fotoPath).mtimeMs;
+            const pdfM = fs.statSync(carnetPath).mtimeMs;
+            return fotoM >= pdfM; // si la foto es igual o más nueva, regenerar
+        } catch { return true; }
+    }
+    // Si no hay foto, no regenerar innecesariamente
+    return false;
+};
+
+// Descargar carné PDF por número de afiliación (se regenera si la foto es más nueva)
 app.get('/carnet/:noafiliacion', async (req, res) => {
     try {
-        const carnetPath = path.join(__dirname, 'carnets', `${req.params.noafiliacion}_carnet.pdf`);
-        if (!fs.existsSync(carnetPath)) {
-            // Buscar datos del paciente en la BD
-            const result = await pool.query('SELECT * FROM tbl_pacientes WHERE noafiliacion = $1', [req.params.noafiliacion]);
-            if (!result.rows.length) {
-                return res.status(404).json({ error: 'Paciente no encontrado.' });
-            }
-            const pacienteData = result.rows[0];
-            // Buscar foto
-            let fotoPath = null;
-            if (pacienteData.urlfoto && fs.existsSync(pacienteData.urlfoto)) {
-                fotoPath = pacienteData.urlfoto;
-            } else {
-                // Buscar por nombre estándar (jpg/png)
-                const jpgPath = path.join(__dirname, 'fotos', `${req.params.noafiliacion}.jpg`);
-                const pngPath = path.join(__dirname, 'fotos', `${req.params.noafiliacion}.png`);
-                if (fs.existsSync(jpgPath)) fotoPath = jpgPath;
-                else if (fs.existsSync(pngPath)) fotoPath = pngPath;
-            }
-            // Generar y guardar el carné
-            await definirCarnetPaciente(pacienteData, fotoPath, carnetPath);
+        const noafiliacion = req.params.noafiliacion;
+
+        // Carpeta de carnets
+        const carnetDir = path.join(__dirname, 'carnets');
+        if (!fs.existsSync(carnetDir)) fs.mkdirSync(carnetDir);
+        const carnetPath = path.join(carnetDir, `${noafiliacion}_carnet.pdf`);
+
+        // Traer datos del paciente
+        const { rows } = await pool.query(`
+        SELECT
+            no_afiliacion  AS noafiliacion,
+            dpi,
+            no_paciente_proveedor AS nopacienteproveedor,
+            primer_nombre   AS primernombre,
+            segundo_nombre  AS segundonombre,
+            otros_nombres   AS otrosnombres,
+            primer_apellido AS primerapellido,
+            segundo_apellido AS segundoapellido,
+            apellido_casada AS apellidocasada,
+            fecha_nacimiento AS fechanacimiento,
+            fecha_ingreso    AS fechaingreso,
+            sexo,
+            direccion,
+            url_foto AS urlfoto
+        FROM public.tbl_pacientes
+        WHERE no_afiliacion = $1
+        `, [noafiliacion]);
+        if (!rows.length) return res.status(404).json({ error: 'Paciente no encontrado.' });
+        const paciente = rows[0];
+
+        // Resolver ruta real de la foto (soporta /fotos/xxx.jpg, http://.../fotos/xxx.jpg, etc.)
+        const fotoPath = resolveFotoPath(paciente, noafiliacion);
+
+        // ¿Generar/regenerar?
+        const mustRegenerate = shouldRegenerateCarnet(carnetPath, fotoPath);
+        if (mustRegenerate) {
+            await definirCarnetPaciente(paciente, fotoPath, carnetPath);
         }
+
+        // Enviar el PDF
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="${req.params.noafiliacion}_carnet.pdf"`);
-        const carnetBuffer = await fs.promises.readFile(carnetPath);
-        res.status(200).end(carnetBuffer);
+        res.setHeader('Content-Disposition', `attachment; filename="${noafiliacion}_carnet.pdf"`);
+        fs.createReadStream(carnetPath)
+            .on('error', (e) => res.status(500).json({ error: 'No se pudo leer el carné', detalle: e.message }))
+            .pipe(res);
     } catch (error) {
-        res.status(500).json({ error: 'Error al descargar o generar el carné.' });
+        console.error('Error en GET /carnet/:noafiliacion:', error);
+        res.status(500).json({ error: 'Error al descargar o generar el carné.', detalle: error.message });
     }
 });
-
 
 // Buscar paciente por DPI
 app.get('/pacientes/dpi/:dpi', async (req, res) => {
@@ -1471,277 +1556,118 @@ app.get('/pacientes/dpi/:dpi', async (req, res) => {
 });
 
 // Registrar nuevo paciente
-// Registrar nuevo paciente - Versión corregida
+// === REEMPLAZO COMPLETO: POST /pacientes ===
 app.post('/pacientes', async (req, res) => {
-    const client = await pool.connect();
     try {
-        const { photo, ...pacienteData } = req.body;
-        console.log('Datos recibidos:', pacienteData);
+        const b = req.body || {};
+        const nz = v => (v === undefined || v === null || v === '' ? null : v);
 
-        // Validación de campos obligatorios (solo los NOT NULL de la tabla)
-        const requiredFields = [
-            { field: 'noafiliacion', desc: 'Número de afiliación', type: 'int' },
-            { field: 'dpi', desc: 'DPI', type: 'string', length: 13 },
-            { field: 'nopacienteproveedor', desc: 'Número de paciente proveedor', type: 'int' },
-            { field: 'primernombre', desc: 'Primer nombre', type: 'string', max: 25 },
-            { field: 'primerapellido', desc: 'Primer apellido', type: 'string', max: 50 },
-            { field: 'fechanacimiento', desc: 'Fecha de nacimiento', type: 'date' },
-            { field: 'sexo', desc: 'Sexo', type: 'string', max: 15 },
-            { field: 'direccion', desc: 'Dirección', type: 'string', max: 150 },
-            { field: 'fechaingreso', desc: 'Fecha de ingreso', type: 'date' },
-            { field: 'iddepartamento', desc: 'Departamento', type: 'int' },
-            { field: 'idestado', desc: 'Estado', type: 'int' },
-            { field: 'idacceso', desc: 'Acceso vascular', type: 'int' }
-        ];
-        const errors = [];
-        requiredFields.forEach(({ field, desc, type, length, max }) => {
-            const value = pacienteData[field];
-            if (value === undefined || value === null || value === '') {
-                errors.push(`Campo requerido: ${desc}`);
-            } else if (type === 'int' && (isNaN(Number(value)) || !Number.isInteger(Number(value)))) {
-                errors.push(`El campo '${desc}' debe ser un número entero válido.`);
-            } else if (type === 'string') {
-                if (typeof value !== 'string') {
-                    errors.push(`El campo '${desc}' debe ser texto.`);
-                } else if (length && value.length !== length) {
-                    errors.push(`El campo '${desc}' debe tener exactamente ${length} caracteres.`);
-                } else if (max && value.length > max) {
-                    errors.push(`El campo '${desc}' no debe exceder ${max} caracteres.`);
-                }
-            } else if (type === 'date') {
-                // Validar formato YYYY-MM-DD
-                if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-                    errors.push(`El campo '${desc}' debe tener formato YYYY-MM-DD.`);
+        // ---- FOTO OPCIONAL (photo ó imagenBase64) ----
+        const noaf = String(b.noafiliacion || b.noAfiliacion || '').trim();
+        let savedFileName = null;
+        if (noaf && (b.photo || b.imagenBase64)) {
+            try {
+                const raw = String(b.photo || b.imagenBase64);
+                let base64, ext = 'jpg';
+                const m = raw.match(/^data:image\/([\w+.-]+);base64,(.+)$/i);
+                if (m) {
+                    ext = m[1].toLowerCase();
+                    if (ext === 'jpeg') ext = 'jpg';
+                    base64 = m[2];
                 } else {
-                    const dateObj = new Date(value);
-                    if (isNaN(dateObj.getTime())) {
-                        errors.push(`El campo '${desc}' no es una fecha válida.`);
-                    }
+                    base64 = raw; // base64 "pelado"
                 }
-            }
-        });
-
-
-        // Forzar el estado a 1 (NuevoIngreso)
-        pacienteData.idestado = 1;
-
-        if (errors.length > 0) {
-            return res.status(400).json({ errors });
-        }
-
-        await client.query('BEGIN');
-
-        // Si hay una foto, procesarla
-        if (photo) {
-            let base64Data, ext = 'jpg';
-            if (photo.startsWith('data:image/png')) {
-                base64Data = photo.replace(/^data:image\/png;base64,/, '');
-                ext = 'png';
-            } else {
-                base64Data = photo.replace(/^data:image\/jpeg;base64,/, '');
-            }
-            const fileName = `${pacienteData.noafiliacion}.${ext}`;
-            const filePath = path.join(__dirname, 'fotos', fileName);
-            await fs.promises.writeFile(filePath, base64Data, 'base64');
-            pacienteData.urlfoto = filePath;
-            // Esperar a que la imagen esté escrita
-            await new Promise((resolve, reject) => {
-                fs.access(filePath, fs.constants.F_OK, (err) => {
-                    if (err) reject(err); else resolve();
-                });
-            });
-        }
-
-        // Generar carné en PDF
-        const carnetsDir = path.join(__dirname, 'carnets');
-        if (!fs.existsSync(carnetsDir)) {
-            fs.mkdirSync(carnetsDir);
-        }
-        const carnetFileName = `${pacienteData.noafiliacion}_carnet.pdf`;
-        const carnetPath = path.join(carnetsDir, carnetFileName);
-        const doc = new PDFDocument({ size: [350, 260] });
-        const writeStream = fs.createWriteStream(carnetPath);
-        doc.pipe(writeStream);
-
-        // Logo clínica (si existe)
-        const logoPath = path.join(__dirname, 'assets', 'img', 'logoClinica.png');
-        if (fs.existsSync(logoPath)) {
-            doc.image(logoPath, 15, 10, { width: 60 });
-        }
-
-        // Título
-        doc.fontSize(16).text('Carné de Paciente', 90, 15, { align: 'left', bold: true });
-        doc.moveDown();
-
-        // Foto paciente (si existe)
-        if (pacienteData.urlfoto && fs.existsSync(pacienteData.urlfoto)) {
-            doc.image(pacienteData.urlfoto, 260, 15, { width: 70, height: 70, fit: [70, 70] });
-        } else {
-            doc.rect(260, 15, 70, 70).stroke();
-            doc.fontSize(10).text('Sin Foto', 265, 50);
-        }
-
-        // Datos principales
-        doc.fontSize(10).text(`Nombres: ${pacienteData.primernombre || ''} ${pacienteData.segundonombre || ''} ${pacienteData.otrosnombres || ''}`, 15, 90);
-        doc.fontSize(10).text(`Apellidos: ${pacienteData.primerapellido || ''} ${pacienteData.segundoapellido || ''} ${pacienteData.apellidocasada || ''}`, 15, 105);
-        doc.fontSize(10).text(`No. Afiliación: ${pacienteData.noafiliacion}`, 15, 120);
-        doc.fontSize(10).text(`DPI: ${pacienteData.dpi}`, 15, 135);
-        doc.fontSize(10).text(`Dirección: ${pacienteData.direccion}`, 15, 150, { width: 220 });
-        doc.fontSize(10).text(`Fecha Nacimiento: ${pacienteData.fechanacimiento}`, 15, 165);
-        doc.fontSize(10).text(`Sexo: ${pacienteData.sexo}`, 15, 180);
-        doc.fontSize(10).text(`Fecha Ingreso: ${pacienteData.fechaingreso}`, 15, 195);
-
-        // Tabla de turnos (5 filas)
-        doc.fontSize(11).text('Turnos:', 15, 210);
-        const startX = 15, startY = 225, rowH = 18, colW = 65;
-        // Encabezados
-        doc.rect(startX, startY, colW * 3, rowH).stroke();
-        doc.fontSize(10).text('Fecha', startX + 5, startY + 5);
-        doc.text('Hora', startX + colW + 5, startY + 5);
-        doc.text('Observaciones', startX + colW * 2 + 5, startY + 5);
-        // 5 filas vacías
-        for (let i = 1; i <= 5; i++) {
-            doc.rect(startX, startY + rowH * i, colW * 3, rowH).stroke();
-        }
-
-        // Finalizar PDF
-        doc.end();
-
-        // Esperar a que el PDF se guarde antes de continuar
-        await new Promise((resolve, reject) => {
-            writeStream.on('finish', resolve);
-            writeStream.on('error', reject);
-        });
-
-        // Verificar existencia de claves foráneas (idcausa solo si viene)
-        const foreignKeyChecks = [
-            { table: 'tbl_departamentos', field: 'iddepartamento', value: pacienteData.iddepartamento },
-            { table: 'tbl_estadospaciente', field: 'idestado', value: pacienteData.idestado },
-            { table: 'tbl_accesovascular', field: 'idacceso', value: pacienteData.idacceso },
-            { table: 'tbl_jornadas', field: 'idjornada', value: pacienteData.idjornada }
-        ];
-
-        for (const check of foreignKeyChecks) {
-            const exists = await client.query(
-                `SELECT 1 FROM ${check.table} WHERE ${check.field} = $1`,
-                [check.value]
-            );
-            if (exists.rows.length === 0) {
-                throw new Error(`No existe registro en ${check.table} con ${check.field} = ${check.value}`);
+                if (!['jpg', 'jpeg', 'png', 'webp'].includes(ext)) ext = 'jpg';
+                savedFileName = `${noaf}.${ext}`;
+                fs.writeFileSync(path.join(fotosDir, savedFileName), Buffer.from(base64, 'base64'));
+            } catch (e) {
+                console.warn('[POST /pacientes] No se pudo guardar la foto:', e.message);
+                savedFileName = null;
             }
         }
 
-        const query = `INSERT INTO tbl_pacientes (
-            noafiliacion, dpi, nopacienteproveedor, primernombre, segundonombre, 
-            otrosnombres, primerapellido, segundoapellido, apellidocasada, fechanacimiento, sexo, direccion, fechaingreso, iddepartamento, idestado, idacceso, numeroformulario, fechainicioperiodo, fechafinperiodo, observaciones, urlfoto, idjornada
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22) RETURNING *`;
+        // ---- Calcular edad si viene fecha de nacimiento ----
+        const fnac = b.fechaNacimiento || b.fechanacimiento || null;
+        let edad = null;
+        if (fnac) {
+            const d = new Date(fnac);
+            if (!isNaN(d)) {
+                const hoy = new Date();
+                edad = hoy.getFullYear() - d.getFullYear()
+                    - (hoy.getMonth() < d.getMonth() ||
+                        (hoy.getMonth() === d.getMonth() && hoy.getDate() < d.getDate()) ? 1 : 0);
+            }
+        }
+
+        // ---- INSERT (igual al tuyo, solo que ahora mandamos url_foto = savedFileName) ----
+        const sql = `
+      INSERT INTO public.tbl_pacientes(
+        no_afiliacion, dpi, no_paciente_proveedor,
+        primer_nombre, segundo_nombre, otros_nombres,
+        primer_apellido, segundo_apellido, apellido_casada,
+        edad, fecha_nacimiento, sexo, direccion, fecha_ingreso,
+        id_departamento, id_estado, id_acceso, numero_formulario_activo,
+        id_jornada, sesiones_autorizadas_mes,
+        fecha_registro, url_foto, usuario_creacion, fecha_creacion,
+        inicio_prest_servicios, fin_prest_servicios
+      )
+      VALUES (
+        $1,$2,$3,
+        $4,$5,$6,
+        $7,$8,$9,
+        $10,$11,$12,$13,$14,
+        $15,$16,$17,$18,
+        $19,$20,
+        NOW(), $21, $22, NOW(),
+        $23, $24
+      )
+      RETURNING no_afiliacion AS noafiliacion;
+    `;
 
         const values = [
-            parseInt(pacienteData.noafiliacion),
-            pacienteData.dpi,
-            parseInt(pacienteData.nopacienteproveedor),
-            pacienteData.primernombre,
-            pacienteData.segundonombre || null,
-            pacienteData.otrosnombres || null,
-            pacienteData.primerapellido,
-            pacienteData.segundoapellido || null,
-            pacienteData.apellidocasada || null,
-            pacienteData.fechanacimiento,
-            pacienteData.sexo,
-            pacienteData.direccion,
-            pacienteData.fechaingreso,
-            parseInt(pacienteData.iddepartamento),
-            1, // idestado fijo a 1
-            parseInt(pacienteData.idacceso),
-            pacienteData.numeroformulario || null,
-            pacienteData.fechainicioperiodo || null,
-            pacienteData.fechafinperiodo || null,
-            pacienteData.observaciones || null,
-            pacienteData.urlfoto || null,
-            parseInt(pacienteData.idjornada)
+            nz(noaf),                             // 1  no_afiliacion
+            nz(b.dpi),                            // 2  dpi
+            nz(b.nopacienteproveedor),            // 3  no_paciente_proveedor
+            nz(b.primernombre),                   // 4  primer_nombre
+            nz(b.segundonombre),                  // 5  segundo_nombre
+            nz(b.otrosnombres),                   // 6  otros_nombres
+            nz(b.primerapellido),                 // 7  primer_apellido
+            nz(b.segundoapellido),                // 8  segundo_apellido
+            nz(b.apellidocasada),                 // 9  apellido_casada
+            nz(edad),                             // 10 edad
+            nz(fnac),                             // 11 fecha_nacimiento (YYYY-MM-DD)
+            nz(b.sexo),                           // 12 sexo
+            nz(b.direccion),                      // 13 direccion
+            nz(b.fechaIngreso || b.fechaingreso), // 14 fecha_ingreso (YYYY-MM-DD)
+            b.idDepartamento ? Number(b.idDepartamento) : null,      // 15 id_departamento
+            b.idEstado ? Number(b.idEstado) : 2,                     // 16 id_estado (por defecto 2 = Nuevo Ingreso)
+            b.idAcceso ? Number(b.idAcceso) : null,                  // 17 id_acceso
+            nz(b.numeroFormulario),                                   // 18 numero_formulario_activo
+            b.idJornada ? Number(b.idJornada) : null,                 // 19 id_jornada
+            b.sesionesAutorizadasMes ? Number(b.sesionesAutorizadasMes) : null, // 20 sesiones_autorizadas_mes
+            savedFileName,                                           // 21 url_foto  <<--- AQUI GUARDAMOS EL NOMBRE DEL ARCHIVO
+            nz(b.usuario_creacion) || 'web',                         // 22 usuario_creacion
+            nz(b.fechainicioperiodo),                                // 23 inicio_prest_servicios (YYYY-MM-DD)
+            nz(b.fechafinperiodo)                                    // 24 fin_prest_servicios (YYYY-MM-DD)
         ];
 
-        console.log('Ejecutando consulta:', query);
-        console.log('Con valores:', values);
+        const { rows } = await pool.query(sql, values);
 
-        const result = await client.query(query, values);
-
-        // === CREACIÓN AUTOMÁTICA DE TURNOS DE HEMODIÁLISIS ===
-        // Validar que los campos necesarios vengan en el request
-        if (pacienteData.periodoinicio && pacienteData.periodofin && pacienteData.idjornada && pacienteData.idclinica) {
-            // 1. Obtener días de la jornada del paciente
-            const jornadaResult = await client.query('SELECT dias FROM tbl_jornadas WHERE idjornada = $1', [pacienteData.idjornada]);
-            if (!jornadaResult.rows.length) throw new Error('Jornada no encontrada');
-            const diasJornada = jornadaResult.rows[0].dias.split(',').map(d => d.trim().toLowerCase()); // Ej: ["lunes", "miércoles", "viernes"]
-
-            // 2. Preparar fechas de turnos
-            const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-            let fecha = new Date(pacienteData.periodoinicio);
-            const fechaFin = new Date(pacienteData.periodofin);
-
-            while (fecha <= fechaFin) {
-                const dia = diasSemana[fecha.getDay()];
-                if (diasJornada.includes(dia)) {
-                    await client.query(
-                        `INSERT INTO tbl_turnos (noafiliacion, idclinica, idturnoestado, fechacreacion, fechaturno)
-                         VALUES ($1, $2, $3, $4, $5)`,
-                        [
-                            pacienteData.noafiliacion,
-                            pacienteData.idclinica,
-                            1, // idturnoestado = 1 (activo o pendiente)
-                            new Date(), // fechacreacion
-                            new Date(fecha) // fechaturno
-                        ]
-                    );
-                }
-                fecha.setDate(fecha.getDate() + 1);
-            }
-        }
-        // === FIN CREACIÓN AUTOMÁTICA DE TURNOS ===
-
-        await client.query('COMMIT');
-
-        // Enviar PDF como descarga automática y guardar en servidor
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="${carnetFileName}"`);
-        const carnetBuffer = await fs.promises.readFile(carnetPath);
-        res.status(201).end(carnetBuffer);
-        // Si necesitas también la data del paciente, puedes enviar un JSON con la ruta al PDF en otro endpoint.
-    } catch (error) {
-        await client.query('ROLLBACK');
-        console.error('Error en registro de paciente:', {
-            message: error.message,
-            stack: error.stack,
-            code: error.code,
-            detail: error.detail
+        return res.status(201).json({
+            ok: true,
+            noafiliacion: rows[0].noafiliacion,
+            message: 'Paciente registrado',
+            photoUrl: savedFileName ? `/fotos/${savedFileName}` : null,
+            carnetUrl: `/carnet/forzar/${encodeURIComponent(noaf)}`
         });
-
-        let statusCode = 500;
-        let errorMessage = 'Error al registrar el paciente';
-
-        if (error.code === '23505') {
-            statusCode = 409;
-            errorMessage = 'Ya existe un paciente con este número de afiliación';
-        } else if (error.code === '23502') {
-            statusCode = 400;
-            errorMessage = 'Faltan campos obligatorios';
-        } else if (error.code === '23503') {
-            statusCode = 400;
-            errorMessage = 'Error en relación con tablas vinculadas: ' + error.detail;
-        } else if (error.message.includes('No existe registro')) {
-            statusCode = 400;
-            errorMessage = error.message;
-        }
-
-        res.status(statusCode).json({
-            error: errorMessage,
-            details: error.detail || error.message,
-            code: error.code
-        });
-    } finally {
-        client.release();
+    } catch (err) {
+        console.error('[POST /pacientes] ERROR:', err.message, err.code);
+        if (err.code === '23505') return res.status(409).json({ error: 'no_afiliacion o dpi ya existe' });
+        if (err.code === '42703') return res.status(500).json({ error: 'Nombre de columna inválido en INSERT' });
+        res.status(500).json({ error: 'Error al registrar el paciente' });
     }
 });
+
 // Obtener causas de egreso activas
 app.get('/causas-egreso', async (req, res) => {
     try {
@@ -1764,65 +1690,43 @@ app.get('/estados-paciente', async (req, res) => {
     }
 });
 
-// Obtener accesos vasculares activos
-app.get('/accesos-vasculares', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT idacceso, descripcion FROM tbl_accesovascular WHERE estado = true ORDER BY descripcion');
-        res.json(result.rows);
-    } catch (error) {
-        console.error('Error al obtener accesos vasculares:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
-    }
-});
-
-// Obtener todos los departamentos
-app.get('/departamentos', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT idDepartamento, nombre FROM tbl_departamentos ORDER BY nombre');
-        res.json(result.rows);
-    } catch (error) {
-        console.error('Error al obtener departamentos:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
-    }
-});
-
 // Obtener paciente por ID
 app.get('/pacientes/:paciente_id', async (req, res) => {
     try {
         const { paciente_id } = req.params;
         const result = await pool.query(`
-            SELECT 
-                pac.noafiliacion, 
-                pac.dpi, 
-                pac.nopacienteproveedor, 
-                pac.primernombre, 
-                pac.segundonombre, 
-                pac.otrosnombres, 
-                pac.primerapellido, 
-                pac.segundoapellido, 
-                pac.apellidocasada, 
-                pac.edad, 
-                to_char(pac.fechanacimiento, 'YYYY-MM-DD') as fechanacimiento, 
-                pac.sexo, 
-                pac.direccion, 
-                to_char(pac.fechaingreso, 'YYYY-MM-DD') as fechaingreso,
-                dep.nombre AS departamento, 
-                pac.estanciaprograma, 
-                estp.descripcion AS estado, 
-                acc.descripcion AS accesovascular, 
-                cau.descripcion AS causaegreso, 
-                pac.numeroformulario, 
-                pac.fechainicioperiodo,
-                pac.fechafinperiodo,
-                pac.sesionesautorizadasmes,
-                pac.urlfoto
-            FROM tbl_pacientes pac
-            LEFT JOIN tbl_departamentos dep ON pac.iddepartamento = dep.iddepartamento
-            LEFT JOIN tbl_estadospaciente estp ON pac.idestado = estp.idestado
-            LEFT JOIN tbl_accesovascular acc ON pac.idacceso = acc.idacceso
-            LEFT JOIN tbl_causaegreso cau ON pac.idcausa = cau.idcausa
-            WHERE pac.noafiliacion = $1
-        `, [paciente_id]
+                SELECT 
+                    pac.noafiliacion, 
+                    pac.dpi, 
+                    pac.nopacienteproveedor, 
+                    pac.primernombre, 
+                    pac.segundonombre, 
+                    pac.otrosnombres, 
+                    pac.primerapellido, 
+                    pac.segundoapellido, 
+                    pac.apellidocasada, 
+                    pac.edad, 
+                    to_char(pac.fechanacimiento, 'YYYY-MM-DD') as fechanacimiento, 
+                    pac.sexo, 
+                    pac.direccion, 
+                    to_char(pac.fechaingreso, 'YYYY-MM-DD') as fechaingreso,
+                    dep.nombre AS departamento, 
+                    pac.estanciaprograma, 
+                    estp.descripcion AS estado, 
+                    acc.descripcion AS accesovascular, 
+                    cau.descripcion AS causaegreso, 
+                    pac.numeroformulario, 
+                    pac.fechainicioperiodo,
+                    pac.fechafinperiodo,
+                    pac.sesionesautorizadasmes,
+                    pac.urlfoto
+                FROM tbl_pacientes pac
+                LEFT JOIN tbl_departamento dep ON pac.iddepartamento = dep.id_departamento
+                LEFT JOIN tbl_estadospaciente estp ON pac.idestado = estp.idestado
+                LEFT JOIN tbl_accesovascular acc ON pac.idacceso = acc.idacceso
+                LEFT JOIN tbl_causaegreso cau ON pac.idcausa = cau.idcausa
+                WHERE pac.no_afiliacion = $1
+            `, [paciente_id]
         );
 
         if (result.rows.length === 0) {
@@ -1852,17 +1756,17 @@ app.put('/pacientes/:noafiliacion', async (req, res) => {
     try {
         const result = await pool.query(
             `UPDATE tbl_pacientes SET
-                primernombre = COALESCE($1, primernombre),
-                segundonombre = COALESCE($2, segundonombre),
-                primerapellido = COALESCE($3, primerapellido),
-                segundoapellido = COALESCE($4, segundoapellido),
-                numeroformulario = COALESCE($5, numeroformulario),
-                sesionesautorizadasmes = COALESCE($6, sesionesautorizadasmes),
-                fechainicioperiodo = COALESCE($7, fechainicioperiodo),
-                fechafinperiodo = COALESCE($8, fechafinperiodo),
-                observaciones = COALESCE($9, observaciones),
-                urlfoto = COALESCE($10, urlfoto)
-            WHERE noafiliacion = $11`,
+                    primernombre = COALESCE($1, primernombre),
+                    segundonombre = COALESCE($2, segundonombre),
+                    primerapellido = COALESCE($3, primerapellido),
+                    segundoapellido = COALESCE($4, segundoapellido),
+                    numeroformulario = COALESCE($5, numeroformulario),
+                    sesionesautorizadasmes = COALESCE($6, sesionesautorizadasmes),
+                    fechainicioperiodo = COALESCE($7, fechainicioperiodo),
+                    fechafinperiodo = COALESCE($8, fechafinperiodo),
+                    observaciones = COALESCE($9, observaciones),
+                    urlfoto = COALESCE($10, urlfoto)
+                WHERE noafiliacion = $11`,
             [
                 primerNombre || null,
                 segundoNombre || null,
@@ -1902,42 +1806,42 @@ app.get('/consultaPacientes', async (req, res) => {
             return res.status(400).json({ detail: "Debe proporcionar el número de afiliación" });
         }
         const result = await pool.query(`
-            SELECT 
-                pac.noafiliacion, 
-                pac.dpi, 
-                pac.nopacienteproveedor, 
-                pac.primernombre, 
-                pac.segundonombre, 
-                pac.otrosnombres, 
-                pac.primerapellido, 
-                pac.segundoapellido, 
-                pac.apellidocasada, 
-                pac.edad, 
-                pac.fechanacimiento, 
-                pac.sexo, 
-                pac.direccion, 
-                pac.fechaingreso, 
-                dep.nombre AS departamento, 
-                pac.estanciaprograma, 
-                estp.descripcion AS estado, 
-                acc.descripcion AS accesovascular, 
-                cau.descripcion AS causaegreso, 
-                pac.numeroformulario, 
-                pac.periodoprestservicios, 
-                pac.sesionesautorizadasmes
-            FROM 
-                tbl_pacientes pac
-            FULL JOIN 
-                tbl_departamentos dep ON pac.iddepartamento = dep.iddepartamento
-            FULL JOIN 
-                tbl_estadospaciente estp ON pac.idestado = estp.idestado
-            FULL JOIN 
-                tbl_accesovascular acc ON pac.idacceso = acc.idacceso
-            FULL JOIN 
-                tbl_causaegreso cau ON pac.idcausa = cau.idcausa
-            WHERE 
-                pac.noafiliacion = $1
-        `, [noafiliacion]);
+                SELECT 
+                    pac.noafiliacion, 
+                    pac.dpi, 
+                    pac.nopacienteproveedor, 
+                    pac.primernombre, 
+                    pac.segundonombre, 
+                    pac.otrosnombres, 
+                    pac.primerapellido, 
+                    pac.segundoapellido, 
+                    pac.apellidocasada, 
+                    pac.edad, 
+                    pac.fechanacimiento, 
+                    pac.sexo, 
+                    pac.direccion, 
+                    pac.fechaingreso, 
+                    dep.nombre AS departamento, 
+                    pac.estanciaprograma, 
+                    estp.descripcion AS estado, 
+                    acc.descripcion AS accesovascular, 
+                    cau.descripcion AS causaegreso, 
+                    pac.numeroformulario, 
+                    pac.periodoprestservicios, 
+                    pac.sesionesautorizadasmes
+                FROM 
+                    tbl_pacientes pac
+                FULL JOIN 
+                    tbl_departamento dep ON pac.iddepartamento = dep.id_departamento
+                FULL JOIN 
+                    tbl_estadospaciente estp ON pac.idestado = estp.idestado
+                FULL JOIN 
+                    tbl_accesovascular acc ON pac.idacceso = acc.idacceso
+                FULL JOIN 
+                    tbl_causaegreso cau ON pac.idcausa = cau.idcausa
+                WHERE 
+                    pac.noafiliacion = $1
+            `, [noafiliacion]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({ detail: "Paciente no encontrado" });
@@ -1955,18 +1859,18 @@ app.get('/asignacionPacientes', async (req, res) => {
     try {
         const { noafiliacion } = req.query;
         const result = await pool.query(`
-            SELECT 
-                pac.noAfiliacion,
-                pac.primernombre || ' ' || pac.segundonombre || ' ' || 
-                pac.primerapellido || ' ' || pac.segundoapellido AS nombrepaciente,
-                tur.idTurno,
-                cli.descripcion AS nombreclinica,
-                tur.FechaTurno
-            FROM tbl_Turnos tur
-            INNER JOIN tbl_pacientes pac ON tur.noAfiliacion = pac.noAfiliacion
-            INNER JOIN tbl_clinica cli ON tur.idclinica = cli.idSala
-            WHERE tur.idturnoestado = 2 AND pac.noAfiliacion = $1
-        `, [noafiliacion]);
+                SELECT 
+                    pac.noAfiliacion,
+                    pac.primernombre || ' ' || pac.segundonombre || ' ' || 
+                    pac.primerapellido || ' ' || pac.segundoapellido AS nombrepaciente,
+                    tur.idTurno,
+                    cli.descripcion AS nombreclinica,
+                    tur.FechaTurno
+                FROM tbl_Turnos tur
+                INNER JOIN tbl_pacientes pac ON tur.noAfiliacion = pac.noAfiliacion
+                INNER JOIN tbl_clinica cli ON tur.idclinica = cli.idSala
+                WHERE tur.idturnoestado = 2 AND pac.noAfiliacion = $1
+            `, [noafiliacion]);
 
         res.json(result.rows);
     } catch (err) {
@@ -1999,18 +1903,18 @@ app.post('/crear-turno', async (req, res) => {
 
         // Obtener el siguiente ID disponible verificando huecos en la secuencia
         const idQuery = `
-            WITH RECURSIVE numeros AS (
-                SELECT 1 as num
-                UNION ALL
-                SELECT num + 1
+                WITH RECURSIVE numeros AS (
+                    SELECT 1 as num
+                    UNION ALL
+                    SELECT num + 1
+                    FROM numeros
+                    WHERE num < (SELECT MAX(idTurno) FROM tbl_Turnos)
+                )
+                SELECT MIN(numeros.num) as siguiente_id
                 FROM numeros
-                WHERE num < (SELECT MAX(idTurno) FROM tbl_Turnos)
-            )
-            SELECT MIN(numeros.num) as siguiente_id
-            FROM numeros
-            LEFT JOIN tbl_Turnos ON tbl_Turnos.idTurno = numeros.num
-            WHERE tbl_Turnos.idTurno IS NULL;
-        `;
+                LEFT JOIN tbl_Turnos ON tbl_Turnos.idTurno = numeros.num
+                WHERE tbl_Turnos.idTurno IS NULL;
+            `;
 
         const idResult = await client.query(idQuery);
         let nuevoId = idResult.rows[0]?.siguiente_id;
@@ -2023,16 +1927,16 @@ app.post('/crear-turno', async (req, res) => {
 
         // Insertar el nuevo turno con estado inicial 2
         await client.query(`
-            INSERT INTO tbl_Turnos (idTurno, noAfiliacion, idclinica, FechaCreacion, FechaTurno, idturnoestado)
-            VALUES (
-                $1,
-                $2,
-                (SELECT idsala FROM tbl_Clinica WHERE descripcion = $3),
-                $4,
-                $5,
-                2
-            )
-        `, [nuevoId, noAfiliacion, clinica, fechaTurno, fechaTurno]);
+                INSERT INTO tbl_Turnos (idTurno, noAfiliacion, idclinica, FechaCreacion, FechaTurno, idturnoestado)
+                VALUES (
+                    $1,
+                    $2,
+                    (SELECT idsala FROM tbl_Clinica WHERE descripcion = $3),
+                    $4,
+                    $5,
+                    2
+                )
+            `, [nuevoId, noAfiliacion, clinica, fechaTurno, fechaTurno]);
 
         await client.query('COMMIT');
 
@@ -2071,21 +1975,21 @@ app.get('/reporte-turnos-pdf', async (req, res) => {
         }
         const where = filtros.length > 0 ? 'WHERE ' + filtros.join(' AND ') : '';
         const consulta = `
-            SELECT 
-                t.idTurno,
-                t.noAfiliacion AS numeroafiliacion,
-                p.primernombre || ' ' || COALESCE(p.segundonombre,'') || ' ' || p.primerapellido || ' ' || COALESCE(p.segundoapellido,'') AS nombrepaciente,
-                to_char(t.FechaTurno, 'YYYY-MM-DD') AS fecha,
-                to_char(t.FechaTurno, 'HH24:MI') AS hora,
-                c.descripcion AS nombreclinica,
-                e.descripcion AS estado
-            FROM tbl_Turnos t
-            INNER JOIN tbl_pacientes p ON t.noAfiliacion = p.noAfiliacion
-            INNER JOIN tbl_clinica c ON t.idclinica = c.idsala
-            INNER JOIN tbl_turnoestados e ON t.idturnoestado = e.idturnoestado
-            ${where}
-            ORDER BY t.FechaTurno DESC
-        `;
+                SELECT 
+                    t.idTurno,
+                    t.noAfiliacion AS numeroafiliacion,
+                    p.primernombre || ' ' || COALESCE(p.segundonombre,'') || ' ' || p.primerapellido || ' ' || COALESCE(p.segundoapellido,'') AS nombrepaciente,
+                    to_char(t.FechaTurno, 'YYYY-MM-DD') AS fecha,
+                    to_char(t.FechaTurno, 'HH24:MI') AS hora,
+                    c.descripcion AS nombreclinica,
+                    e.descripcion AS estado
+                FROM tbl_Turnos t
+                INNER JOIN tbl_pacientes p ON t.noAfiliacion = p.no_Afiliacion
+                INNER JOIN tbl_clinica c ON t.idclinica = c.idsala
+                INNER JOIN tbl_turnoestados e ON t.idturnoestado = e.idturnoestado
+                ${where}
+                ORDER BY t.FechaTurno DESC
+            `;
         const result = await pool.query(consulta, valores);
         // Crear PDF
         const doc = new PDFDocument({ margin: 30, size: 'A4', layout: 'landscape' });
@@ -2224,21 +2128,21 @@ app.get('/reporte-turnos', async (req, res) => {
         }
         const where = filtros.length > 0 ? 'WHERE ' + filtros.join(' AND ') : '';
         const consulta = `
-            SELECT 
-                t.idTurno,
-                t.noAfiliacion AS numeroafiliacion,
-                p.primernombre || ' ' || COALESCE(p.segundonombre,'') || ' ' || p.primerapellido || ' ' || COALESCE(p.segundoapellido,'') AS nombrepaciente,
-                to_char(t.FechaTurno, 'YYYY-MM-DD') AS fecha,
-                to_char(t.FechaTurno, 'HH24:MI') AS hora,
-                c.descripcion AS nombreclinica,
-                e.descripcion AS estado
-            FROM tbl_Turnos t
-            INNER JOIN tbl_pacientes p ON t.noAfiliacion = p.noAfiliacion
-            INNER JOIN tbl_clinica c ON t.idclinica = c.idsala
-            INNER JOIN tbl_turnoestados e ON t.idturnoestado = e.idturnoestado
-            ${where}
-            ORDER BY t.FechaTurno DESC
-        `;
+                SELECT 
+                    t.idTurno,
+                    t.noAfiliacion AS numeroafiliacion,
+                    p.primernombre || ' ' || COALESCE(p.segundonombre,'') || ' ' || p.primerapellido || ' ' || COALESCE(p.segundoapellido,'') AS nombrepaciente,
+                    to_char(t.FechaTurno, 'YYYY-MM-DD') AS fecha,
+                    to_char(t.FechaTurno, 'HH24:MI') AS hora,
+                    c.descripcion AS nombreclinica,
+                    e.descripcion AS estado
+                FROM tbl_Turnos t
+                INNER JOIN tbl_pacientes p ON t.noAfiliacion = p.no_Afiliacion
+                INNER JOIN tbl_clinica c ON t.idclinica = c.idsala
+                INNER JOIN tbl_turnoestados e ON t.idturnoestado = e.idturnoestado
+                ${where}
+                ORDER BY t.FechaTurno DESC
+            `;
         const result = await pool.query(consulta, valores);
         // Crear Excel
         const workbook = new ExcelJS.Workbook();
@@ -2282,21 +2186,21 @@ app.get('/turnos', async (req, res) => {
         }
         const where = filtros.length > 0 ? 'WHERE ' + filtros.join(' AND ') : '';
         const consulta = `
-            SELECT 
-                t.idTurno,
-                t.noAfiliacion AS numeroafiliacion,
-                p.primernombre || ' ' || COALESCE(p.segundonombre,'') || ' ' || p.primerapellido || ' ' || COALESCE(p.segundoapellido,'') AS nombrepaciente,
-                to_char(t.FechaTurno, 'YYYY-MM-DD') AS fecha,
-                to_char(t.FechaTurno, 'HH24:MI') AS hora,
-                c.descripcion AS nombreclinica,
-                e.descripcion AS estado
-            FROM tbl_Turnos t
-            INNER JOIN tbl_pacientes p ON t.noAfiliacion = p.noAfiliacion
-            INNER JOIN tbl_clinica c ON t.idclinica = c.idsala
-            INNER JOIN tbl_turnoestados e ON t.idturnoestado = e.idturnoestado
-            ${where}
-            ORDER BY t.FechaTurno DESC
-        `;
+                SELECT 
+                    t.idTurno,
+                    t.noAfiliacion AS numeroafiliacion,
+                    p.primernombre || ' ' || COALESCE(p.segundonombre,'') || ' ' || p.primerapellido || ' ' || COALESCE(p.segundoapellido,'') AS nombrepaciente,
+                    to_char(t.FechaTurno, 'YYYY-MM-DD') AS fecha,
+                    to_char(t.FechaTurno, 'HH24:MI') AS hora,
+                    c.descripcion AS nombreclinica,
+                    e.descripcion AS estado
+                FROM tbl_Turnos t
+                INNER JOIN tbl_pacientes p ON t.noAfiliacion = p.no_Afiliacion
+                INNER JOIN tbl_clinica c ON t.idclinica = c.idsala
+                INNER JOIN tbl_turnoestados e ON t.idturnoestado = e.idturnoestado
+                ${where}
+                ORDER BY t.FechaTurno DESC
+            `;
         const result = await pool.query(consulta, valores);
         res.json(result.rows);
     } catch (err) {
@@ -2309,22 +2213,22 @@ app.get('/turno-mas-antiguo/:clinica', async (req, res) => {
     try {
         const { clinica } = req.params;
         const consultaTurnoMasAntiguo = `
-            SELECT 
-                t.idTurno,
-                t.noAfiliacion,
-                p.primernombre || ' ' || p.segundonombre || ' ' || 
-                p.primerapellido || ' ' || p.segundoapellido AS nombrepaciente,
-                c.descripcion AS nombreclinica,
-                t.FechaTurno,
-                t.FechaAsignacion,
-                p.urlfoto
-            FROM tbl_Turnos t
-            INNER JOIN tbl_pacientes p ON t.noAfiliacion = p.noAfiliacion
-            INNER JOIN tbl_clinica c ON t.idclinica = c.idsala
-            WHERE c.descripcion = $1 AND t.idturnoestado = 3
-            ORDER BY t.FechaAsignacion ASC
-            LIMIT 1
-        `;
+                SELECT 
+                    t.idTurno,
+                    t.noAfiliacion,
+                    p.primernombre || ' ' || p.segundonombre || ' ' || 
+                    p.primerapellido || ' ' || p.segundoapellido AS nombrepaciente,
+                    c.descripcion AS nombreclinica,
+                    t.FechaTurno,
+                    t.FechaAsignacion,
+                    p.urlfoto
+                FROM tbl_Turnos t
+                INNER JOIN tbl_pacientes p ON t.noAfiliacion = p.no_Afiliacion
+                INNER JOIN tbl_clinica c ON t.idclinica = c.idsala
+                WHERE c.descripcion = $1 AND t.idturnoestado = 3
+                ORDER BY t.FechaAsignacion ASC
+                LIMIT 1
+            `;
 
         const result = await pool.query(consultaTurnoMasAntiguo, [clinica]);
 
@@ -2343,22 +2247,22 @@ app.get('/turno-mas-antiguo-asignado/:clinica', async (req, res) => {
     try {
         const { clinica } = req.params;
         const consultaTurnoMasAntiguo = `
-            SELECT 
-                t.idTurno,
-                t.noAfiliacion,
-                p.primernombre || ' ' || p.segundonombre || ' ' || 
-                p.primerapellido || ' ' || p.segundoapellido AS nombrepaciente,
-                c.descripcion AS nombreclinica,
-                t.FechaTurno,
-                t.FechaAsignacion,
-                p.urlfoto
-            FROM tbl_Turnos t
-            INNER JOIN tbl_pacientes p ON t.noAfiliacion = p.noAfiliacion
-            INNER JOIN tbl_clinica c ON t.idclinica = c.idsala
-            WHERE c.descripcion = $1 AND t.idturnoestado = 1
-            ORDER BY t.FechaAsignacion ASC
-            LIMIT 1
-        `;
+                SELECT 
+                    t.idTurno,
+                    t.noAfiliacion,
+                    p.primernombre || ' ' || p.segundonombre || ' ' || 
+                    p.primerapellido || ' ' || p.segundoapellido AS nombrepaciente,
+                    c.descripcion AS nombreclinica,
+                    t.FechaTurno,
+                    t.FechaAsignacion,
+                    p.urlfoto
+                FROM tbl_Turnos t
+                INNER JOIN tbl_pacientes p ON t.noAfiliacion = p.no_Afiliacion
+                INNER JOIN tbl_clinica c ON t.idclinica = c.idsala
+                WHERE c.descripcion = $1 AND t.idturnoestado = 1
+                ORDER BY t.FechaAsignacion ASC
+                LIMIT 1
+            `;
 
         const result = await pool.query(consultaTurnoMasAntiguo, [clinica]);
 
@@ -2391,20 +2295,20 @@ app.put('/llamar-turno/:turno_id', async (req, res) => {
 app.get('/turnoLlamado', async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT 
-                p.noAfiliacion,
-                p.primernombre || ' ' || p.segundonombre || ' ' || 
-                p.primerapellido || ' ' || p.segundoapellido AS nombrepaciente,
-                c.descripcion AS nombreclinica,
-                t.FechaTurno,
-                p.urlfoto
-            FROM tbl_Turnos t
-            INNER JOIN tbl_pacientes p ON t.noAfiliacion = p.noAfiliacion
-            INNER JOIN tbl_clinica c ON t.idclinica = c.idsala
-            WHERE t.idturnoestado = 3
-            ORDER BY t.FechaTurno DESC
-            LIMIT 1
-        `);
+                SELECT 
+                    p.noAfiliacion,
+                    p.primernombre || ' ' || p.segundonombre || ' ' || 
+                    p.primerapellido || ' ' || p.segundoapellido AS nombrepaciente,
+                    c.descripcion AS nombreclinica,
+                    t.FechaTurno,
+                    p.urlfoto
+                FROM tbl_Turnos t
+                INNER JOIN tbl_pacientes p ON t.noAfiliacion = p.no_Afiliacion
+                INNER JOIN tbl_clinica c ON t.idclinica = c.idsala
+                WHERE t.idturnoestado = 3
+                ORDER BY t.FechaTurno DESC
+                LIMIT 1
+            `);
 
         if (result.rows.length === 0) {
             res.json(null);
@@ -2420,19 +2324,19 @@ app.get('/turnoLlamado', async (req, res) => {
 app.get('/turno-llamado', async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT 
-                t.idTurno,
-                t.FechaTurno,
-                c.descripcion as clinica,
-                p.primernombre || ' ' || p.segundonombre || ' ' || p.primerapellido || ' ' || p.segundoapellido as paciente,
-                p.urlfoto
-            FROM tbl_Turnos t
-            JOIN tbl_clinica c ON t.idclinica = c.idSala
-            JOIN tbl_pacientes p ON t.noAfiliacion = p.noAfiliacion
-            WHERE t.idturnoestado = 2
-            ORDER BY t.FechaTurno DESC
-            LIMIT 1
-        `);
+                SELECT 
+                    t.idTurno,
+                    t.FechaTurno,
+                    c.descripcion as clinica,
+                    p.primernombre || ' ' || p.segundonombre || ' ' || p.primerapellido || ' ' || p.segundoapellido as paciente,
+                    p.urlfoto
+                FROM tbl_Turnos t
+                JOIN tbl_clinica c ON t.idclinica = c.idSala
+                JOIN tbl_pacientes p ON t.noAfiliacion = p.no_Afiliacion
+                WHERE t.idturnoestado = 2
+                ORDER BY t.FechaTurno DESC
+                LIMIT 1
+            `);
 
         if (result.rows.length === 0) {
             return res.status(404).json({ detail: "No hay turno llamado actualmente" });
@@ -2525,20 +2429,20 @@ app.get('/clinicas', async (req, res) => {
 app.get('/turnos-siguientes', async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT 
-                p.noAfiliacion,
-                p.primernombre || ' ' || p.segundonombre || ' ' || 
-                p.primerapellido || ' ' || p.segundoapellido AS nombrepaciente,
-                c.descripcion AS nombreclinica,
-                t.FechaTurno,
-                p.urlfoto
-            FROM tbl_Turnos t
-            INNER JOIN tbl_pacientes p ON t.noAfiliacion = p.noAfiliacion
-            INNER JOIN tbl_clinica c ON t.idclinica = c.idsala
-            WHERE t.idturnoestado = 1
-            ORDER BY t.FechaTurno ASC
-            LIMIT 5
-        `);
+                SELECT 
+                    p.noAfiliacion,
+                    p.primernombre || ' ' || p.segundonombre || ' ' || 
+                    p.primerapellido || ' ' || p.segundoapellido AS nombrepaciente,
+                    c.descripcion AS nombreclinica,
+                    t.FechaTurno,
+                    p.urlfoto
+                FROM tbl_Turnos t
+                INNER JOIN tbl_pacientes p ON t.noAfiliacion = p.no_Afiliacion
+                INNER JOIN tbl_clinica c ON t.idclinica = c.idsala
+                WHERE t.idturnoestado = 1
+                ORDER BY t.FechaTurno ASC
+                LIMIT 5
+            `);
 
         res.json(result.rows);
     } catch (err) {
@@ -2550,88 +2454,44 @@ app.get('/turnos-siguientes', async (req, res) => {
 app.get('/pacientes', async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT 
-                pac.noafiliacion, 
-                pac.dpi, 
-                pac.nopacienteproveedor, 
-                pac.primernombre, 
-                pac.segundonombre, 
-                pac.otrosnombres, 
-                pac.primerapellido, 
-                pac.segundoapellido, 
-                pac.apellidocasada, 
-                pac.edad, 
-                pac.fechanacimiento, 
-                pac.sexo, 
-                pac.direccion, 
-                pac.fechaingreso, 
-                dep.nombre AS departamento, 
-                pac.estanciaprograma, 
-                estp.descripcion AS estado, 
-                acc.descripcion AS AccesoVascular, 
-                cau.descripcion AS CausaEgreso, 
-                pac.numeroformulario, 
-                pac.periodoprestservicios, 
-                pac.sesionesautorizadasmes
-            FROM 
-                tbl_pacientes pac
-            FULL JOIN 
-                tbl_departamentos dep ON pac.iddepartamento = dep.iddepartamento
-            FULL JOIN 
-                tbl_estadospaciente estp ON pac.idestado = estp.idestado
-            FULL JOIN 
-                tbl_accesovascular acc ON pac.idacceso = acc.idacceso
-            FULL JOIN 
-                tbl_causaegreso cau ON pac.idcausa = cau.idcausa
-            ORDER BY pac.primernombre, pac.primerapellido
-        `);
+                SELECT 
+                    pac.noafiliacion, 
+                    pac.dpi, 
+                    pac.nopacienteproveedor, 
+                    pac.primernombre, 
+                    pac.segundonombre, 
+                    pac.otrosnombres, 
+                    pac.primerapellido, 
+                    pac.segundoapellido, 
+                    pac.apellidocasada, 
+                    pac.edad, 
+                    pac.fechanacimiento, 
+                    pac.sexo, 
+                    pac.direccion, 
+                    pac.fechaingreso, 
+                    dep.nombre AS departamento, 
+                    pac.estanciaprograma, 
+                    estp.descripcion AS estado, 
+                    acc.descripcion AS AccesoVascular, 
+                    cau.descripcion AS CausaEgreso, 
+                    pac.numeroformulario, 
+                    pac.periodoprestservicios, 
+                    pac.sesionesautorizadasmes
+                FROM 
+                    tbl_pacientes pac
+                FULL JOIN 
+                    tbl_departamento dep ON pac.iddepartamento = dep.id_departamento
+                FULL JOIN 
+                    tbl_estadospaciente estp ON pac.idestado = estp.idestado
+                FULL JOIN 
+                    tbl_accesovascular acc ON pac.idacceso = acc.idacceso
+                FULL JOIN 
+                    tbl_causaegreso cau ON pac.idcausa = cau.idcausa
+                ORDER BY pac.primernombre, pac.primerapellido
+            `);
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ detail: err.message });
-    }
-});
-
-// Crear nuevo paciente
-app.post('/pacientes', async (req, res) => {
-    const client = await pool.connect();
-    try {
-        const { noAfiliacion, primerNombre, segundoNombre, primerApellido, segundoApellido } = req.body;
-
-        // Verificar si el paciente ya existe
-        const existeResult = await client.query(
-            'SELECT noAfiliacion FROM tbl_pacientes WHERE noAfiliacion = $1',
-            [noAfiliacion]
-        );
-
-        if (existeResult.rows.length > 0) {
-            return res.status(400).json({
-                detail: 'Ya existe un paciente con este número de afiliación'
-            });
-        }
-
-        await client.query('BEGIN');
-
-        await client.query(`
-            INSERT INTO tbl_pacientes (
-                noAfiliacion, 
-                primerNombre, 
-                segundoNombre, 
-                primerApellido, 
-                segundoApellido
-            ) VALUES ($1, $2, $3, $4, $5)
-        `, [noAfiliacion, primerNombre, segundoNombre, primerApellido, segundoApellido]);
-
-        await client.query('COMMIT');
-
-        res.json({
-            success: true,
-            message: "Paciente registrado exitosamente"
-        });
-    } catch (err) {
-        await client.query('ROLLBACK');
-        res.status(500).json({ detail: err.message });
-    } finally {
-        client.release();
     }
 });
 
@@ -2646,60 +2506,60 @@ app.put('/pacientes/:noAfiliacion', async (req, res) => {
         if (desdeReingreso) {
             // Si viene de reingreso, también actualizar idestado = 2 y limpiar campos de egreso
             result = await client.query(`
-                UPDATE tbl_pacientes 
-                SET 
-                    primerNombre = $1, 
-                    segundoNombre = $2, 
-                    primerApellido = $3, 
-                    segundoApellido = $4,
-                    numeroformulario = $5,
-                    sesionesautorizadasmes = $6,
-                    fechainicioperiodo = $7,
-                    fechafinperiodo = $8,
-                    observaciones = $9,
-                    idestado = 2,
-                    idcausa = NULL,
-                    causaegreso = NULL,
-                    fechaegreso = NULL,
-                    nocasoconcluido = NULL
-                WHERE noAfiliacion = $10
-                RETURNING *
-            `, [primerNombre, segundoNombre, primerApellido, segundoApellido, numeroformulario, sesionesautorizadasmes, fechainicioperiodo, fechafinperiodo, observaciones, noAfiliacion]);
+                    UPDATE tbl_pacientes 
+                    SET 
+                        primerNombre = $1, 
+                        segundoNombre = $2, 
+                        primerApellido = $3, 
+                        segundoApellido = $4,
+                        numeroformulario = $5,
+                        sesionesautorizadasmes = $6,
+                        fechainicioperiodo = $7,
+                        fechafinperiodo = $8,
+                        observaciones = $9,
+                        idestado = 2,
+                        idcausa = NULL,
+                        causaegreso = NULL,
+                        fechaegreso = NULL,
+                        nocasoconcluido = NULL
+                    WHERE noAfiliacion = $10
+                    RETURNING *
+                `, [primerNombre, segundoNombre, primerApellido, segundoApellido, numeroformulario, sesionesautorizadasmes, fechainicioperiodo, fechafinperiodo, observaciones, noAfiliacion]);
         } else if (desdeEgreso) {
             // Egreso de paciente (incluye fallecimiento)
             result = await client.query(`
-                UPDATE tbl_pacientes
-                SET
-                    idestado = 3,
-                    idcausa = $1,
-                    causaegreso = $2,
-                    fechaegreso = $3::date,
-                    nocasoconcluido = $4,
-                    observaciones = $5,
-                    comorbilidades = COALESCE($6, NULL),
-                    fechafallecido = COALESCE($7::date, NULL),
-                    lugarfallecimiento = COALESCE($8, NULL),
-                    causafallecimiento = COALESCE($9, NULL)
-                WHERE noAfiliacion = $10
-                RETURNING *
-            `, [idcausa, causaegreso, fechaegreso, nocasoconcluido, observaciones, comorbilidades, fechafallecimiento, lugarfallecimiento, causafallecimiento, noAfiliacion]);
+                    UPDATE tbl_pacientes
+                    SET
+                        idestado = 3,
+                        idcausa = $1,
+                        causaegreso = $2,
+                        fechaegreso = $3::date,
+                        nocasoconcluido = $4,
+                        observaciones = $5,
+                        comorbilidades = COALESCE($6, NULL),
+                        fechafallecido = COALESCE($7::date, NULL),
+                        lugarfallecimiento = COALESCE($8, NULL),
+                        causafallecimiento = COALESCE($9, NULL)
+                    WHERE noAfiliacion = $10
+                    RETURNING *
+                `, [idcausa, causaegreso, fechaegreso, nocasoconcluido, observaciones, comorbilidades, fechafallecimiento, lugarfallecimiento, causafallecimiento, noAfiliacion]);
         } else {
             // Si no, no modificar idestado
             result = await client.query(`
-                UPDATE tbl_pacientes 
-                SET 
-                    primerNombre = $1, 
-                    segundoNombre = $2, 
-                    primerApellido = $3, 
-                    segundoApellido = $4,
-                    numeroformulario = $5,
-                    sesionesautorizadasmes = $6,
-                    fechainicioperiodo = $7,
-                    fechafinperiodo = $8,
-                    observaciones = $9
-                WHERE noAfiliacion = $10
-                RETURNING *
-            `, [primerNombre, segundoNombre, primerApellido, segundoApellido, numeroformulario, sesionesautorizadasmes, fechainicioperiodo, fechafinperiodo, observaciones, noAfiliacion]);
+                    UPDATE tbl_pacientes 
+                    SET 
+                        primerNombre = $1, 
+                        segundoNombre = $2, 
+                        primerApellido = $3, 
+                        segundoApellido = $4,
+                        numeroformulario = $5,
+                        sesionesautorizadasmes = $6,
+                        fechainicioperiodo = $7,
+                        fechafinperiodo = $8,
+                        observaciones = $9
+                    WHERE noAfiliacion = $10
+                    RETURNING *
+                `, [primerNombre, segundoNombre, primerApellido, segundoApellido, numeroformulario, sesionesautorizadasmes, fechainicioperiodo, fechafinperiodo, observaciones, noAfiliacion]);
         }
 
         if (result.rows.length === 0) {
@@ -2727,7 +2587,7 @@ app.get('/pacientes/:noAfiliacion', async (req, res) => {
     try {
         const { noAfiliacion } = req.params;
         const result = await pool.query(
-            'SELECT * FROM tbl_pacientes WHERE noAfiliacion = $1',
+            'SELECT * FROM tbl_pacientes WHERE no_Afiliacion = $1',
             [noAfiliacion]
         );
 
@@ -2752,41 +2612,41 @@ app.get('/pacientes/buscar', async (req, res) => {
         }
 
         const query = `
-            SELECT 
-                pac.noafiliacion, 
-                pac.dpi, 
-                pac.nopacienteproveedor, 
-                pac.primernombre, 
-                pac.segundonombre, 
-                pac.otrosnombres, 
-                pac.primerapellido, 
-                pac.segundoapellido, 
-                pac.apellidocasada, 
-                pac.edad, 
-                to_char(pac.fechanacimiento, 'YYYY-MM-DD') as fechanacimiento, 
-                pac.sexo, 
-                pac.direccion, 
-                to_char(pac.fechaingreso, 'YYYY-MM-DD') as fechaingreso, 
-                dep.nombre AS departamento, 
-                pac.estanciaprograma, 
-                estp.descripcion AS estado, 
-                acc.descripcion AS accesovascular, 
-                cau.descripcion AS causaegreso, 
-                pac.numeroformulario, 
-                pac.periodoprestservicios, 
-                pac.sesionesautorizadasmes
-            FROM 
-                tbl_pacientes pac
-            LEFT JOIN 
-                tbl_departamentos dep ON pac.iddepartamento = dep.iddepartamento
-            LEFT JOIN 
-                tbl_estadospaciente estp ON pac.idestado = estp.idestado
-            LEFT JOIN 
-                tbl_accesovascular acc ON pac.idacceso = acc.idacceso
-            LEFT JOIN 
-                tbl_causaegreso cau ON pac.idcausa = cau.idcausa
-            WHERE 
-                pac.noafiliacion = $1`;
+                SELECT 
+                    pac.noafiliacion, 
+                    pac.dpi, 
+                    pac.nopacienteproveedor, 
+                    pac.primernombre, 
+                    pac.segundonombre, 
+                    pac.otrosnombres, 
+                    pac.primerapellido, 
+                    pac.segundoapellido, 
+                    pac.apellidocasada, 
+                    pac.edad, 
+                    to_char(pac.fechanacimiento, 'YYYY-MM-DD') as fechanacimiento, 
+                    pac.sexo, 
+                    pac.direccion, 
+                    to_char(pac.fechaingreso, 'YYYY-MM-DD') as fechaingreso, 
+                    dep.nombre AS departamento, 
+                    pac.estanciaprograma, 
+                    estp.descripcion AS estado, 
+                    acc.descripcion AS accesovascular, 
+                    cau.descripcion AS causaegreso, 
+                    pac.numeroformulario, 
+                    pac.periodoprestservicios, 
+                    pac.sesionesautorizadasmes
+                FROM 
+                    tbl_pacientes pac
+                LEFT JOIN 
+                    tbl_departamento dep ON pac.iddepartamento = dep.id_departamento
+                LEFT JOIN 
+                    tbl_estadospaciente estp ON pac.idestado = estp.idestado
+                LEFT JOIN 
+                    tbl_accesovascular acc ON pac.idacceso = acc.idacceso
+                LEFT JOIN 
+                    tbl_causaegreso cau ON pac.idcausa = cau.idcausa
+                WHERE 
+                    pac.noafiliacion = $1`;
         const result = await pool.query(query, [valor]);
 
         if (result.rows.length === 0) {
@@ -2804,123 +2664,41 @@ app.get('/pacientes/buscar', async (req, res) => {
 // Endpoint para subir foto de paciente
 app.post('/upload-photo', async (req, res) => {
     try {
-        console.log('Recibiendo solicitud de subida de foto');
         const { noAfiliacion, photo } = req.body;
-
-        console.log('Tipo de datos recibidos:', {
-            noAfiliacion: typeof noAfiliacion,
-            photo: typeof photo,
-            photoLength: photo ? photo.length : 0,
-            photoStart: photo ? photo.substring(0, 50) + '...' : 'no photo'
-        });
-
-        // Validar datos requeridos
         if (!noAfiliacion || !photo) {
-            console.error('Faltan datos requeridos:', { noAfiliacion: !!noAfiliacion, photo: !!photo });
             return res.status(400).json({ success: false, message: 'Faltan datos requeridos' });
         }
 
-        console.log('Procesando foto para paciente:', noAfiliacion);
-
-        // Verificar si el paciente existe
+        // 1) Verificar paciente
         const pacienteExiste = await pool.query(
-            'SELECT 1 FROM tbl_pacientes WHERE noafiliacion = $1',
+            'SELECT 1 FROM public.tbl_pacientes WHERE no_afiliacion = $1',
             [noAfiliacion]
         );
-
         if (pacienteExiste.rows.length === 0) {
-            console.error('Paciente no encontrado:', noAfiliacion);
-            return res.status(404).json({
-                success: false,
-                message: 'No se encontró el paciente con el número de afiliación proporcionado'
-            });
+            return res.status(404).json({ success: false, message: 'Paciente no encontrado' });
         }
 
-        // Procesar la imagen
-        let base64Data;
-        try {
-            // Verificar si la foto es una cadena
-            if (typeof photo !== 'string') {
-                throw new Error('La foto debe ser una cadena base64');
-            }
+        // 2) Normalizar base64 (acepta "data:image/..." o el base64 pelado)
+        const base64 = photo.startsWith('data:image')
+            ? photo.split(',')[1]
+            : photo;
+        if (!base64) return res.status(400).json({ success: false, message: 'Imagen vacía' });
 
-            // Aceptar diferentes formatos de imagen
-            if (photo.startsWith('data:image')) {
-                const parts = photo.split(',');
-                if (parts.length !== 2) {
-                    throw new Error('Formato data URL inválido');
-                }
-                base64Data = parts[1];
-            } else {
-                base64Data = photo;
-            }
-
-            // Verificar que sea un base64 válido y no esté vacío
-            if (!base64Data || base64Data.trim() === '') {
-                throw new Error('La imagen está vacía');
-            }
-
-            // Verificar que sea un base64 válido
-            if (!/^[A-Za-z0-9+/=]+$/.test(base64Data)) {
-                throw new Error('La cadena no es un base64 válido');
-            }
-        } catch (err) {
-            console.error('Error al procesar la imagen:', err);
-            return res.status(400).json({
-                success: false,
-                message: 'El formato de la imagen no es válido. Debe ser una imagen JPEG en base64'
-            });
-        }
-
+        // 3) Guardar archivo
         const fileName = `${noAfiliacion}.jpg`;
-        const filePath = path.join(__dirname, 'fotos', fileName);
+        const filePath = path.join(fotosDir, fileName);
+        fs.writeFileSync(filePath, Buffer.from(base64, 'base64'));
 
-        // Crear la carpeta si no existe
-        try {
-            if (!fs.existsSync(path.join(__dirname, 'fotos'))) {
-                fs.mkdirSync(path.join(__dirname, 'fotos'));
-            }
-        } catch (err) {
-            console.error('Error al crear directorio de fotos:', err);
-            throw new Error('No se pudo crear el directorio para almacenar las fotos');
-        }
+        // 4) Actualizar DB
+        await pool.query(
+            'UPDATE public.tbl_pacientes SET url_foto = $1 WHERE no_afiliacion = $2',
+            [fileName, noAfiliacion]
+        );
 
-        // Guardar el archivo
-        try {
-            fs.writeFileSync(filePath, base64Data, 'base64');
-        } catch (err) {
-            console.error('Error al escribir el archivo:', err);
-            throw new Error('No se pudo guardar el archivo de imagen');
-        }
-
-        // Actualizar la base de datos
-        try {
-            await pool.query(
-                'UPDATE tbl_pacientes SET urlfoto = $1 WHERE noafiliacion = $2',
-                [filePath, noAfiliacion]
-            );
-        } catch (err) {
-            console.error('Error al actualizar la base de datos:', err);
-            // Intentar eliminar el archivo si falló la actualización de la BD
-            try {
-                fs.unlinkSync(filePath);
-            } catch (unlinkErr) {
-                console.error('Error al eliminar archivo después de fallo en BD:', unlinkErr);
-            }
-            throw new Error('No se pudo actualizar la información en la base de datos');
-        }
-
-        console.log('Foto guardada exitosamente para paciente:', noAfiliacion);
-        res.json({ success: true, message: 'Foto guardada exitosamente' });
+        res.json({ success: true, url: `/fotos/${fileName}` });
     } catch (error) {
-        console.error('Error al guardar la foto:', {
-            message: error.message,
-            stack: error.stack
-        });
-        res.status(500).json({
-            success: false,
-            message: 'Error interno al guardar la foto: ' + error.message
-        });
+        console.error('Error al guardar la foto:', error);
+        res.status(500).json({ success: false, message: 'Error interno al guardar la foto' });
     }
 });
 
@@ -2937,7 +2715,11 @@ app.post('/definirCarnetPaciente', async (req, res) => {
         const path = require('path');
         const fs = require('fs');
         // Ruta de la foto y del PDF
-        const fotoPath = path.join(__dirname, 'fotos', `${noAfiliacion}.jpg`);
+        // Usa el helper para localizar la foto con cualquier extensión o si viene como URL:
+        const fotoPath = resolveFotoPath(
+            { urlfoto: pacienteData?.urlfoto ?? pacienteData?.url_foto ?? null },
+            noAfiliacion
+        );
         const carnetDir = path.join(__dirname, 'carnets');
         if (!fs.existsSync(carnetDir)) {
             fs.mkdirSync(carnetDir);
@@ -2957,95 +2739,76 @@ app.post('/definirCarnetPaciente', async (req, res) => {
 // Endpoint para descargar carné PDF por número de afiliación (forzar regeneración)
 app.get('/carnet/forzar/:noafiliacion', async (req, res) => {
     try {
-        const noafiliacion = req.params.noafiliacion;
-        // Obtener datos del paciente desde la base de datos
-        const result = await pool.query('SELECT * FROM tbl_pacientes WHERE noafiliacion = $1', [noafiliacion]);
-        if (!result.rows.length) {
-            return res.status(404).json({ error: 'Paciente no encontrado' });
-        }
-        const paciente = result.rows[0];
-        // Obtener ruta de la foto si existe
-        let fotoPath = null;
-        if (paciente.urlfoto) {
-            // Si la ruta es absoluta y existe, la usamos. Si no, buscamos en la carpeta fotos
-            if (fs.existsSync(paciente.urlfoto)) {
-                fotoPath = paciente.urlfoto;
-            } else {
-                const fotoEnFotos = path.join(__dirname, 'fotos', paciente.urlfoto);
-                if (fs.existsSync(fotoEnFotos)) {
-                    fotoPath = fotoEnFotos;
-                } else {
-                    // Buscar por nombre estándar (jpg/png)
-                    const jpgPath = path.join(__dirname, 'fotos', `${noafiliacion}.jpg`);
-                    const pngPath = path.join(__dirname, 'fotos', `${noafiliacion}.png`);
-                    if (fs.existsSync(jpgPath)) {
-                        fotoPath = jpgPath;
-                    } else if (fs.existsSync(pngPath)) {
-                        fotoPath = pngPath;
-                    }
-                }
-            }
-        } else {
-            // Buscar por nombre estándar (jpg/png)
-            const jpgPath = path.join(__dirname, 'fotos', `${noafiliacion}.jpg`);
-            const pngPath = path.join(__dirname, 'fotos', `${noafiliacion}.png`);
-            if (fs.existsSync(jpgPath)) {
-                fotoPath = jpgPath;
-            } else if (fs.existsSync(pngPath)) {
-                fotoPath = pngPath;
-            }
-        }
-        // Preparar datos para el carné (solo los campos requeridos)
-        const pacienteData = {
-            primernombre: paciente.primernombre,
-            segundonombre: paciente.segundonombre,
-            otrosnombres: paciente.otrosnombres,
-            primerapellido: paciente.primerapellido,
-            segundoapellido: paciente.segundoapellido,
-            apellidocasada: paciente.apellidocasada,
-            direccion: paciente.direccion,
-            fechanacimiento: paciente.fechanacimiento,
-            fechaingreso: paciente.fechaingreso,
-            noafiliacion: paciente.noafiliacion,
-            dpi: paciente.dpi,
-            sexo: paciente.sexo
-        };
-        // Generar un archivo temporal
-        const carnetPath = path.join(__dirname, 'tmp', `carnet_${noafiliacion}_${Date.now()}.pdf`);
-        if (!fs.existsSync(path.join(__dirname, 'tmp'))) {
-            fs.mkdirSync(path.join(__dirname, 'tmp'));
-        }
-        await definirCarnetPaciente(pacienteData, fotoPath, carnetPath);
+        const noafiliacion = String(req.params.noafiliacion || '').trim();
+
+        // Traer datos del paciente con alias consistentes
+        const { rows } = await pool.query(`
+      SELECT
+        no_afiliacion  AS noafiliacion,
+        dpi,
+        no_paciente_proveedor AS nopacienteproveedor,
+        primer_nombre   AS primernombre,
+        segundo_nombre  AS segundonombre,
+        otros_nombres   AS otrosnombres,
+        primer_apellido AS primerapellido,
+        segundo_apellido AS segundoapellido,
+        apellido_casada AS apellidocasada,
+        fecha_nacimiento AS fechanacimiento,
+        fecha_ingreso    AS fechaingreso,
+        sexo,
+        direccion,
+        url_foto AS urlfoto
+      FROM public.tbl_pacientes
+      WHERE no_afiliacion = $1
+    `, [noafiliacion]);
+
+        if (!rows.length) return res.status(404).json({ error: 'Paciente no encontrado' });
+        const paciente = rows[0];
+
+        // Resolver ruta real de la foto (soporta url_foto variado + extensiones)
+        const fotoPath = resolveFotoPath(paciente, noafiliacion);
+
+        // Carpeta de carnets + ruta del PDF
+        const carnetDir = path.join(__dirname, 'carnets');
+        if (!fs.existsSync(carnetDir)) fs.mkdirSync(carnetDir, { recursive: true });
+        const carnetPath = path.join(carnetDir, `${noafiliacion}_carnet.pdf`);
+
+        // Generar SIEMPRE (forzar)
+        await definirCarnetPaciente(paciente, fotoPath, carnetPath);
+
+        // Enviar PDF y limpiar archivo temporal después
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="carnet_${noafiliacion}.pdf"`);
+
         const stream = fs.createReadStream(carnetPath);
+        stream.on('error', (e) => res.status(500).json({ error: 'No se pudo leer el carné', detalle: e.message }));
+        stream.on('end', () => { try { fs.unlinkSync(carnetPath); } catch { } });
         stream.pipe(res);
-        stream.on('end', () => {
-            fs.unlink(carnetPath, () => { });
-        });
     } catch (error) {
+        console.error('Error en GET /carnet/forzar/:noafiliacion:', error);
         res.status(500).json({ error: 'Error al generar el carné.', detalle: error.message });
     }
 });
+
 
 // Endpoint para exportar reporte de pacientes fallecidos en Excel
 app.get('/api/reportes/fallecidos/excel', async (req, res) => {
     try {
         const { fechainicio, fechafin } = req.query;
         let baseQuery = `
-            SELECT 
-                pac.noafiliacion, pac.dpi, pac.nopacienteproveedor, 
-                CONCAT_WS(' ', pac.primernombre, pac.segundonombre, pac.otrosnombres, pac.primerapellido, pac.segundoapellido, pac.apellidocasada) as nombrecompleto, 
-                TO_CHAR(pac.fechanacimiento, 'YYYY-MM-DD') as fechanacimiento, pac.sexo, pac.direccion, dep.nombre as departamento, 
-                TO_CHAR(pac.fechaingreso, 'YYYY-MM-DD') as fechaingreso, 
-                pac.comorbilidades, TO_CHAR(pac.fechaegreso, 'YYYY-MM-DD') as fechafallecimiento, 
-                pac.sesionesrealizadasmes, pac.lugarfallecimiento, pac.causafallecimiento
-            FROM tbl_pacientes pac
-            LEFT JOIN tbl_departamentos dep ON pac.iddepartamento = dep.iddepartamento
-            LEFT JOIN tbl_estadospaciente est ON pac.idestado = est.idestado
-            LEFT JOIN tbl_causaegreso cau ON pac.idcausa = cau.idcausa
-            WHERE est.descripcion = 'Egreso' AND (cau.descripcion ILIKE '%fallec%')
-        `;
+                SELECT 
+                    pac.noafiliacion, pac.dpi, pac.nopacienteproveedor, 
+                    CONCAT_WS(' ', pac.primernombre, pac.segundonombre, pac.otrosnombres, pac.primerapellido, pac.segundoapellido, pac.apellidocasada) as nombrecompleto, 
+                    TO_CHAR(pac.fechanacimiento, 'YYYY-MM-DD') as fechanacimiento, pac.sexo, pac.direccion, dep.nombre as departamento, 
+                    TO_CHAR(pac.fechaingreso, 'YYYY-MM-DD') as fechaingreso, 
+                    pac.comorbilidades, TO_CHAR(pac.fechaegreso, 'YYYY-MM-DD') as fechafallecimiento, 
+                    pac.sesionesrealizadasmes, pac.lugarfallecimiento, pac.causafallecimiento
+                FROM tbl_pacientes pac
+                LEFT JOIN tbl_departamento dep ON pac.iddepartamento = dep.id_departamento
+                LEFT JOIN tbl_estadospaciente est ON pac.idestado = est.idestado
+                LEFT JOIN tbl_causaegreso cau ON pac.idcausa = cau.idcausa
+                WHERE est.descripcion = 'Egreso' AND (cau.descripcion ILIKE '%fallec%')
+            `;
         let params = [];
         let idx = 1;
         if (fechainicio) {
@@ -3077,7 +2840,7 @@ app.get('/api/reportes/fallecidos/excel', async (req, res) => {
             let periodo = '';
             if (p.fechainicioperiodo && p.fechafinperiodo) {
                 periodo = `${p.fechainicioperiodo} al ${p.fechafinperiodo}`;
-            }return{
+            } return {
                 noafiliacion: p.noafiliacion,
                 dpi: p.dpi,
                 nopacienteproveedor: p.nopacienteproveedor,
@@ -3099,19 +2862,19 @@ app.get('/api/reportes/fallecidos/excel', async (req, res) => {
         const ExcelJS = require("exceljs");
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Fallecidos');
-         // Insertar logo y título
-         const logoPath = __dirname + '/assets/img/logoClinica.png';
-         if (fs.existsSync(logoPath)) {
-             const imageId = workbook.addImage({
-                 filename: logoPath,
-                 extension: 'png',
-             });
-             worksheet.addImage(imageId, {
-                 tl: { col: 0, row: 0 }, // A1
-                 br: { col: 2, row: 7 }  // B7
-             });
-         }
-          // Insertar título de la fila 1 a la 7 en columnas C a Q (centrado)
+        // Insertar logo y título
+        const logoPath = __dirname + '/assets/img/logoClinica.png';
+        if (fs.existsSync(logoPath)) {
+            const imageId = workbook.addImage({
+                filename: logoPath,
+                extension: 'png',
+            });
+            worksheet.addImage(imageId, {
+                tl: { col: 0, row: 0 }, // A1
+                br: { col: 2, row: 7 }  // B7
+            });
+        }
+        // Insertar título de la fila 1 a la 7 en columnas C a Q (centrado)
         worksheet.mergeCells('D3:P5');
         worksheet.getCell('D3').value = 'REPORTE PACIENTES FALLECIDOS';
         worksheet.getCell('D3').alignment = { horizontal: 'center', vertical: 'middle' };
@@ -3120,7 +2883,7 @@ app.get('/api/reportes/fallecidos/excel', async (req, res) => {
         for (let col = 4; col <= 19; col++) { // D1 a S1
             worksheet.getCell(1, col).value = null;
         }
-        
+
         worksheet.columns = [
             { header: 'No. Afiliación', key: 'noafiliacion', width: 15 },
             { header: 'DPI', key: 'dpi', width: 18 },
@@ -3139,16 +2902,16 @@ app.get('/api/reportes/fallecidos/excel', async (req, res) => {
             { header: 'Causa de Fallecimiento', key: 'causafallecimiento', width: 24 }
         ];
         const startRow = 8;
-         // Encabezados personalizados (fila 8)
-         worksheet.getRow(startRow).values = worksheet.columns.map(col => col.header);
-        
+        // Encabezados personalizados (fila 8)
+        worksheet.getRow(startRow).values = worksheet.columns.map(col => col.header);
+
         result.rows.forEach((p, i) => {
             worksheet.getRow(startRow + 1 + i).values = [
                 p.noafiliacion || '',
                 p.dpi || '',
                 p.nopacienteproveedor || '',
-                p.nombrecompleto|| '',
-                p.edad|| '',
+                p.nombrecompleto || '',
+                p.edad || '',
                 p.fechanacimiento || '',
                 p.sexo || '',
                 p.direccion || '',
@@ -3182,8 +2945,8 @@ app.get('/api/reportes/fallecidos/excel', async (req, res) => {
                 p.noafiliacion || '',
                 p.dpi || '',
                 p.nopacienteproveedor || '',
-                p.nombrecompleto|| '',
-                p.edad|| '',
+                p.nombrecompleto || '',
+                p.edad || '',
                 p.fechanacimiento || '',
                 p.sexo || '',
                 p.direccion || '',
@@ -3236,5 +2999,61 @@ app.post('/registrar-faltista', async (req, res) => {
     } catch (error) {
         console.error('Error al registrar faltista:', error);
         res.status(500).json({ success: false, message: 'Error al registrar faltista.', detalle: error.message });
+    }
+});
+
+app.get("/departamentos", async (_req, res) => {
+    const qFunc = `
+        SELECT id_departamento AS iddepartamento, nombre
+        FROM public.fn_mostrar_departamentos()
+        ORDER BY nombre ASC
+    `;
+    const qTabla = `
+        SELECT id_departamento AS iddepartamento, nombre
+        FROM public.tbl_departamento
+        ORDER BY nombre ASC
+    `;
+    try {
+        const r1 = await pool.query(qFunc);
+        return res.json(r1.rows);
+    } catch (e1) {
+        try {
+            const r2 = await pool.query(qTabla);
+            return res.json(r2.rows);
+        } catch (e2) {
+            console.error("[/departamentos] ERROR:", e1.message, "| fallback:", e2.message);
+            return res.status(500).json({ error: "DB_ERROR" });
+        }
+    }
+});
+
+// Legacy: /accesos-vasculares (usa función)
+app.get('/accesos-vasculares', async (req, res) => {
+    try {
+        const { rows } = await pool.query('SELECT * FROM public.fn_mostrar_accesos_vascular()');
+        const data = rows.map(r => ({
+            idacceso: r.idacceso ?? r.id_acceso ?? r.id ?? null,
+            descripcion: r.descripcion ?? r.nombre ?? ''
+        }));
+        res.json(data);
+    } catch (e) {
+        console.error('accesos-vasculares legacy:', e);
+        res.status(500).json({ error: 'Error al obtener accesos vasculares' });
+    }
+});
+
+// Legacy: /jornadas (usa función)
+app.get('/jornadas', async (req, res) => {
+    try {
+        const { rows } = await pool.query('SELECT * FROM public.fn_mostrar_jornadas()');
+        const data = rows.map(r => ({
+            idjornada: r.idjornada ?? r.id_jornada ?? r.id ?? null,
+            descripcion: r.descripcion ?? r.nombre ?? '',
+            dias: r.dias ?? r.dias_semana ?? ''
+        }));
+        res.json(data);
+    } catch (e) {
+        console.error('jornadas legacy:', e);
+        res.status(500).json({ error: 'Error al obtener jornadas' });
     }
 });
