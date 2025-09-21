@@ -99,7 +99,7 @@ router.post('/auth/login', async (req, res) => {
     );
     const roles = rres.rows.map(r => r.nombre);
 
-    const token = jwt.sign({ sub: user.id_usuario, roles }, JWT_SECRET, { expiresIn: '8h' });
+    const token = jwt.sign({ sub: user.id_usuario, nombre_usuario: user.nombre_usuario, roles }, JWT_SECRET, { expiresIn: '8h' });
     // Considerar genérica si la contraseña del usuario coincide con 'Clinica1.' (hash o texto)
     let mustChangePassword = false;
     try {

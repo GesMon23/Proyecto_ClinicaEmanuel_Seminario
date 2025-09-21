@@ -78,13 +78,15 @@ router.put('/empleados/:dpi', verifyJWT, requireRole(['RolGestionUsuarios']), as
     return res.status(400).json({ error: 'No hay campos válidos para actualizar' });
   }
 
-  // Auditoría (actor)
-  const actor = (req.user && (req.user.nombre_usuario || req.user.usuario || req.user.sub || req.user.id_usuario || req.user.id)) || null;
+  // Auditoría (actor): resolver con función de BD
+  const nombreJWT = (req.user && (req.user.nombre_usuario || req.user.usuario)) || null;
+  const idJWT = Number(req.user && (req.user.id_usuario || req.user.id || req.user.sub)) || null;
+  const rActor = await pool.query('SELECT public.fn_resolver_actor($1, $2) AS actor_nombre', [nombreJWT, idJWT]);
+  const actorNombre = rActor.rows?.[0]?.actor_nombre || null;
 
-  // Llamamos a función/ procedimiento en BD
-  // sp_actualizar_empleado(original_dpi text, datos jsonb, actor text) RETURNS boolean
-  const sql = `SELECT sp_actualizar_empleado($1, $2::jsonb, $3) AS success`;
-  const params = [dpi, JSON.stringify(datos), actor];
+  // Llamamos a función en BD (sp_actualizar_empleado)
+  const sql = `SELECT fn_actualizar_empleado($1, $2::jsonb, $3) AS success`;
+  const params = [dpi, JSON.stringify(datos), actorNombre];
 
   try {
     const result = await pool.query(sql, params);
@@ -114,12 +116,16 @@ router.patch('/empleados/:dpi/estado', verifyJWT, requireRole(['RolGestionUsuari
   if (!dpi || typeof activo === 'undefined') {
     return res.status(400).json({ error: 'dpi y activo son requeridos' });
   }
-  const actor = (req.user && (req.user.nombre_usuario || req.user.usuario || req.user.sub || req.user.id_usuario || req.user.id)) || null;
+  // Resolver actor con función de BD
+  const nombreJWT2 = (req.user && (req.user.nombre_usuario || req.user.usuario)) || null;
+  const idJWT2 = Number(req.user && (req.user.id_usuario || req.user.id || req.user.sub)) || null;
+  const rActor2 = await pool.query('SELECT public.fn_resolver_actor($1, $2) AS actor_nombre', [nombreJWT2, idJWT2]);
+  const actorNombre = rActor2.rows?.[0]?.actor_nombre || null;
 
   // Procedimiento/función en BD
   // sp_cambiar_estado_empleado(dpi text, activo boolean, actor text) RETURNS boolean
-  const sql = `SELECT sp_cambiar_estado_empleado($1, $2, $3) AS success`;
-  const params = [dpi, Boolean(activo), actor];
+  const sql = `SELECT fn_cambiar_estado_empleado($1, $2, $3) AS success`;
+  const params = [dpi, Boolean(activo), actorNombre];
   try {
     const result = await pool.query(sql, params);
     const ok = result?.rows?.[0]?.success === true || result?.rows?.[0]?.sp_cambiar_estado_empleado === true;

@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Row, Col, Form, Button } from "react-bootstrap";
+import { Row, Col, Form, Button, Tabs, Tab } from "react-bootstrap";
 import api from '../config/api';
 import logoClinica from '@/assets/logoClinica2.png';
+import ConsultaPsicologia from '../components/ConsultaPsicologia';
 
 const Psicologia = () => {
+  const [tab, setTab] = useState('registro'); // 'registro' | 'consulta'
   const [paciente, setPaciente] = useState(null);
   const [busquedaError, setBusquedaError] = useState("");
   const [noafiliacion, setNoAfiliacion] = useState("");
@@ -218,7 +220,34 @@ const Psicologia = () => {
               <hr className="mt-4 border-gray-300 dark:border-gray-600" />
             </div>
             
+            {/* Tabs */}
+            <div className="flex gap-3 mb-6">
+              <button
+                type="button"
+                onClick={() => setTab('registro')}
+                className={`px-4 py-2 rounded-md font-semibold border transition-colors ${
+                  tab === 'registro'
+                    ? 'bg-green-800 text-white border-green-900'
+                    : 'bg-white dark:bg-slate-800 text-green-800 dark:text-white border-green-800 hover:bg-green-50 dark:hover:bg-slate-700'
+                }`}
+              >
+                Registro
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab('consulta')}
+                className={`px-4 py-2 rounded-md font-semibold border transition-colors ${
+                  tab === 'consulta'
+                    ? 'bg-green-800 text-white border-green-900'
+                    : 'bg-white dark:bg-slate-800 text-green-800 dark:text-white border-green-800 hover:bg-green-50 dark:hover:bg-slate-700'
+                }`}
+              >
+                Consulta
+              </button>
+            </div>
+
             {/* Formulario de búsqueda de pacientes */}
+            {tab === 'registro' && (
             <Form onSubmit={guardarEvaluacion} className="space-y-6">
               {/* Información del paciente encontrado */}
               {paciente && (
@@ -487,6 +516,11 @@ const Psicologia = () => {
                 </>
               )}
             </Form>
+            )}
+
+            {tab === 'consulta' && (
+              <ConsultaPsicologia />
+            )}
           </div>
         </div>
       </div>
