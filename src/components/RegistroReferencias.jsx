@@ -132,7 +132,7 @@ const RegistroReferencias = () => {
       }
       // Construir payload con nombres de campos correctos
       const payload = {
-        noafiliacion: Number(form.noafiliacion),
+        noafiliacion: String(form.noafiliacion).trim(),
         fechareferencia: form.FechaReferencia,
         motivotraslado: form.MotivoTraslado,
         idmedico: Number(form.idMedico),

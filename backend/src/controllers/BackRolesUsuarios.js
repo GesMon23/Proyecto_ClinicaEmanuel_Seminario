@@ -143,8 +143,20 @@ router.patch(
       const { estado } = req.body || {};
       if (!id) return res.status(400).json({ error: 'id inválido' });
       if (typeof estado !== 'boolean') return res.status(400).json({ error: 'estado debe ser boolean' });
-      
-      await pool.query('SELECT public.fn_actualizar_estado_usuario($1, $2)', [id, estado]);
+
+      // Bloquear auto-inactivación del usuario logueado
+      const currentId = Number(req.user?.sub || req.user?.id_usuario || req.user?.id) || null;
+      if (estado === false && currentId && id === currentId) {
+        return res.status(400).json({ error: 'No puedes inactivar tu propio usuario' });
+      }
+
+      // Resolver actor (nombre de usuario) vía función en BD
+      const nombreJWT = (req.user && (req.user.nombre_usuario || req.user.usuario)) || null;
+      const idJWT = Number(req.user && (req.user.id_usuario || req.user.id || req.user.sub)) || null;
+      const rActor = await pool.query('SELECT public.fn_resolver_actor($1, $2) AS actor_nombre', [nombreJWT, idJWT]);
+      const actorNombre = rActor.rows?.[0]?.actor_nombre || null;
+
+      await pool.query('SELECT public.fn_actualizar_estado_usuario($1, $2, $3)', [id, estado, actorNombre]);
       return res.json({ ok: true });
     } catch (err) {
       console.error('Error en PATCH /usuarios/:id/estado:', err);

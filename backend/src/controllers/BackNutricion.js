@@ -17,7 +17,7 @@ function getUserIdFromReq(req) {
     return null;
   }
 }
-async function getNombreUsuario(req) {
+async function resolveActorNombre(req) {
   try {
     const auth = req.headers?.authorization || '';
     const token = auth.startsWith('Bearer ')
@@ -25,11 +25,10 @@ async function getNombreUsuario(req) {
       : null;
     if (!token) return null;
     const payload = jwt.verify(token, JWT_SECRET);
-    const sub = payload?.sub;
-    if (!sub) return null;
-    const { rows } = await pool.query('SELECT * FROM fn_usuario_autenticado($1)', [sub]);
-    const user = rows?.[0];
-    return user?.nombre_usuario || null;
+    const nombreJWT = payload?.nombre_usuario || null;
+    const idJWT = payload?.sub ? Number(payload.sub) : null;
+    const { rows } = await pool.query('SELECT public.fn_resolver_actor($1, $2) AS actor_nombre', [nombreJWT, idJWT]);
+    return rows?.[0]?.actor_nombre || null;
   } catch (_) {
     return null;
   }
@@ -66,14 +65,14 @@ router.post('/evaluacion', async (req, res) => {
         $6::text      -- usuario_creacion (nombre_usuario)
       ) AS result
     `;
-    const usuarioNombre = await getNombreUsuario(req);
+    const usuarioNombre = await resolveActorNombre(req);
     const params = [
       no_afiliacion,
       motivo_consulta,
       altura_cm,
       peso_kg,
       observaciones || null,
-      usuarioNombre || usuario_creacion || 'sistema'
+      usuarioNombre || 'sistema'
     ];
 
     const { rows } = await pool.query(sql, params);
@@ -94,24 +93,6 @@ router.post('/evaluacion', async (req, res) => {
     return res.status(500).json({ error: 'Error interno del servidor', detalle: error.message });
   }
 });
-/*
-// GET /historial/:noafiliacion - historial de informes nutrición
-router.get('/historial/:noafiliacion', async (req, res) => {
-  try {
-    const { noafiliacion } = req.params;
-    const sql = `
-      SELECT id_informe, motivo_consulta, estado_nutricional, observaciones,
-             altura_cm, peso_kg, imc, usuario_creacion, fecha_creacion
-      FROM public.tbl_informe_nutricion
-      WHERE no_afiliacion = $1
-      ORDER BY fecha_creacion DESC
-    `;
-    const { rows } = await pool.query(sql, [noafiliacion]);
-    return res.json({ success: true, data: rows });
-  } catch (error) {
-    console.error('Error en Nutrición /historial:', error);
-    return res.status(500).json({ success: false, message: 'Error interno del servidor' });
-  }
-});*/
+
 
 module.exports = router;

@@ -21,10 +21,16 @@ const backCreacionUsuariosRouter = require('./src/controllers/BackCreacionUsuari
 const backRolesUsuariosRouter = require('./src/controllers/BackRolesUsuarios');
 // Importar router de psicología
 const backPsicologiaRouter = require('./src/controllers/BackPsicologia');
+// Importar router de consulta de psicología
+const backConsultaPsicologiaRouter = require('./src/controllers/BackConsultaPsicologia');
 // Importar router de nutrición
 const backNutricionRouter = require('./src/controllers/BackNutricion');
+// Importar router de consulta de nutrición (historial, filtros)
+const backConsultaNutricionRouter = require('./src/controllers/BackConsultaNutricion');
 // Importar router de registro de referencias
 const backRegistroReferenciasRouter = require('./src/controllers/BackRegistroReferencias');
+// Importar router de consulta de referencias
+const backConsultaReferenciasRouter = require('./src/controllers/BackConsultaReferencias');
 // Importar router de catálogos (médicos, etc.)
 const backCatalogosRouter = require('./src/controllers/BackCatalogos');
 const backEgresoPacientes = require('./src/controllers/BackEgresoPacientes');
@@ -70,10 +76,16 @@ app.use(backCreacionUsuariosRouter);
 app.use(backRolesUsuariosRouter);
 // Usar router de psicología
 app.use('/api/psicologia', backPsicologiaRouter);
+// Usar router de consulta de psicología (endpoints GET de historial)
+app.use('/api/psicologia', backConsultaPsicologiaRouter);
 // Usar router de nutrición
 app.use('/api/nutricion', backNutricionRouter);
+// Usar router de consulta de nutrición
+app.use('/api/nutricion', backConsultaNutricionRouter);
 // Usar router de registro de referencias
 app.use(backRegistroReferenciasRouter);
+// Usar router de consulta de referencias
+app.use(backConsultaReferenciasRouter);
 // Usar router de catálogos
 app.use(backCatalogosRouter);
 // Endpoint para subir/reemplazar foto de paciente

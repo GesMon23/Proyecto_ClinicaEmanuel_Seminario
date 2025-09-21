@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { Row, Col, Form, Button } from "react-bootstrap";
 import api from '../config/api';
 import logoClinica from '@/assets/logoClinica2.png';
+import ConsultaNutricion from '../components/ConsultaNutricion';
 
 const Nutricion = () => {
+  const [tab, setTab] = useState('registro'); // 'registro' | 'consulta'
   const [paciente, setPaciente] = useState(null);
   const [busquedaError, setBusquedaError] = useState("");
   const [noafiliacion, setNoAfiliacion] = useState("");
@@ -160,14 +162,38 @@ const Nutricion = () => {
                   alt="Logo Clínica"
                   className="h-[160px] max-w-[260px] object-contain bg-white rounded-xl shadow-md p-2 dark:bg-slate-800"
                 />
-                <span className="text-3xl font-bold text-green-800 dark:text-white mb-4">
-                  Nutrición
-                </span>
+                <span className="text-3xl font-bold text-green-800 dark:text-white mb-4">Nutrición</span>
               </div>
               <hr className="mt-4 border-gray-300 dark:border-gray-600" />
             </div>
+
+            {/* Tabs */}
+            <div className="flex gap-3 mb-6">
+              <button
+                type="button"
+                onClick={() => setTab('registro')}
+                className={`px-4 py-2 rounded-md font-semibold border transition-colors ${
+                  tab === 'registro'
+                    ? 'bg-green-800 text-white border-green-900'
+                    : 'bg-white dark:bg-slate-800 text-green-800 dark:text-white border-green-800 hover:bg-green-50 dark:hover:bg-slate-700'
+                }`}
+              >
+                Registro
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab('consulta')}
+                className={`px-4 py-2 rounded-md font-semibold border transition-colors ${
+                  tab === 'consulta'
+                    ? 'bg-green-800 text-white border-green-900'
+                    : 'bg-white dark:bg-slate-800 text-green-800 dark:text-white border-green-800 hover:bg-green-50 dark:hover:bg-slate-700'
+                }`}
+              >
+                Consulta
+              </button>
+            </div>
             
-            {/* Búsqueda de Paciente */}
+            {tab === 'registro' && (
             <Form className="space-y-6">
               {paciente && (
                 <div className="bg-green-100 text-green-900 dark:bg-green-900 dark:text-green-200 border border-green-700 dark:border-green-400 rounded-xl py-4 mb-6 text-center">
@@ -303,6 +329,11 @@ const Nutricion = () => {
                 </div>
               )}
             </Form>
+            )}
+
+            {tab === 'consulta' && (
+              <ConsultaNutricion />
+            )}
 
             {/* Modal simple */}
             {modal.isOpen && (

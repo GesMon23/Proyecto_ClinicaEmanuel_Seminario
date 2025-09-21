@@ -16,17 +16,16 @@ function getUserIdFromReq(req) {
   }
 }
 
-async function getNombreUsuario(req) {
+async function resolveActorNombre(req) {
   try {
     const auth = req.headers?.authorization || '';
     const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
     if (!token) return null;
     const payload = jwt.verify(token, JWT_SECRET);
-    const sub = payload?.sub;
-    if (!sub) return null;
-    const { rows } = await pool.query('SELECT * FROM fn_usuario_autenticado($1)', [sub]);
-    const user = rows?.[0];
-    return user?.nombre_usuario || null;
+    const nombreJWT = payload?.nombre_usuario || null;
+    const idJWT = payload?.sub ? Number(payload.sub) : null;
+    const { rows } = await pool.query('SELECT public.fn_resolver_actor($1, $2) AS actor_nombre', [nombreJWT, idJWT]);
+    return rows?.[0]?.actor_nombre || null;
   } catch (_) {
     return null;
   }
@@ -58,29 +57,42 @@ const guardarEvaluacion = async (req, res) => {
         $4::text,   -- tipo_atencion
         $5::text,   -- pronostico
         $6::boolean,-- aplicacion_kdqol
-        $7::numeric,-- fisico_mental
-        $8::numeric,-- enfermedad_renal
-        $9::numeric,-- sintomas_problemas
-        $10::numeric,-- efectos_enfermedad
-        $11::numeric,-- vida_diaria
+        $7::int,    -- fisico_mental
+        $8::int,    -- enfermedad_renal
+        $9::int,    -- sintomas_problemas
+        $10::int,   -- efectos_enfermedad
+        $11::int,   -- vida_diaria
         $12::text,  -- observaciones
         $13::text   -- usuario_creacion
       ) AS result
     `;
-    const usuarioNombre = await getNombreUsuario(req);
+    const usuarioNombre = await resolveActorNombre(req);
+    // Normalizaciones
+    const quitarAcentos = (s) => (s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '');
+    const esSi = (v) => {
+      if (typeof v === 'boolean') return v === true;
+      const t = quitarAcentos(String(v || '')).trim().toLowerCase();
+      return t === 'si';
+    };
+    const toIntOrNull = (v) => {
+      if (v === null || v === undefined || v === '') return null;
+      const n = parseInt(v, 10);
+      return Number.isFinite(n) ? n : null;
+    };
+
     const params = [
-      no_afiliacion,
-      motivo_consulta,
-      tipo_consulta,
-      tipo_atencion,
-      pronostico_paciente,
-      aplicacion_kdqol === 'Si' || aplicacion_kdqol === true,
-      fisico_mental || null,
-      enfermedad_renal || null,
-      sintomas_problemas || null,
-      efectos_enfermedad || null,
-      vida_diaria || null,
-      observaciones || null,
+      no_afiliacion || null,
+      (motivo_consulta || '').trim() || null,
+      (tipo_consulta || '').trim() || null,
+      (tipo_atencion || '').trim() || null,
+      (pronostico_paciente || '').trim() || null,
+      esSi(aplicacion_kdqol),
+      toIntOrNull(fisico_mental),
+      toIntOrNull(enfermedad_renal),
+      toIntOrNull(sintomas_problemas),
+      toIntOrNull(efectos_enfermedad),
+      toIntOrNull(vida_diaria),
+      (observaciones || '').trim() || null,
       usuarioNombre || 'sistema'
     ];
 
@@ -108,81 +120,5 @@ const guardarEvaluacion = async (req, res) => {
 // Registrar endpoint activo para guardar evaluación
 router.post('/evaluacion', guardarEvaluacion);
 
-/*
-router.post('/evaluacion', guardarEvaluacion);
-
-// Endpoint para obtener historial de informes psicológicos de un paciente
-router.get('/historial/:noafiliacion', async (req, res) => {
-  try {
-    const { noafiliacion } = req.params;
-    
-    const query = `
-      SELECT 
-        id_informe,
-        motivo_consulta,
-        tipo_consulta,
-        tipo_atencion,
-        pronostico,
-        observaciones,
-        kdqol,
-        fecha_creacion,
-        usuario_creacion
-      FROM tbl_informes_psicologia 
-      WHERE no_afiliacion = $1
-      ORDER BY fecha_creacion DESC
-    `;
-    
-    const result = await pool.query(query, [noafiliacion]);
-    
-    res.json({
-      success: true,
-      data: result.rows
-    });
-    
-  } catch (error) {
-    console.error('Error al obtener historial:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error interno del servidor'
-    });
-  }
-});
-
-// Endpoint para obtener datos KDQOL de un paciente
-router.get('/kdqol/:noafiliacion', async (req, res) => {
-  try {
-    const { noafiliacion } = req.params;
-    
-    const query = `
-      SELECT 
-        id_kdqol,
-        fecha_aplicacion,
-        puntaje_fisico,
-        puntaje_mental,
-        puntaje_sintomas,
-        puntaje_carga,
-        puntaje_efectos,
-        fecha_creacion,
-        usuario_creacion
-      FROM tbl_kdqol 
-      WHERE no_afiliacion = $1
-      ORDER BY fecha_aplicacion DESC
-    `;
-    
-    const result = await pool.query(query, [noafiliacion]);
-    
-    res.json({
-      success: true,
-      data: result.rows
-    });
-    
-  } catch (error) {
-    console.error('Error al obtener datos KDQOL:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error interno del servidor'
-    });
-  }
-});*/
 
 module.exports = router;

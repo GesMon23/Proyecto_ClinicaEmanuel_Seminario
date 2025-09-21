@@ -98,11 +98,28 @@ router.post('/usuarios', verifyJWT, requireRole(['RolGestionUsuarios']), async (
     const passwordPlano = 'Clinica1.';
     const hash = await bcrypt.hash(passwordPlano, 10);
 
+    // Resolver nombre de usuario (actor) para auditoría de creación
+    let actorNombre = (req.user && (req.user.nombre_usuario || req.user.usuario)) || null;
+    if (!actorNombre) {
+      const idU = req.user && (req.user.id_usuario || req.user.id || req.user.sub);
+      if (idU) {
+        try {
+          const rUser = await pool.query(
+            'SELECT nombre_usuario FROM public.tbl_usuarios WHERE id_usuario = $1 LIMIT 1',
+            [Number(idU)]
+          );
+          actorNombre = rUser.rows?.[0]?.nombre_usuario || null;
+        } catch (_) {
+          actorNombre = null;
+        }
+      }
+    }
+
     // Transacción
     client = await pool.connect();
     await client.query('BEGIN');
 
-    const usuario_creacion = String(req.user?.sub || 'sistema');
+    const usuario_creacion = String(actorNombre || 'sistema');
     const rolesArr = Array.isArray(roles) ? roles : [];
 
     // Crear usuario + asignar roles en DB
