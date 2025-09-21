@@ -1,6 +1,9 @@
+// RegistroPacientes.jsx
 import React, { useState, useEffect } from "react";
 import { Button } from "react-bootstrap";
 import logoClinica from "@/assets/logoClinica2.png";
+import api from "../config/api";
+import WebcamFoto from "@/components/WebcamFoto.jsx";
 
 // Modal sencillo
 const CustomModal = ({ show, onClose, title, children }) => {
@@ -23,9 +26,34 @@ const CustomModal = ({ show, onClose, title, children }) => {
   );
 };
 
-import api from "../config/api";
-import WebcamFoto from "@/components/WebcamFoto.jsx";
+// ------ Helpers de fecha y carné (sin tocar backend) ------
+const formatFechaYMDToDMY = (ymd) => {
+  if (!ymd) return "";
+  const [y, m, d] = ymd.split("-");
+  return `${d.padStart(2, "0")}/${m.padStart(2, "0")}/${y}`;
+};
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Reintento corto para descargar carné (por si el server aún está generando)
+const fetchCarnetWithRetry = async (id, maxTries = 3) => {
+  let lastErr;
+  for (let i = 0; i < maxTries; i++) {
+    try {
+      const res = await api.get(`/carnet/forzar/${encodeURIComponent(String(id))}`, {
+        responseType: "blob",
+      });
+      return res;
+    } catch (e) {
+      lastErr = e;
+      // Pequeña espera entre intentos, incremental
+      await sleep(600 + i * 300);
+    }
+  }
+  throw lastErr;
+};
+
+// ------ Componente principal ------
 const RegistroPacientes = () => {
   const [formData, setFormData] = useState({
     noAfiliacion: "",
@@ -44,7 +72,7 @@ const RegistroPacientes = () => {
     idDepartamento: "",
     idAcceso: "",
     numeroFormulario: "",
-    periodoPrestServicios: "",
+    periodoPrestServicios: "", // no se usa en inputs, pero lo mantenemos por compatibilidad
     periodoInicio: "",
     periodoFin: "",
     idjornada: "",
@@ -71,9 +99,29 @@ const RegistroPacientes = () => {
           api.get("/accesos-vasculares"),
           api.get("/jornadas"),
         ]);
-        setDepartamentos(respDep.data || []);
-        setAccesosVasculares(respAcc.data || []);
-        setJornadas(respJor.data || []);
+
+        const toArray = (x) => (Array.isArray(x) ? x : x?.data ?? []);
+        const rawDeps = toArray(respDep.data);
+        const rawAccs = toArray(respAcc.data);
+        const rawJors = toArray(respJor.data);
+
+        // Normalizamos claves más comunes (id y texto)
+        const deps = rawDeps.map((d) => ({
+          id: d.iddepartamento ?? d.id_departamento ?? d.idDepartamento ?? d.id,
+          nombre: d.nombre ?? d.descripcion ?? "",
+        }));
+        const accs = rawAccs.map((a) => ({
+          id: a.idacceso ?? a.id_acceso ?? a.idAcceso ?? a.id,
+          descripcion: a.descripcion ?? "",
+        }));
+        const jors = rawJors.map((j) => ({
+          id: j.idjornada ?? j.id_jornada ?? j.idJornada ?? j.id,
+          descripcion: j.descripcion ?? "",
+        }));
+
+        setDepartamentos(deps);
+        setAccesosVasculares(accs);
+        setJornadas(jors);
       } catch (error) {
         console.error("Error al cargar catálogos:", error);
         setModalType("error");
@@ -136,7 +184,7 @@ const RegistroPacientes = () => {
     setLoading(true);
 
     try {
-      // Validación básica en el frontend
+      // Reglas mínimas: iguales a tu versión, pero con validaciones extra
       const requiredFields = [
         "noAfiliacion",
         "dpi",
@@ -155,51 +203,48 @@ const RegistroPacientes = () => {
         "sesionesAutorizadasMes",
       ];
 
-      const missingFields = requiredFields.filter((field) => !formData[field]);
+      const missingFields = requiredFields.filter((field) => !String(formData[field] ?? "").trim());
       if (missingFields.length > 0) {
         throw new Error("Todos los campos marcados con * son obligatorios");
       }
 
-      if (formData.dpi && formData.dpi.length !== 13) {
-        throw new Error("El DPI debe tener exactamente 13 caracteres");
+      const dpiTrim = String(formData.dpi).trim();
+      if (!/^\d{13}$/.test(dpiTrim)) {
+        throw new Error("El DPI debe tener 13 dígitos (solo números).");
       }
 
-      // Formatear periodo de prestación de servicios (texto)
-      const formatFecha = (fecha) => {
-        if (!fecha) return "";
-        const d = new Date(fecha);
-        const day = String(d.getDate()).padStart(2, "0");
-        const month = String(d.getMonth() + 1).padStart(2, "0");
-        const year = d.getFullYear();
-        return `${day}/${month}/${year}`;
-      };
-      const periodoPrestServicios = `Del ${formatFecha(formData.periodoInicio)} al ${formatFecha(
+      if (formData.periodoFin < formData.periodoInicio) {
+        throw new Error("La fecha 'Hasta' del período no puede ser anterior a 'Del'.");
+      }
+
+      // Periodo de prestación de servicios (texto), sin usar Date()
+      const periodoPrestServicios = `Del ${formatFechaYMDToDMY(formData.periodoInicio)} al ${formatFechaYMDToDMY(
         formData.periodoFin
       )}`;
 
-      // Datos para el backend (sin 'observaciones')
+      // Payload: mantenemos tus claves originales para no depender del backend
       const pacienteData = {
-        noafiliacion: Number(formData.noAfiliacion),
-        dpi: String(formData.dpi),
-        nopacienteproveedor: Number(formData.noPacienteProveedor || 0),
+        noafiliacion: String(formData.noAfiliacion).trim(), // string para no perder ceros
+        dpi: dpiTrim,
+        nopacienteproveedor: String(formData.noPacienteProveedor).trim(),
 
-        primernombre: String(formData.primerNombre),
-        segundonombre: formData.segundoNombre || null,
-        otrosnombres: formData.otrosNombres || null,
-        primerapellido: String(formData.primerApellido),
-        segundoapellido: formData.segundoApellido || null,
-        apellidocasada: formData.apellidoCasada || null,
+        primernombre: String(formData.primerNombre).trim(),
+        segundonombre: formData.segundoNombre?.trim() || null,
+        otrosnombres: formData.otrosNombres?.trim() || null,
+        primerapellido: String(formData.primerApellido).trim(),
+        segundoapellido: formData.segundoApellido?.trim() || null,
+        apellidocasada:
+          formData.sexo === "Femenino" ? formData.apellidoCasada?.trim() || null : null,
 
-        // claves en camelCase que tu backend ya acepta
-        fechaNacimiento: formData.fechaNacimiento || null,
+        // claves camelCase que ya usabas en tu versión
+        fechaNacimiento: formData.fechaNacimiento || null, // YYYY-MM-DD
         sexo: String(formData.sexo),
-        direccion: String(formData.direccion),
-        fechaIngreso: formData.fechaIngreso,
-        idDepartamento: Number(formData.idDepartamento),
-        idAcceso: Number(formData.idAcceso),
-        numeroFormulario: formData.numeroFormulario || null,
+        direccion: String(formData.direccion).trim(),
+        fechaIngreso: formData.fechaIngreso, // YYYY-MM-DD
+        idDepartamento: formData.idDepartamento ? Number(formData.idDepartamento) : null,
+        idAcceso: formData.idAcceso ? Number(formData.idAcceso) : null,
+        numeroFormulario: formData.numeroFormulario?.trim() || null,
 
-        // periodo
         periodoprestservicios: periodoPrestServicios || null,
         fechainicioperiodo: formData.periodoInicio || null,
         fechafinperiodo: formData.periodoFin || null,
@@ -210,24 +255,19 @@ const RegistroPacientes = () => {
           : null,
 
         usuario_creacion: "web",
+        photo: imgSrc || null,
       };
 
       // 1) Registrar paciente
-      await api.post("/pacientes", { ...pacienteData, photo: imgSrc });
+      await api.post("/pacientes", pacienteData);
 
-      // 2) (Opcional) espera pequeña
-      await new Promise((resolve) => setTimeout(resolve, 600));
-
-      // 3) Generar/descargar carné PDF
-      const carnetResponse = await api.get(`/carnet/forzar/${pacienteData.noafiliacion}`, {
-        responseType: "blob",
-      });
-
-      const blob = new Blob([carnetResponse.data], { type: "application/pdf" });
+      // 2) Descargar carné con reintentos cortos (sin setTimeout fijo)
+      const carnetRes = await fetchCarnetWithRetry(String(formData.noAfiliacion).trim(), 3);
+      const blob = new Blob([carnetRes.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${formData.noAfiliacion}_carnet.pdf`;
+      a.download = `${String(formData.noAfiliacion).trim()}_carnet.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -236,21 +276,28 @@ const RegistroPacientes = () => {
       setSuccessMessage("Paciente registrado y carné descargado correctamente.");
       setShowSuccessModal(true);
 
-      // 4) Reset
+      // 3) Reset
       setFormData(emptyForm);
       setImgSrc(null);
     } catch (error) {
       console.error("Error al registrar paciente:", error);
-      let errorMessage = error.message;
+      let errorMessage = error?.message ?? "Error desconocido";
+
+      // Si backend retornó detalles
       if (error.response && error.response.data) {
         if (Array.isArray(error.response.data.errors)) {
           errorMessage = error.response.data.errors.join("\n");
         } else if (typeof error.response.data.error === "string") {
           errorMessage = error.response.data.error;
         } else {
-          errorMessage = JSON.stringify(error.response.data);
+          try {
+            errorMessage = JSON.stringify(error.response.data);
+          } catch {
+            /* ignore */
+          }
         }
       }
+
       setSuccessMessage("");
       setModalType("error");
       setModalMessage(`Error al registrar paciente:\n${errorMessage}`);
@@ -274,11 +321,15 @@ const RegistroPacientes = () => {
         onClose={() => setShowErrorModal(false)}
         title={modalType === "error" ? "Error" : "Alerta"}
       >
-        <p className="mb-4 text-gray-700 dark:text-gray-300">{modalMessage}</p>
+        <p className="mb-4 text-gray-700 dark:text-gray-300" style={{ whiteSpace: "pre-line" }}>
+          {modalMessage}
+        </p>
         <button
           onClick={() => setShowErrorModal(false)}
           className={`w-full rounded px-4 py-2 font-medium text-white transition-colors ${
-            modalType === "success" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"
+            modalType === "success"
+              ? "bg-green-600 hover:bg-green-700"
+              : "bg-red-600 hover:bg-red-700"
           }`}
         >
           Cerrar
@@ -332,6 +383,8 @@ const RegistroPacientes = () => {
                       name="noAfiliacion"
                       value={formData.noAfiliacion}
                       onChange={handleInputChange}
+                      inputMode="numeric"
+                      pattern="\d*"
                       required
                       placeholder="Ingrese el número de afiliación"
                       className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-gray-600 dark:bg-slate-800 dark:text-white"
@@ -351,9 +404,12 @@ const RegistroPacientes = () => {
                       name="dpi"
                       value={formData.dpi}
                       onChange={handleInputChange}
+                      inputMode="numeric"
+                      pattern="\d{13}"
                       required
-                      placeholder="Ingrese el DPI"
+                      placeholder="Ingrese el DPI (13 dígitos)"
                       className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-gray-600 dark:bg-slate-800 dark:text-white"
+                      title="Debe contener 13 dígitos"
                     />
                   </div>
 
@@ -370,6 +426,8 @@ const RegistroPacientes = () => {
                       name="noPacienteProveedor"
                       value={formData.noPacienteProveedor}
                       onChange={handleInputChange}
+                      inputMode="numeric"
+                      pattern="\d*"
                       required
                       placeholder="Ingrese el número de paciente proveedor"
                       className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-gray-600 dark:bg-slate-800 dark:text-white"
@@ -583,7 +641,7 @@ const RegistroPacientes = () => {
                     >
                       <option value="">Seleccione el departamento</option>
                       {departamentos.map((depto) => (
-                        <option key={depto.iddepartamento} value={depto.iddepartamento}>
+                        <option key={depto.id} value={depto.id}>
                           {depto.nombre}
                         </option>
                       ))}
@@ -607,7 +665,7 @@ const RegistroPacientes = () => {
                     >
                       <option value="">Seleccione el acceso vascular</option>
                       {accesosVasculares.map((acceso) => (
-                        <option key={acceso.idacceso} value={acceso.idacceso}>
+                        <option key={acceso.id} value={acceso.id}>
                           {acceso.descripcion}
                         </option>
                       ))}
@@ -702,7 +760,7 @@ const RegistroPacientes = () => {
                     >
                       <option value="">Seleccione la jornada</option>
                       {jornadas.map((jornada) => (
-                        <option key={jornada.idjornada} value={jornada.idjornada}>
+                        <option key={jornada.id} value={jornada.id}>
                           {jornada.descripcion}
                         </option>
                       ))}
@@ -746,7 +804,7 @@ const RegistroPacientes = () => {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="rounded bg-green-500 px-6 py-2 font-semibold text-white shadow-sm transition hover:bg-green-800 disabled:opacity-70 dark:text-black"
+                      className="rounded bg-green-500 px-6 py-2 font-semibold text-white shadow-sm transition hover:bg-green-800 disabled:opacity-70"
                     >
                       {loading ? "Registrando..." : "Registrar Paciente"}
                     </button>
@@ -754,7 +812,7 @@ const RegistroPacientes = () => {
                       type="button"
                       onClick={handleLimpiarForm}
                       disabled={loading}
-                      className="rounded bg-red-500 px-6 py-2 font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:opacity-70 dark:text-black"
+                      className="rounded bg-red-500 px-6 py-2 font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:opacity-70"
                     >
                       Limpiar
                     </button>
