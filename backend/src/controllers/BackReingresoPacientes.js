@@ -1,139 +1,134 @@
-// Actualizar paciente por No. Afiliación
-app.put('/pacientes/:noafiliacion', async (req, res) => {
-    console.log('--- [PUT /pacientes/:noafiliacion] ---');
-    console.log('NoAfiliacion (URL param):', req.params.noafiliacion);
-    console.log('Body recibido:', req.body);
+const express = require('express');
+const router = express.Router();
+const pool = require('../../db/pool');
 
-    const { noafiliacion } = req.params;
-    const {
-        primerNombre, segundoNombre, primerApellido, segundoApellido,
-        numeroformulario, sesionesautorizadasmes, fechainicioperiodo,
-        fechafinperiodo, observaciones, urlfoto
-        // Agrega aquí otros campos requeridos
-    } = req.body;
-
-    try {
-        const result = await pool.query(
-            `UPDATE tbl_pacientes SET
-                primernombre = COALESCE($1, primernombre),
-                segundonombre = COALESCE($2, segundonombre),
-                primerapellido = COALESCE($3, primerapellido),
-                segundoapellido = COALESCE($4, segundoapellido),
-                numeroformulario = COALESCE($5, numeroformulario),
-                sesionesautorizadasmes = COALESCE($6, sesionesautorizadasmes),
-                fechainicioperiodo = COALESCE($7, fechainicioperiodo),
-                fechafinperiodo = COALESCE($8, fechafinperiodo),
-                observaciones = COALESCE($9, observaciones),
-                urlfoto = COALESCE($10, urlfoto)
-            WHERE noafiliacion = $11`,
-            [
-                primerNombre || null,
-                segundoNombre || null,
-                primerApellido || null,
-                segundoApellido || null,
-                numeroformulario || null,
-                sesionesautorizadasmes || null,
-                fechainicioperiodo || null,
-                fechafinperiodo || null,
-                observaciones || null,
-                urlfoto || null,
-                noafiliacion
-            ]
-        );
-        console.log('Resultado de la query:', result);
-        console.log('Filas afectadas:', result.rowCount);
-
-        if (result.rowCount > 0) {
-            console.log('Paciente actualizado correctamente');
-            res.json({ success: true });
-        } else {
-            console.warn('No se encontró el paciente con noafiliacion:', noafiliacion);
-            res.status(404).json({ success: false, detail: 'Paciente no encontrado' });
-        }
-    } catch (error) {
-        console.error('Error al actualizar paciente:', error);
-        res.status(500).json({ success: false, detail: 'Error al actualizar paciente', error: error.message });
+// GET /api/reingreso/pacientes/reingreso?noafiliacion=... | dpi=...
+// Devuelve SOLO egresados (id_estado=3) que tengan registro en tbl_egresos
+router.get('/pacientes/reingreso', async (req, res) => {
+  try {
+    const { noafiliacion, dpi } = req.query;
+    if (!noafiliacion && !dpi) {
+      return res.status(400).json({ error: 'Debe proporcionar noafiliacion o dpi.' });
     }
-    console.log('--- [FIN PUT /pacientes/:noafiliacion] ---');
+
+    const filtroCampo = noafiliacion ? 'p.no_afiliacion' : 'p.dpi';
+    const filtroVal   = noafiliacion ? noafiliacion : dpi;
+
+    // Trae datos del paciente (id_estado=3) + último egreso
+    // Requisito: que exista egreso
+    const sql = `
+      SELECT
+        p.no_afiliacion        AS noafiliacion,
+        p.dpi,
+        p.no_paciente_proveedor AS nopacienteproveedor,
+        p.primer_nombre        AS primernombre,
+        p.segundo_nombre       AS segundonombre,
+        p.otros_nombres        AS otrosnombres,
+        p.primer_apellido      AS primerapellido,
+        p.segundo_apellido     AS segundoapellido,
+        p.apellido_casada      AS apellidocasada,
+        p.fecha_nacimiento     AS fechanacimiento,
+        p.sexo,
+        p.direccion,
+        p.id_estado            AS idestado,
+        eg.id_causa_egreso     AS idcausa,
+        eg.descripcion         AS descripcionegreso,
+        eg.fecha_egreso        AS fechaegreso,
+        p.url_foto             AS urlfoto
+      FROM public.tbl_pacientes p
+      JOIN LATERAL (
+        SELECT e.id_causa_egreso, e.descripcion, e.fecha_egreso
+        FROM public.tbl_egresos e
+        WHERE e.no_afiliacion = p.no_afiliacion
+        ORDER BY e.fecha_egreso DESC NULLS LAST
+        LIMIT 1
+      ) eg ON TRUE
+      WHERE p.id_estado = 3
+        AND ${filtroCampo} = $1
+    `;
+    const { rows } = await pool.query(sql, [filtroVal]);
+    // Si no hay filas, o no hay egreso, no es elegible
+    return res.json(rows);
+  } catch (err) {
+    console.error('[GET /api/reingreso/pacientes/reingreso] ERROR:', err);
+    res.status(500).json({ error: 'Error al buscar pacientes para reingreso.' });
+  }
 });
 
+// POST /api/reingreso/pacientes/reingreso
+// Body: { noAfiliacion, numeroFormulario, fechaReingreso, observaciones, usuario }
+router.post('/pacientes/reingreso', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const b = req.body || {};
+    const noAfiliacion     = String(b.noAfiliacion || '').trim();
+    const numeroFormulario = String(b.numeroFormulario || '').trim();
+    const fechaReingreso   = String(b.fechaReingreso || '').trim(); // 'YYYY-MM-DD'
+    const observaciones    = (b.observaciones ?? '').trim() || null;
+    const usuario          = (b.usuario ?? 'web').trim();
 
-// Endpoint para verificar si existe una foto
-app.get('/check-photo/:filename', (req, res) => {
-    const filename = req.params.filename;
-    const filePath = path.join(__dirname, 'fotos', filename);
-
-    if (fs.existsSync(filePath)) {
-        res.json({ exists: true });
-    } else {
-        res.json({ exists: false });
+    if (!noAfiliacion || !numeroFormulario || !fechaReingreso) {
+      return res.status(400).json({ success: false, error: 'noAfiliacion, numeroFormulario y fechaReingreso son obligatorios.' });
     }
+
+    await client.query('BEGIN');
+
+    // 1) Validar paciente egresado (id_estado = 3)
+    const qPac = `
+      SELECT id_estado
+      FROM public.tbl_pacientes
+      WHERE no_afiliacion = $1
+      FOR UPDATE
+    `;
+    const rPac = await client.query(qPac, [noAfiliacion]);
+    if (!rPac.rowCount) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, error: 'Paciente no encontrado.' });
+    }
+    if (Number(rPac.rows[0].id_estado) !== 3) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ success: false, error: 'El paciente no está en estado Egresado (id_estado = 3).' });
+    }
+
+    // 2) Validar que tenga egreso registrado
+    const qEg = `SELECT 1 FROM public.tbl_egresos WHERE no_afiliacion = $1 LIMIT 1`;
+    const rEg = await client.query(qEg, [noAfiliacion]);
+    if (!rEg.rowCount) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ success: false, error: 'No existe egreso registrado para este paciente.' });
+    }
+
+    // 3) Actualizar paciente: numero_formulario_activo + id_estado = 4 (Reingreso)
+    const qUpd = `
+      UPDATE public.tbl_pacientes
+      SET
+        numero_formulario_activo = $2,
+        id_estado               = 4,
+        usuario_actualizacion   = $3,
+        fecha_actualizacion     = NOW()
+      WHERE no_afiliacion = $1
+    `;
+    await client.query(qUpd, [noAfiliacion, numeroFormulario, usuario]);
+
+    // 4) Insert en tbl_reingresos
+    const qIns = `
+      INSERT INTO public.tbl_reingresos
+      (no_afiliacion, numero_formulario, fecha_reingreso, observaciones,
+       usuario_creacion, fecha_creacion, usuario_actualizacion, fecha_actualizacion,
+       usuario_eliminacion, fecha_eliminacion)
+      VALUES ($1,$2,$3,$4,$5,NOW(),NULL,NULL,NULL,NULL)
+    `;
+    await client.query(qIns, [noAfiliacion, numeroFormulario, fechaReingreso, observaciones, usuario]);
+
+    await client.query('COMMIT');
+    return res.json({ success: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('[POST /api/reingreso/pacientes/reingreso] ERROR:', err);
+    res.status(500).json({ success: false, error: 'Error al registrar el reingreso.' });
+  } finally {
+    client.release();
+  }
 });
 
-// Endpoint para buscar pacientes para reingreso (usando función en PostgreSQL)
-app.get('/api/pacientes/reingreso', async (req, res) => {
-    const { dpi, noafiliacion } = req.query;
-
-    if (!dpi && !noafiliacion) {
-        return res.status(400).json({ error: 'Debe proporcionar dpi o noafiliacion.' });
-    }
-
-    try {
-        const result = await pool.query(
-            `SELECT * FROM fn_buscar_pacientes_reingreso($1, $2)`,
-            [dpi || null, noafiliacion || null]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Paciente no encontrado para reingreso.' });
-        }
-
-        res.json(result.rows);
-    } catch (error) {
-        console.error('Error al buscar pacientes para reingreso:', error);
-        res.status(500).json({ error: 'Error al buscar pacientes para reingreso.', detalle: error.message });
-    }
-});
-
-// Buscar paciente por DPI
-app.get('/pacientes/dpi/:dpi', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM tbl_pacientes WHERE dpi = $1', [req.params.dpi]);
-        if (!result.rows.length) {
-            return res.status(404).json({ error: 'Paciente no encontrado.' });
-        }
-        res.json(result.rows[0]);
-    } catch (error) {
-        res.status(500).json({ error: 'Error al buscar paciente por DPI.' });
-    }
-});
-
-
-// Endpoint para obtener paciente por número de afiliación con descripciones de llaves foráneas
-app.get('/pacientes/:noafiliacion', async (req, res) => {
-    try {
-        const query = `
-            SELECT 
-                p.*, 
-                d.nombre AS departamento_nombre,
-                e.descripcion AS estado_descripcion,
-                a.descripcion AS acceso_descripcion,
-                c.descripcion AS causaegreso_descripcion,
-                j.descripcion AS jornada_descripcion
-            FROM tbl_pacientes p
-            LEFT JOIN tbl_departamentos d ON p.iddepartamento = d.iddepartamento
-            LEFT JOIN tbl_estadospaciente e ON p.idestado = e.idestado
-            LEFT JOIN tbl_accesovascular a ON p.idacceso = a.idacceso
-            LEFT JOIN tbl_causaegreso c ON p.idcausa = c.idcausa
-            LEFT JOIN tbl_jornadas j ON p.idjornada = j.idjornada
-            WHERE p.noafiliacion = $1
-        `;
-        const result = await pool.query(query, [req.params.noafiliacion]);
-        if (!result.rows.length) {
-            return res.status(404).json({ error: 'Paciente no encontrado.' });
-        }
-        res.json(result.rows[0]);
-    } catch (error) {
-        res.status(500).json({ error: 'Error al obtener paciente.', detalle: error.message });
-    }
-});
+module.exports = router;
