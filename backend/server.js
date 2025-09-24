@@ -39,6 +39,7 @@ const backCatalogosRouter = require('./src/controllers/BackCatalogos');
 const backEgresoPacientes = require('./src/controllers/BackEgresoPacientes');
 const backActualizacionPacientes = require('./src/controllers/BackActualizacionPacientes');
 //const backRegistroPacientes = require('./src/controllers/BackRegistroPacientes');
+const backReingresoPacientesRouter = require('./src/controllers/BackReingresoPacientes');
 // Pool compartido
 const pool = require('./db/pool');
 
@@ -97,7 +98,8 @@ app.use(backCatalogosRouter);
 
 app.use(backActualizacionPacientes);
 app.use(backEgresoPacientes);
-//app.use('/api/pacientes', backRegistroPacientes); // ✅ una sola montura
+//app.use('/api/pacientes', backRegistroPacientes); 
+app.use('/api/reingreso', backReingresoPacientesRouter);
 
 app.post('/upload-foto/:noAfiliacion', async (req, res) => {
     const { noAfiliacion } = req.params;
@@ -260,34 +262,6 @@ app.get('/api/pacientes/egreso', async (req, res) => {
         res.json(result.rows);
     } catch (error) {
         res.status(500).json({ error: 'Error al buscar pacientes para egreso.', detalle: error.message });
-    }
-});
-
-// Endpoint para buscar pacientes para reingreso
-app.get('/api/pacientes/reingreso', async (req, res) => {
-    const { dpi, noafiliacion } = req.query;
-    let baseQuery = `
-            SELECT pac.noafiliacion, pac.dpi, pac.nopacienteproveedor, pac.primernombre, pac.segundonombre, pac.otrosnombres, pac.primerapellido, pac.segundoapellido, pac.apellidocasada, 
-            pac.fechanacimiento, pac.sexo, pac.direccion, pac.fechaegreso, pac.idcausa, pac.causaegreso, cau.descripcion as descripcionEgreso, pac.urlfoto, pac.iddepartamento, pac.idestado, 
-            pac.fechainicioperiodo, pac.fechafinperiodo, pac.sesionesautorizadasmes AS sesionesautorizadas, pac.observaciones 
-            FROM tbl_pacientes pac LEFT JOIN tbl_causaegreso cau ON 
-            pac.idcausa = cau.idcausa WHERE pac.idestado = 3 AND pac.idcausa != 1`;
-    let params = [];
-    if (dpi) {
-        baseQuery += ' AND pac.dpi = $1';
-        params.push(dpi);
-    } else if (noafiliacion) {
-        baseQuery += ' AND pac.noafiliacion = $1';
-        params.push(noafiliacion);
-    } else {
-        return res.status(400).json({ error: 'Debe proporcionar dpi o noafiliacion.' });
-    }
-
-    try {
-        const result = await pool.query(baseQuery, params);
-        res.json(result.rows);
-    } catch (error) {
-        res.status(500).json({ error: 'Error al buscar pacientes para reingreso.', detalle: error.message });
     }
 });
 
@@ -1652,7 +1626,7 @@ app.post('/pacientes', async (req, res) => {
             nz(b.direccion),                      // 13 direccion
             nz(b.fechaIngreso || b.fechaingreso), // 14 fecha_ingreso (YYYY-MM-DD)
             b.idDepartamento ? Number(b.idDepartamento) : null,      // 15 id_departamento
-            b.idEstado ? Number(b.idEstado) : 2,                     // 16 id_estado (por defecto 2 = Nuevo Ingreso)
+            b.idEstado ? Number(b.idEstado) : 1,                     // 16 id_estado (por defecto 1 = Nuevo Ingreso)
             b.idAcceso ? Number(b.idAcceso) : null,                  // 17 id_acceso
             nz(b.numeroFormulario),                                   // 18 numero_formulario_activo
             b.idJornada ? Number(b.idJornada) : null,                 // 19 id_jornada

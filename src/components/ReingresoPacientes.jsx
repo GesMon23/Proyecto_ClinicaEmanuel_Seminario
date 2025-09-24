@@ -1,213 +1,249 @@
-import React, { useState, useEffect } from "react";
-import logoClinica from "@/assets/logoClinica2.png"
-import { Card, Form, Button, Alert, Table, Spinner, Row, Col } from 'react-bootstrap';
-import api from '../config/api';
-import CustomModal from '@/components/CustomModal.jsx';
+import React, { useState } from "react";
+import logoClinica from "@/assets/logoClinica2.png";
+import defaultAvatar from "@/assets/img/default-avatar.png";
+import { Form, Button, Alert } from "react-bootstrap";
+import api from "../config/api";
+import CustomModal from "@/components/CustomModal.jsx";
 
-// Calcula la edad a partir de la fecha de nacimiento (YYYY-MM-DD)
+// Calcula edad desde fecha (YYYY-MM-DD o ISO)
 function calcularEdad(fechaNacimiento) {
-  if (!fechaNacimiento) return '';
-  const partes = fechaNacimiento.split('-');
-  if (partes.length < 3) return '';
-  const anio = parseInt(partes[0], 10);
-  const mes = parseInt(partes[1], 10) - 1;
-  const dia = parseInt(partes[2], 10);
+  if (!fechaNacimiento) return "";
+  const d = new Date(fechaNacimiento);
+  if (isNaN(d.getTime())) return "";
   const hoy = new Date();
-  const nacimiento = new Date(anio, mes, dia);
-  let edad = hoy.getFullYear() - nacimiento.getFullYear();
-  const m = hoy.getMonth() - nacimiento.getMonth();
-  if (m < 0 || (m === 0 && hoy.getDate() < nacimiento.getDate())) {
-    edad--;
-  }
+  let edad = hoy.getFullYear() - d.getFullYear();
+  const m = hoy.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && hoy.getDate() < d.getDate())) edad--;
   return edad;
 }
 
+// ⚠️ Solo lo necesario para reingreso
+const initForm = {
+  numeroformulario: "",
+  fechaReingreso: "", // YYYY-MM-DD
+  observaciones: "",
+};
+
+// Normaliza claves
+const normalizePaciente = (r) => ({
+  idpaciente: r.idpaciente ?? r.id_paciente ?? null,
+  noafiliacion: r.noafiliacion ?? r.no_afiliacion ?? "",
+  dpi: r.dpi ?? "",
+  nopacienteproveedor: r.nopacienteproveedor ?? r.no_paciente_proveedor ?? "",
+  primernombre: r.primernombre ?? r.primer_nombre ?? "",
+  segundonombre: r.segundonombre ?? r.segundo_nombre ?? "",
+  otrosnombres: r.otrosnombres ?? r.otros_nombres ?? "",
+  primerapellido: r.primerapellido ?? r.primer_apellido ?? "",
+  segundoapellido: r.segundoapellido ?? r.segundo_apellido ?? "",
+  apellidacasada: r.apellidacasada ?? r.apellido_casada ?? "",
+  fechanacimiento: r.fechanacimiento ?? r.fecha_nacimiento ?? null,
+  sexo: r.sexo ?? "",
+  direccion: r.direccion ?? "",
+  fechaegreso: r.fechaegreso ?? r.fecha_egreso ?? null,
+  idestado: r.idestado ?? r.id_estado ?? null,
+  idcausa: r.idcausa ?? r.id_causa ?? null,
+  causaegreso_descripcion:
+    r.causaegreso_descripcion ??
+    r.causa_egreso_descripcion ??
+    r.causa_descripcion ??
+    r.descripcion ??
+    r.descripcionEgreso ??
+    "",
+  urlfoto: r.urlfoto ?? r.url_foto ?? null,
+});
+
 const ReingresoPacientes = (props) => {
-  const [busqueda, setBusqueda] = useState({ dpi: '', noafiliacion: '' });
+  const [selectedFilter, setSelectedFilter] = useState("noafiliacion");
+  const [busqueda, setBusqueda] = useState({ dpi: "", noafiliacion: "" });
   const [resultados, setResultados] = useState([]);
+  const [formsById, setFormsById] = useState({});
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
-  const [modalMessage, setModalMessage] = useState('');
-  const [modalTitle, setModalTitle] = useState('');
-  const [modalType, setModalType] = useState('info');
+  const [modalMessage, setModalMessage] = useState("");
+  const [modalTitle, setModalTitle] = useState("");
+  const [modalType, setModalType] = useState("info");
 
-  // Estados para el formulario de reingreso
-  const [formData, setFormData] = useState({
-    numeroformulario: '',
-    sesionesautorizadasmes: '',
-    periodoDel: '',
-    periodoHasta: '',
-    observaciones: ''
-  });
-
-  const handleReingresoInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  // Limpia el formulario de reingreso y los datos del paciente
-  const handleLimpiarReingreso = () => {
-    setFormData({
-      numeroformulario: '',
-      sesionesautorizadasmes: '',
-      periodoDel: '',
-      periodoHasta: '',
-      observaciones: ''
-    });
-    setResultados([]);
-    setError('');
-  };
-
-  const handleReingresoSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    if (!resultados.length) {
-      setError("Debe buscar y seleccionar un paciente");
-      return;
-    }
-    const paciente = resultados[0];
-    try {
-      // Validaciones básicas
-      if (!formData.numeroformulario || !formData.sesionesautorizadasmes || !formData.periodoDel || !formData.periodoHasta) {
-        setError("Todos los campos son obligatorios");
-        return;
-      }
-      // Preparar datos para el backend
-      const payload = {
-        primerNombre: paciente.primernombre || '',
-        segundoNombre: paciente.segundonombre || '',
-        primerApellido: paciente.primerapellido || '',
-        segundoApellido: paciente.segundoapellido || '',
-        numeroformulario: formData.numeroformulario,
-        sesionesautorizadasmes: formData.sesionesautorizadasmes,
-        fechainicioperiodo: formData.periodoDel,
-        fechafinperiodo: formData.periodoHasta,
-        observaciones: formData.observaciones || '',
-        desdeReingreso: true
-      };
-      const response = await api.put(`/pacientes/${paciente.noafiliacion}`, payload);
-      if (response.data && response.data.success) {
-        setModalMessage("Reingreso guardado exitosamente.");
-        setModalTitle("Éxito");
-        setModalType("success");
-        setShowModal(true);
-        handleLimpiarReingreso();
-      } else {
-        setModalMessage(response.data?.detail || "Error al guardar el reingreso.");
-        setModalTitle("Error");
-        setModalType("error");
-        setShowModal(true);
-      }
-    } catch (err) {
-      setModalMessage(err.response?.data?.detail || err.message || "Error inesperado.");
-      setModalTitle("Error");
-      setModalType("error");
-      setShowModal(true);
-    }
-  };
-
+  const baseURL = (api?.defaults?.baseURL || "").replace(/\/$/, "");
 
   const handleChange = (e) => {
     setBusqueda({ ...busqueda, [e.target.name]: e.target.value });
   };
+  const handleFilterChange = (e) => {
+    setSelectedFilter(e.target.value);
+    setError("");
+  };
 
-  // Verifica si la foto existe en el servidor
-  const verificarExistenciaFoto = async (filename) => {
+  const handleLimpiarTodo = () => {
+    setBusqueda({ dpi: "", noafiliacion: "" });
+    setResultados([]);
+    setFormsById({});
+    setError("");
+    setShowModal(false);
+    setModalMessage("");
+    setModalTitle("");
+    setModalType("info");
+    setLoading(false);
+  };
+
+  const getKey = (p) =>
+    p.idpaciente ?? p.noafiliacion ?? p.dpi ?? `${p.primernombre}-${p.dpi || ""}`;
+
+  const verificarExistenciaFoto = async (idOrFilename) => {
     try {
-      const response = await api.get(`/check-photo/${filename}`);
-      return response.data.exists;
-    } catch (error) {
+      const response = await api.get(`/check-photo/${idOrFilename}`);
+      return !!response.data?.exists && !!response.data?.filename;
+    } catch {
       return false;
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setResultados([]);
     setLoading(true);
     try {
-      let params = {};
-      if (busqueda.dpi) params.dpi = busqueda.dpi;
-      if (busqueda.noafiliacion) params.noafiliacion = busqueda.noafiliacion;
-      if (!params.dpi && !params.noafiliacion) {
-        setError('Debe ingresar DPI o No. Afiliación');
-        setLoading(false);
+      const val = (busqueda[selectedFilter] || "").trim();
+      if (!val) {
+        setError(
+          selectedFilter === "noafiliacion"
+            ? "Debe ingresar el Número de Afiliación."
+            : "Debe ingresar el DPI."
+        );
         return;
       }
-      const { data } = await api.get('/api/pacientes/reingreso', { params });
+      const params =
+        selectedFilter === "noafiliacion" ? { noafiliacion: val } : { dpi: val };
 
-      // Procesar fotos como en ConsultaPacientes
-      const resultadosConFoto = await Promise.all(
-        data.map(async (p) => {
-          if (p.urlfoto) {
-            const filename = p.urlfoto.replace(/^.*[\\\/]/, '');
-            const fotoExists = await verificarExistenciaFoto(filename);
-            if (fotoExists) {
-              return { ...p, urlfoto: `/fotos/${filename}` };
-            }
-          }
-          return { ...p, urlfoto: null };
+      const { data } = await api.get("/api/reingreso/pacientes/reingreso", {
+        params,
+      });
+
+      const enriquecidos = await Promise.all(
+        (Array.isArray(data) ? data : []).map(async (raw) => {
+          const p = normalizePaciente(raw);
+          const fotoOK = p.noafiliacion ? await verificarExistenciaFoto(p.noafiliacion) : false;
+          return {
+            ...p,
+            fotoFilename: fotoOK ? `${p.noafiliacion}.jpg` : null,
+            _cacheBuster: Date.now(),
+          };
         })
       );
-      const soloReingreso = resultadosConFoto.filter(p => p.idestado === 3 && p.idcausa !== 1);
-      setResultados(soloReingreso);
-      if (resultadosConFoto.some(p => p.idestado === 3 && p.idcausa === 1)) {
-        setModalMessage('El paciente está fallecido.');
-        setModalTitle('Paciente fallecido');
-        setModalType('error');
+
+      const fallecidos = enriquecidos.filter(
+        (p) =>
+          Number(p.idcausa) === 1 ||
+          (p.causaegreso_descripcion || "").toLowerCase().includes("fallec")
+      );
+      const elegibles = enriquecidos.filter(
+        (p) => Number(p.idestado) === 3 && !fallecidos.includes(p)
+      );
+
+      setResultados(elegibles);
+      setFormsById({});
+
+      if (fallecidos.length > 0) {
+        setModalMessage("El/los paciente(s) están fallecidos.");
+        setModalTitle("Paciente fallecido");
+        setModalType("error");
         setShowModal(true);
-      } else if (resultadosConFoto.length > 0 && soloReingreso.length === 0) {
-        setModalMessage('El paciente ya está activo y no es elegible para reingreso.');
-        setModalTitle('Paciente activo');
-        setModalType('error');
+      } else if (enriquecidos.length > 0 && elegibles.length === 0) {
+        setModalMessage("El paciente no es elegible para reingreso.");
+        setModalTitle("No elegible");
+        setModalType("error");
         setShowModal(true);
       }
-      if (resultadosConFoto.length === 0) {
-        // Si no hay resultados, buscar si existe el paciente aunque no cumpla los filtros
-        let responseAlt = null;
-        try {
-          if (params.dpi) {
-            responseAlt = await api.get(`/pacientes/dpi/${params.dpi}`);
-          } else if (params.noafiliacion) {
-            responseAlt = await api.get(`/pacientes/${params.noafiliacion}`);
-          }
-          if (responseAlt && responseAlt.data) {
-            // Verificar si está fallecido
-            const paciente = Array.isArray(responseAlt.data) ? responseAlt.data[0] : responseAlt.data;
-            if (paciente.idestado === 3 && paciente.idcausa === 1) {
-              setModalMessage('El paciente está fallecido.');
-              setModalTitle('Paciente fallecido');
-              setModalType('error');
-              setShowModal(true);
-            } else {
-              // El paciente existe pero no cumple el filtro de reingreso
-              setModalMessage('El paciente está activo y no es elegible para reingreso.');
-              setModalTitle('Paciente activo');
-              setModalType('error');
-              setShowModal(true);
-            }
-          } else {
-            setModalMessage('Paciente no encontrado');
-            setModalTitle('Paciente no encontrado');
-            setModalType('error');
-            setShowModal(true);
-          }
-        } catch (error) {
-          setModalMessage('Paciente no encontrado');
-          setModalTitle('Paciente no encontrado');
-          setModalType('error');
-          setShowModal(true);
-        }
+      if (enriquecidos.length === 0) {
+        setModalMessage("Paciente no encontrado.");
+        setModalTitle("Paciente no encontrado");
+        setModalType("error");
+        setShowModal(true);
       }
-    } catch (err) {
-      setError('Error al buscar paciente.');
+    } catch {
+      setError("Error al buscar paciente.");
     } finally {
       setLoading(false);
-      setBusqueda({ dpi: '', noafiliacion: '' });
     }
   };
+
+  const handleFormChange = (key, name, value) => {
+    setFormsById((prev) => ({
+      ...prev,
+      [key]: { ...(prev[key] || initForm), [name]: value },
+    }));
+  };
+
+  const isFormValid = (f) => {
+    if (!f?.numeroformulario || !f?.fechaReingreso) return false;
+    const d = new Date(f.fechaReingreso);
+    if (isNaN(d.getTime())) return false;
+    return true;
+  };
+
+  const handleReingresoSubmit = (paciente, key) => async (e) => {
+    e.preventDefault();
+    setError("");
+    const f = formsById[key] || initForm;
+    if (!isFormValid(f)) {
+      setModalMessage(
+        "Ingrese el número de formulario y una fecha de reingreso válida."
+      );
+      setModalTitle("Campos incompletos");
+      setModalType("error");
+      setShowModal(true);
+      return;
+    }
+
+    try {
+      const payload = {
+        noAfiliacion: paciente.noafiliacion,
+        numeroFormulario: f.numeroformulario,
+        fechaReingreso: f.fechaReingreso,
+        observaciones: f.observaciones || "",
+        usuario: "web",
+      };
+
+      const resp = await api.post(`/api/reingreso/pacientes/reingreso`, payload);
+
+      if (resp.data?.success) {
+        setModalMessage("Reingreso guardado exitosamente.");
+        setModalTitle("Éxito");
+        setModalType("success");
+        setShowModal(true);
+        setResultados((prev) => prev.filter((r) => getKey(r) !== key));
+        setFormsById((prev) => ({ ...prev, [key]: { ...initForm } }));
+      } else {
+        setModalMessage(
+          resp.data?.error || resp.data?.detail || "Error al guardar el reingreso."
+        );
+        setModalTitle("Error");
+        setModalType("error");
+        setShowModal(true);
+      }
+    } catch (err) {
+      setModalMessage(
+        err?.response?.data?.error ||
+          err?.response?.data?.detail ||
+          err.message ||
+          "Error inesperado."
+      );
+      setModalTitle("Error");
+      setModalType("error");
+      setShowModal(true);
+    }
+  };
+
+  // utilitarios dark-friendly
+  const controlClasses =
+    "!bg-white !text-slate-900 !border-slate-300 " +
+    "focus:!ring-2 focus:!ring-emerald-600 focus:!border-emerald-600 " +
+    "placeholder:!text-slate-400 " +
+    "dark:!bg-slate-800 dark:!text-slate-100 dark:!border-slate-600 " +
+    "dark:placeholder:!text-slate-400";
+
+  const labelClasses = "!text-slate-700 dark:!text-slate-200 !font-semibold";
 
   return (
     <React.Fragment>
@@ -218,6 +254,8 @@ const ReingresoPacientes = (props) => {
         message={modalMessage}
         type={modalType}
       />
+
+      {/* Buscador (SIN CAMBIOS) */}
       <div className="w-full px-4 md:px-8 py-6">
         <div className="w-full">
           <div className="bg-white dark:bg-slate-900 rounded-lg shadow-md">
@@ -231,30 +269,68 @@ const ReingresoPacientes = (props) => {
                       className="h-[180px] max-w-[320px] object-contain bg-white rounded-xl shadow-md p-2 dark:bg-slate-800"
                     />
                     <span className="text-3xl font-bold text-green-800 dark:text-white mb-4">
-                      {props.customTitle || 'Reingreso Pacientes'}
+                      {props.customTitle || "Reingreso Pacientes"}
                     </span>
                   </div>
                   <hr className="mt-4 border-gray-300 dark:border-gray-600" />
                 </div>
 
+                {/* Selector de filtro */}
+                <div className="flex justify-center mb-4">
+                  <div className="inline-flex gap-6 items-center text-base text-gray-800 dark:text-gray-200">
+                    <label className="inline-flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="filtro"
+                        value="noafiliacion"
+                        checked={selectedFilter === "noafiliacion"}
+                        onChange={handleFilterChange}
+                      />
+                      <span>No. Afiliación</span>
+                    </label>
+                    <label className="inline-flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="filtro"
+                        value="dpi"
+                        checked={selectedFilter === "dpi"}
+                        onChange={handleFilterChange}
+                      />
+                      <span>DPI</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Input según filtro */}
                 <div className="flex justify-center">
                   <div className="w-full max-w-md mb-4">
-                    <input
-                      placeholder="Número de Afiliación"
-                      type="text"
-                      name="noafiliacion"
-                      value={busqueda.noafiliacion}
-                      onChange={handleChange}
-                      className="w-full text-lg px-4 py-2 mb-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 dark:bg-slate-800 dark:text-white"
-                    />
-                    <input
-                      placeholder="DPI"
-                      type="text"
-                      name="dpi"
-                      value={busqueda.dpi}
-                      onChange={handleChange}
-                      className="w-full text-lg px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 dark:bg-slate-800 dark:text-white"
-                    />
+                    {selectedFilter === "noafiliacion" ? (
+                      <input
+                        placeholder="Número de Afiliación"
+                        type="text"
+                        name="noafiliacion"
+                        value={busqueda.noafiliacion}
+                        onChange={handleChange}
+                        className="w-full text-lg px-4 py-2 border border-gray-300 rounded-md shadow-sm
+                                   focus:outline-none focus:ring-2 focus:ring-green-600
+                                   bg-white text-gray-900 placeholder-gray-500
+                                   dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-300 dark:border-slate-600"
+                        required
+                      />
+                    ) : (
+                      <input
+                        placeholder="DPI"
+                        type="text"
+                        name="dpi"
+                        value={busqueda.dpi}
+                        onChange={handleChange}
+                        className="w-full text-lg px-4 py-2 border border-gray-300 rounded-md shadow-sm
+                                   focus:outline-none focus:ring-2 focus:ring-green-600
+                                   bg-white text-gray-900 placeholder-gray-500
+                                   dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-300 dark:border-slate-600"
+                        required
+                      />
+                    )}
                   </div>
                 </div>
 
@@ -264,20 +340,16 @@ const ReingresoPacientes = (props) => {
                     disabled={loading}
                     className="w-36 px-4 py-2 bg-green-700 hover:bg-green-800 text-white text-base font-semibold rounded-md shadow transition duration-200 disabled:opacity-70"
                   >
-                    {loading ? 'Buscando...' : 'Buscar'}
+                    {loading ? "Buscando..." : "Buscar"}
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      setBusqueda({ dpi: '', noafiliacion: '' });
-                      setResultados([]);
-                      setError('');
-                    }}
+                    onClick={handleLimpiarTodo}
                     className="w-36 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-base font-semibold rounded-md shadow transition duration-200"
+                    aria-label="Limpiar búsqueda y resultados"
                   >
                     Limpiar
                   </button>
-
                 </div>
               </form>
             </div>
@@ -285,169 +357,224 @@ const ReingresoPacientes = (props) => {
         </div>
       </div>
 
+      {/* Resultados */}
+      {resultados.length > 0 &&
+        resultados.map((p) => {
+          const key = getKey(p);
+          const f = formsById[key] || initForm;
+          const fotoSrc = p.fotoFilename
+            ? `${baseURL}/fotos/${p.noafiliacion}.jpg?v=${p._cacheBuster}`
+            : defaultAvatar;
 
-      {/* Mostrar datos del paciente primero y luego el formulario, solo si hay resultados */}
-      {resultados.length > 0 && resultados.map((p) => (
-        <React.Fragment key={p.idpaciente || p.dpi}>
-          {/* Bloque superior: foto y datos grandes y centrados */}
-          <div style={{
-            display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-            gap: '3rem', marginBottom: '2.5rem', border: '1px solid #eee', borderRadius: 16, padding: 32,
-            boxShadow: '0 4px 16px rgba(0,0,0,0.07)', background: '#fff', width: '100%', marginLeft: 0, marginRight: 0, maxWidth: 'none', minHeight: 380
-          }}>
-            {/* Foto a la izquierda */}
-            <div style={{
-              width: '340px', height: '340px', borderRadius: '16px', overflow: 'hidden',
-              border: '2px solid #bdbdbd', boxShadow: '0 2px 12px rgba(0,0,0,0.10)',
-              backgroundColor: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              <img
-                alt="Foto del paciente"
-                src={p.urlfoto ? `http://localhost:3001/fotos/${p.urlfoto.split(/[\\\/]/).pop()}?${Date.now()}` : require("assets/img/default-avatar.png")}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                onError={e => {
-                  e.target.onerror = null;
-                  e.target.src = require("assets/img/default-avatar.png");
-                }}
-              />
-            </div>
-            {/* Datos a la derecha */}
-            <div style={{ textAlign: 'left', flex: 1, paddingLeft: 32 }}>
-              <h2 style={{ marginBottom: 18, fontWeight: 700, fontSize: 32, color: '#2d6a4f', textTransform: 'uppercase', letterSpacing: 1 }}>
-                {`${p.primernombre || ''} ${p.segundonombre || ''} ${p.otrosnombres || ''} ${p.primerapellido || ''} ${p.segundoapellido || ''} ${p.apellidocasada || ''}`.replace(/ +/g, ' ').trim()}
-              </h2>
-              <div style={{ display: 'flex', gap: 32, fontSize: 22 }}>
-                {/* Columna 1 */}
-                <div style={{ flex: 1 }}>
-                  <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>No. Afiliación:</b> {p.noafiliacion}</div>
-                  <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>DPI:</b> {p.dpi}</div>
-                  <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>No. Paciente Proveedor:</b> {p.nopacienteproveedor || ''}</div>
-                  <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>Fecha de Nacimiento:</b> {p.fechanacimiento ? new Date(p.fechanacimiento).toLocaleDateString() : ''}</div>
-                  <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>Edad:</b> {calcularEdad(p.fechanacimiento)}</div>
-                </div>
-                {/* Columna 2 */}
-                <div style={{ flex: 1 }}>
-                  <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>Sexo:</b> {p.sexo || ''}</div>
-                  <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>Dirección:</b> {p.direccion || ''}</div>
-                  <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>Fecha Egreso:</b> {p.fechaegreso ? new Date(p.fechaegreso).toLocaleDateString() : ''}</div>
-                  <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>Causa:</b> {p.causaegreso_descripcion || p.descripcionEgreso || ''}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          {/* Formulario de reingreso abajo, ocupando todo el ancho */}
-          <div style={{ maxWidth: 1100, margin: '0 auto', marginBottom: 40 }}>
-            <Form onSubmit={handleReingresoSubmit} className="mb-3">
-              <div style={{ display: 'flex', gap: 32 }}>
-                {/* Columna izquierda */}
-                <div style={{ flex: 1 }}>
-                  <Form.Group controlId="formNumeroFormulario">
-                    <Form.Label style={{ fontSize: 18 }}>Número de Formulario</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="numeroformulario"
-                      value={formData.numeroformulario}
-                      onChange={handleReingresoInputChange}
-                      placeholder="Ingrese el número de formulario"
-                      required
-                    />
-                  </Form.Group>
+          const nombre = `${p.primernombre || ""} ${p.segundonombre || ""} ${
+            p.otrosnombres || ""
+          } ${p.primerapellido || ""} ${p.segundoapellido || ""} ${p.apellidacasada || ""}`
+            .replace(/ +/g, " ")
+            .trim();
 
-                  <Form.Group controlId="formPeriodoPrestServicios" style={{ marginTop: 16 }}>
-                    <Form.Label style={{ fontSize: 18 }}>Período Prestación de Servicios</Form.Label>
-                    <div style={{ display: 'flex', gap: 12 }}>
-                      <Form.Control
-                        type="date"
-                        name="periodoDel"
-                        value={formData.periodoDel || ''}
-                        onChange={handleReingresoInputChange}
-                        required
+          return (
+            <React.Fragment key={key}>
+              {/* Tarjeta del paciente (responsive mejorado) */}
+              <div className="mx-auto mb-8 w-full max-w-6xl overflow-hidden rounded-2xl border border-slate-200 bg-white/70 shadow-xl backdrop-blur dark:border-slate-700 dark:bg-slate-900/70">
+                {/* Foto arriba en móviles; lado a lado solo desde lg */}
+                <div className="grid gap-0 lg:grid-cols-[320px_minmax(0,1fr)]">
+                  {/* Foto */}
+                  <div className="flex items-center justify-center bg-slate-50 p-6 dark:bg-slate-800/40">
+                    <div className="h-[200px] w-[200px] sm:h-[240px] sm:w-[240px] overflow-hidden rounded-2xl ring-1 ring-slate-200 shadow-lg dark:ring-slate-700">
+                      <img
+                        src={fotoSrc}
+                        alt="Foto del paciente"
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = defaultAvatar;
+                        }}
                       />
-                      <span style={{ alignSelf: 'center' }}>a</span>
-                      <Form.Control
-                        type="date"
-                        name="periodoHasta"
-                        value={formData.periodoHasta || ''}
-                        min={formData.periodoDel || undefined}
-                        onChange={handleReingresoInputChange}
-                        required
-                        disabled={!formData.periodoDel}
-                      />
-                      {formData.periodoDel && formData.periodoHasta && formData.periodoHasta < formData.periodoDel && (
-                        <div style={{ color: 'red', fontSize: 14, marginTop: 4 }}>
-                          La fecha fin no puede ser anterior a la fecha inicio.
-                        </div>
-                      )}
                     </div>
-                  </Form.Group>
-                  <Form.Group controlId="formSesionesAutorizadasMes" style={{ marginTop: 16 }}>
-                    <Form.Label style={{ fontSize: 18 }}>Sesiones Autorizadas por Mes</Form.Label>
-                    <Form.Control
-                      type="number"
-                      name="sesionesautorizadasmes"
-                      value={formData.sesionesautorizadasmes}
-                      onChange={handleReingresoInputChange}
-                      placeholder="Ingrese cantidad de sesiones"
-                      min="0"
-                      required
-                    />
-                  </Form.Group>
-                </div>
-                {/* Columna derecha */}
-                <div style={{ flex: 1 }}>
-                  <Form.Group controlId="formObservaciones" style={{ flex: 1, marginBottom: 24 }}>
-                    <Form.Label style={{ fontSize: 18 }}>Observaciones</Form.Label>
-                    <Form.Control
-                      as="textarea"
-                      name="observaciones"
-                      value={formData.observaciones || ''}
-                      onChange={handleReingresoInputChange}
-                      rows={7}
-                      placeholder="Ingrese observaciones"
-                    />
-                  </Form.Group>
-                  <div style={{ alignSelf: 'flex-end' }}>
-                    <Button
-                      type="submit"
-                      style={{
-                        backgroundColor: '#2d6a4f',
-                        borderColor: '#2d6a4f',
-                        color: '#fff',
-                        fontSize: 20,
-                        padding: '10px 32px',
-                        fontWeight: 600,
-                        boxShadow: '0 2px 8px rgba(44, 106, 79, 0.10)',
-                        marginRight: 16
-                      }}
-                    >
-                      Guardar Reingreso
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="danger"
-                      style={{
-                        fontSize: 20,
-                        padding: '10px 32px',
-                        fontWeight: 600,
-                        backgroundColor: '#dc3545',
-                        borderColor: '#dc3545',
-                        color: '#fff'
-                      }}
-                      onClick={handleLimpiarReingreso}
-                    >
-                      Limpiar
-                    </Button>
+                  </div>
+
+                  {/* Datos */}
+                  <div className="p-6">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <h2 className="text-2xl font-extrabold tracking-wide text-emerald-800 dark:text-emerald-300 break-words">
+                        {nombre || "—"}
+                      </h2>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                          Afiliación: {p.noafiliacion || "—"}
+                        </span>
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
+                          DPI: {p.dpi || "—"}
+                        </span>
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
+                          {p.sexo || "—"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Cards básicas (responsivas) */}
+                    <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                      {[
+                        { label: "NO. PACIENTE PROVEEDOR", value: p.nopacienteproveedor },
+                        {
+                          label: "FECHA DE NACIMIENTO",
+                          value: p.fechanacimiento
+                            ? new Date(p.fechanacimiento).toLocaleDateString()
+                            : "—",
+                          extra: ` (${calcularEdad(p.fechanacimiento) || "—"} años)`,
+                        },
+                        { label: "DIRECCIÓN", value: p.direccion },
+                        { label: "CAUSA DE EGRESO", value: p.causaegreso_descripcion },
+                      ].map((item, i) => (
+                        <div
+                          key={i}
+                          className="min-w-0 rounded-xl border border-slate-200 p-3 dark:border-slate-700"
+                        >
+                          <div className="text-[11px] font-semibold tracking-wide text-slate-500 dark:text-slate-400">
+                            {item.label}
+                          </div>
+                          <div className="text-base font-semibold text-slate-800 dark:text-slate-100 break-words">
+                            {item.value || "—"}
+                            {item.extra && (
+                              <span className="ml-1 text-sm font-normal text-slate-500 dark:text-slate-400">
+                                {item.extra}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
-            </Form>
-          </div>
-        </React.Fragment>
-      ))}
+
+              {/* Datos para Reingreso (responsivo y ordenado) */}
+              <div className="mx-auto mb-10 w-full max-w-6xl">
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/70 shadow-xl backdrop-blur dark:border-slate-700 dark:bg-slate-900/70">
+                  {/* Encabezado */}
+                  <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+                        Datos para Reingreso
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Complete la información requerida para registrar el reingreso.
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                      {p.noafiliacion}
+                    </span>
+                  </div>
+
+                  <Form onSubmit={handleReingresoSubmit(p, key)}>
+                    {/* En móvil: 1 col; desde lg: izq fija y der fluida */}
+                    <div className="grid gap-6 px-5 py-6 md:grid-cols-1 lg:grid-cols-[minmax(320px,520px)_minmax(0,1fr)]">
+                      {/* Columna izquierda */}
+                      <div className="space-y-5 min-w-0">
+                        <Form.Group controlId={`formNumeroFormulario-${key}`}>
+                          <Form.Label className={labelClasses}>
+                            Número de Formulario <span className="text-rose-500">*</span>
+                          </Form.Label>
+                          <div className="relative">
+                            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-400">
+                              #
+                            </span>
+                            <Form.Control
+                              type="text"
+                              name="numeroformulario"
+                              value={f.numeroformulario}
+                              onChange={(e) =>
+                                handleFormChange(key, e.target.name, e.target.value)
+                              }
+                              placeholder="Ingrese el número de formulario"
+                              required
+                              className={`${controlClasses} !w-full pl-9 text-base py-3`}
+                              inputMode="numeric"
+                              pattern="[0-9A-Za-z-]+"
+                              aria-required="true"
+                            />
+                          </div>
+                          <small className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
+                            Acepta números y guiones.
+                          </small>
+                        </Form.Group>
+
+                        <Form.Group controlId={`formFechaReingreso-${key}`}>
+                          <Form.Label className={labelClasses}>
+                            Fecha de Reingreso <span className="text-rose-500">*</span>
+                          </Form.Label>
+                          <div className="relative">
+                            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-400">
+                              📅
+                            </span>
+                            <Form.Control
+                              type="date"
+                              name="fechaReingreso"
+                              value={f.fechaReingreso || ""}
+                              onChange={(e) =>
+                                handleFormChange(key, e.target.name, e.target.value)
+                              }
+                              required
+                              className={`${controlClasses} !w-full pl-10 text-base py-3`}
+                              aria-required="true"
+                            />
+                          </div>
+                        </Form.Group>
+                      </div>
+
+                      {/* Columna derecha: Observaciones ancho completo */}
+                      <div className="flex flex-col min-w-0">
+                        <Form.Group controlId={`formObs-${key}`} className="flex-1">
+                          <div className="flex items-end justify-between">
+                            <Form.Label className={labelClasses}>Observaciones</Form.Label>
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                              {(f.observaciones || "").length}/500
+                            </span>
+                          </div>
+                          <Form.Control
+                            as="textarea"
+                            rows={8}
+                            maxLength={500}
+                            name="observaciones"
+                            value={f.observaciones || ""}
+                            onChange={(e) =>
+                              handleFormChange(key, e.target.name, e.target.value)
+                            }
+                            placeholder="Ingrese observaciones"
+                            className={`${controlClasses} !w-full resize-none text-base py-3 min-h-[220px]`}
+                          />
+                        </Form.Group>
+                      </div>
+                    </div>
+
+                    {/* Acciones */}
+                    <div className="flex flex-col sm:flex-row items-center justify-end gap-3 border-top border-slate-200 bg-slate-50 px-5 py-4 dark:border-slate-700 dark:bg-slate-800/50">
+                      <Button
+                        type="button"
+                        variant="danger"
+                        onClick={handleLimpiarTodo}
+                        className="!w-full sm:!w-auto !rounded-xl !bg-rose-600 !px-5 !py-2.5 !text-white hover:!bg-rose-700"
+                      >
+                        Limpiar
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={!isFormValid(f)}
+                        className="!w-full sm:!w-auto !rounded-xl !bg-emerald-600 !px-5 !py-2.5 !text-white hover:!bg-emerald-700 disabled:opacity-60"
+                      >
+                        Guardar Reingreso
+                      </Button>
+                    </div>
+                  </Form>
+                </div>
+              </div>
+            </React.Fragment>
+          );
+        })}
+
       {error && <Alert variant="danger">{error}</Alert>}
-
-
     </React.Fragment>
   );
-}
+};
+
 export default ReingresoPacientes;
