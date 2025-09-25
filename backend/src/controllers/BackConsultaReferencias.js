@@ -33,8 +33,22 @@ router.get('/api/referencias/consulta', async (req, res) => {
       toValOrNull(idreferencia),
       normSexo,
     ];
-    const sql = 'SELECT * FROM public.fn_consultar_referencias_filtrado($1, $2, $3, $4, $5, $6)';
-    const { rows } = await pool.query(sql, params);
+    // Llamar SP con transacción y cursor
+    const client = await pool.connect();
+    let rows = [];
+    try {
+      await client.query('BEGIN');
+      const cursorName = 'cur_consulta_referencias_filtrado';
+      await client.query('CALL public.sp_consultar_referencias_filtrado($1, $2, $3, $4, $5, $6, $7)', [...params, cursorName]);
+      const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+      rows = fetchRes.rows;
+      await client.query('COMMIT');
+    } catch (e) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+      throw e;
+    } finally {
+      client.release();
+    }
     return res.json(rows);
   } catch (err) {
     console.error('Error al consultar referencias:', err);

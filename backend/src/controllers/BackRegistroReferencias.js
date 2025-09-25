@@ -28,16 +28,6 @@ router.post('/api/referencias', async (req, res) => {
   }
   try {
     const usuarioNombre = await resolveActorNombre(req);
-    const sql = `
-      SELECT * FROM public.fn_registrar_referencia(
-        $1::text,   -- no_afiliacion
-        $2::date,   -- fecha_referencia
-        $3::text,   -- motivo_traslado
-        $4::int,    -- id_medico
-        $5::text,   -- especialidad_referencia
-        $6::text    -- usuario_creacion
-      )
-    `;
     const params = [
       String(noafiliacion).trim(),
       fechareferencia,
@@ -46,8 +36,24 @@ router.post('/api/referencias', async (req, res) => {
       String(especialidadreferencia).trim(),
       usuarioNombre || 'sistema'
     ];
-    const { rows } = await pool.query(sql, params);
-    res.status(201).json({ success: true, referencia: rows?.[0] || null });
+
+    // Llamar SP con transacción y cursor
+    const client = await pool.connect();
+    let refRows = [];
+    try {
+      await client.query('BEGIN');
+      const cursorName = 'cur_registrar_referencia';
+      await client.query('CALL public.sp_registrar_referencia($1, $2, $3, $4, $5, $6, $7)', [...params, cursorName]);
+      const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+      refRows = fetchRes.rows || [];
+      await client.query('COMMIT');
+    } catch (e) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+      throw e;
+    } finally {
+      client.release();
+    }
+    res.status(201).json({ success: true, referencia: refRows?.[0] || null });
   } catch (err) {
     console.error('Error al registrar referencia:', err);
     // Mapear errores específicos lanzados por la función

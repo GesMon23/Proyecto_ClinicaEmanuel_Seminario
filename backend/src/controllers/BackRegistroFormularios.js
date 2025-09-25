@@ -7,8 +7,22 @@ router.use(express.json());
 // Endpoint para obtener jornadas
 router.get('/jornadas', async (req, res) => {
     try {
-        const result = await pool.query('SELECT * from FN_mostrar_jornadas()');
-        res.json(result.rows);
+        const client = await pool.connect();
+        let rows = [];
+        try {
+            await client.query('BEGIN');
+            const cursorName = 'cur_mostrar_jornadas';
+            await client.query('CALL public.sp_mostrar_jornadas($1)', [cursorName]);
+            const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+            rows = fetchRes.rows || [];
+            await client.query('COMMIT');
+        } catch (e) {
+            try { await client.query('ROLLBACK'); } catch (_) {}
+            throw e;
+        } finally {
+            client.release();
+        }
+        res.json(rows);
     } catch (error) {
         res.status(500).json({ error: 'Error al obtener jornadas.' });
     }
@@ -49,16 +63,27 @@ router.put('/api/pacientes/masivo', async (req, res) => {
 router.get('/consulta_pacientes_formularios/:noafiliacion', async (req, res) => {
     try {
         const noaf = String(req.params.noafiliacion || '').trim();
-        const result = await pool.query(
-            'SELECT * FROM fn_Mostrar_Pacientes_Tabla_Formularios($1::text)',
-            [noaf]
-        );
+        const client = await pool.connect();
+        let rows = [];
+        try {
+            await client.query('BEGIN');
+            const cursorName = 'cur_mostrar_pac_form';
+            await client.query('CALL public.sp_mostrar_pacientes_tabla_formularios($1, $2)', [noaf, cursorName]);
+            const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+            rows = fetchRes.rows || [];
+            await client.query('COMMIT');
+        } catch (e) {
+            try { await client.query('ROLLBACK'); } catch (_) {}
+            throw e;
+        } finally {
+            client.release();
+        }
 
-        if (result.rows.length === 0) {
+        if (rows.length === 0) {
             return res.status(404).json({ error: 'Paciente no encontrado.' });
         }
 
-        res.json(result.rows[0]);
+        res.json(rows[0]);
     } catch (error) {
         console.error('Error en /consulta_pacientes_formularios:', error);
         res.status(500).json({ error: 'Error al obtener paciente.', detalle: error.message });
