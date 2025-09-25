@@ -54,17 +54,7 @@ router.post('/evaluacion', async (req, res) => {
       observaciones,
       usuario_creacion
     } = req.body;
-    // Llamar a la función SQL que encapsula validaciones, cálculo, código y el insert
-    const sql = `
-      SELECT public.fn_guardar_informe_nutricion(
-        $1::text,     -- no_afiliacion
-        $2::text,     -- motivo_consulta
-        $3::numeric,  -- altura_cm
-        $4::numeric,  -- peso_kg
-        $5::text,     -- observaciones
-        $6::text      -- usuario_creacion (nombre_usuario)
-      ) AS result
-    `;
+    // Llamar al SP con transacción y cursor
     const usuarioNombre = await resolveActorNombre(req);
     const params = [
       no_afiliacion,
@@ -75,11 +65,25 @@ router.post('/evaluacion', async (req, res) => {
       usuarioNombre || 'sistema'
     ];
 
-    const { rows } = await pool.query(sql, params);
+    const client = await pool.connect();
+    let payload;
+    try {
+      await client.query('BEGIN');
+      const cursorName = 'cur_guardar_informe_nutricion';
+      await client.query('CALL public.sp_guardar_informe_nutricion($1, $2, $3, $4, $5, $6, $7)', [...params, cursorName]);
+      const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+      payload = fetchRes.rows?.[0]?.result || null;
+      await client.query('COMMIT');
+    } catch (e) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+      throw e;
+    } finally {
+      client.release();
+    }
 
     return res.status(201).json({
       message: 'Informe de nutrición guardado exitosamente',
-      informe: rows[0]?.result
+      informe: payload
     });
   } catch (error) {
     // Manejo de errores levantados en la función (validaciones/paciente no encontrado)

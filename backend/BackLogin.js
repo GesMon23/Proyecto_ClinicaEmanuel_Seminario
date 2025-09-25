@@ -33,10 +33,22 @@ router.post('/auth/confirm-password', verifyJWT, async (req, res) => {
     const { password } = req.body || {};
     if (!password) return res.status(400).json({ error: 'password es requerido' });
 
-    const { rows } = await pool.query(
-      'SELECT * FROM public.fn_confirmar_password_usuario($1)',
-      [sub]
-    );
+    // Usar el SP con transacción y cursor
+    const client = await pool.connect();
+    let rows = [];
+    try {
+      await client.query('BEGIN');
+      const cursorName = `cur_confirmar_${sub}`;
+      await client.query('CALL public.sp_confirmar_pasword_usuario($1, $2)', [sub, cursorName]);
+      const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+      rows = fetchRes.rows;
+      await client.query('COMMIT');
+    } catch (e) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+      throw e;
+    } finally {
+      client.release();
+    }
     const user = rows[0];
     if (!user || user.estado === false) return res.status(401).json({ error: 'No autorizado' });
 
@@ -57,10 +69,23 @@ router.post('/auth/confirm-password', verifyJWT, async (req, res) => {
 // Endpoint para consultar usuarios activos
 router.get('/api/usuarios-activos', async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT * from fn_usuarios_activos()'
-    );
-    res.json(result.rows);
+    // Usar SP con transacción y cursor
+    const client = await pool.connect();
+    let rows = [];
+    try {
+      await client.query('BEGIN');
+      const cursorName = 'cur_usuarios_activos';
+      await client.query('CALL public.sp_usuarios_activos($1)', [cursorName]);
+      const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+      rows = fetchRes.rows;
+      await client.query('COMMIT');
+    } catch (e) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+      throw e;
+    } finally {
+      client.release();
+    }
+    res.json(rows);
   } catch (error) {
     console.error('Error al consultar usuarios activos:', error);
     res.status(500).json({ error: 'Error al consultar usuarios activos' });
@@ -76,28 +101,51 @@ router.post('/auth/login', async (req, res) => {
     if (!usuario || !password) {
       return res.status(400).json({ error: 'usuario y password son requeridos' });
     }
-    const ures = await pool.query(
-      'SELECT * from fn_buscar_usuario_auth($1)',
-      [usuario]
-    );
-    const user = ures.rows[0];
-    if (!user || !user.estado) return res.status(401).json({ error: 'Credenciales inválidas' });
+    // Usar SPs con transacción y cursores
+    const client = await pool.connect();
+    let user;
+    let roles = [];
+    try {
+      await client.query('BEGIN');
 
-    // Comparar contraseña (hash bcrypt o texto plano)
-    let ok = false;
-    if (user.contrasenia && user.contrasenia.startsWith('$2')) {
-      ok = await bcrypt.compare(password, user.contrasenia);
-    } else {
-      ok = user.contrasenia === password;
+      // 1) Buscar usuario por nombre
+      const curUser = 'cur_buscar_usuario_auth';
+      await client.query('CALL public.sp_buscar_usuario_auth($1, $2)', [usuario, curUser]);
+      const userRes = await client.query(`FETCH ALL FROM "${curUser}"`);
+      user = userRes.rows[0];
+      if (!user || !user.estado) {
+        await client.query('ROLLBACK');
+        client.release();
+        return res.status(401).json({ error: 'Credenciales inválidas' });
+      }
+
+      // 2) Comparar contraseña (hash bcrypt o texto plano)
+      let ok = false;
+      if (user.contrasenia && user.contrasenia.startsWith('$2')) {
+        ok = await bcrypt.compare(password, user.contrasenia);
+      } else {
+        ok = user.contrasenia === password;
+      }
+      if (!ok) {
+        await client.query('ROLLBACK');
+        client.release();
+        return res.status(401).json({ error: 'Credenciales inválidas' });
+      }
+
+      // 3) Roles del usuario
+      const curRoles = 'cur_roles_usuario';
+      await client.query('CALL public.sp_roles_usuario($1, $2)', [user.id_usuario, curRoles]);
+      const rres = await client.query(`FETCH ALL FROM "${curRoles}"`);
+      roles = rres.rows.map(r => r.nombre);
+
+      await client.query('COMMIT');
+    } catch (e) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+      throw e;
+    } finally {
+      // Si no se ha liberado antes por retornos tempranos
+      try { client.release(); } catch (_) {}
     }
-    if (!ok) return res.status(401).json({ error: 'Credenciales inválidas' });
-
-    // Roles del usuario
-    const rres = await pool.query(
-      `Select * from fn_roles_usuario($1)`,
-      [user.id_usuario]
-    );
-    const roles = rres.rows.map(r => r.nombre);
 
     const token = jwt.sign({ sub: user.id_usuario, nombre_usuario: user.nombre_usuario, roles }, JWT_SECRET, { expiresIn: '8h' });
     // Considerar genérica si la contraseña del usuario coincide con 'Clinica1.' (hash o texto)
@@ -121,17 +169,38 @@ router.get('/auth/me', verifyJWT, async (req, res) => {
   try {
     const { sub } = req.user || {};
     if (!sub) return res.status(401).json({ error: 'No autorizado' });
-    const ures = await pool.query(
-      'SELECT * FROM fn_usuario_autenticado($1)',
-      [sub]
-    );
-    const user = ures.rows[0];
-    if (!user || !user.estado) return res.status(401).json({ error: 'No autorizado' });
-    const rres = await pool.query(
-      `Select * from fn_roles_usuario($1)`,
-      [user.id_usuario]
-    );
-    const roles = rres.rows.map(r => r.nombre);
+    // Usar SPs con transacción y cursores
+    const client = await pool.connect();
+    let user;
+    let roles = [];
+    try {
+      await client.query('BEGIN');
+
+      // 1) Usuario autenticado por id
+      const curMe = 'cur_usuario_autenticado';
+      await client.query('CALL public.sp_usuario_autenticado($1, $2)', [sub, curMe]);
+      const meRes = await client.query(`FETCH ALL FROM "${curMe}"`);
+      user = meRes.rows[0];
+      if (!user || !user.estado) {
+        await client.query('ROLLBACK');
+        client.release();
+        return res.status(401).json({ error: 'No autorizado' });
+      }
+
+      // 2) Roles del usuario
+      const curRoles = 'cur_roles_usuario_me';
+      await client.query('CALL public.sp_roles_usuario($1, $2)', [user.id_usuario, curRoles]);
+      const rres = await client.query(`FETCH ALL FROM "${curRoles}"`);
+      roles = rres.rows.map(r => r.nombre);
+
+      await client.query('COMMIT');
+    } catch (e) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+      throw e;
+    } finally {
+      try { client.release(); } catch (_) {}
+    }
+
     return res.json({ id_usuario: user.id_usuario, nombre_usuario: user.nombre_usuario, roles });
   } catch (err) {
     console.error('Error en /auth/me:', err);
@@ -148,10 +217,22 @@ router.post('/auth/change-password', verifyJWT, async (req, res) => {
     if (!actual || !nueva) return res.status(400).json({ error: 'actual y nueva son requeridas' });
     if (String(nueva).length < 8) return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 8 caracteres' });
 
-    const { rows } = await pool.query(
-      'SELECT * FROM public.fn_confirmar_password_usuario($1)',
-      [sub]
-    );
+    // Usar el SP con transacción y cursor para obtener la contraseña actual
+    const client = await pool.connect();
+    let rows = [];
+    try {
+      await client.query('BEGIN');
+      const cursorName = `cur_confirmar_${sub}`;
+      await client.query('CALL public.sp_confirmar_pasword_usuario($1, $2)', [sub, cursorName]);
+      const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+      rows = fetchRes.rows;
+      await client.query('COMMIT');
+    } catch (e) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+      throw e;
+    } finally {
+      client.release();
+    }
     const user = rows[0];
     if (!user || user.estado === false) return res.status(401).json({ error: 'No autorizado' });
 
@@ -165,7 +246,7 @@ router.post('/auth/change-password', verifyJWT, async (req, res) => {
     if (!ok) return res.status(401).json({ error: 'Contraseña actual incorrecta' });
 
     const hash = await bcrypt.hash(String(nueva), 10);
-    await pool.query('SELECT public.fn_actualizar_password_usuario($1, $2)', [sub, hash]);
+    await pool.query('CALL public.sp_actualizar_password_usuario($1, $2)', [sub, hash]);
     return res.json({ ok: true });
   } catch (err) {
     console.error('Error en /auth/change-password:', err);

@@ -49,23 +49,6 @@ const guardarEvaluacion = async (req, res) => {
       observaciones
     } = req.body;
 
-    const sql = `
-      SELECT public.fn_guardar_evaluacion_psicologia(
-        $1::text,   -- no_afiliacion
-        $2::text,   -- motivo_consulta
-        $3::text,   -- tipo_consulta
-        $4::text,   -- tipo_atencion
-        $5::text,   -- pronostico
-        $6::boolean,-- aplicacion_kdqol
-        $7::int,    -- fisico_mental
-        $8::int,    -- enfermedad_renal
-        $9::int,    -- sintomas_problemas
-        $10::int,   -- efectos_enfermedad
-        $11::int,   -- vida_diaria
-        $12::text,  -- observaciones
-        $13::text   -- usuario_creacion
-      ) AS result
-    `;
     const usuarioNombre = await resolveActorNombre(req);
     // Normalizaciones
     const quitarAcentos = (s) => (s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '');
@@ -96,8 +79,22 @@ const guardarEvaluacion = async (req, res) => {
       usuarioNombre || 'sistema'
     ];
 
-    const { rows } = await pool.query(sql, params);
-    const payload = rows[0]?.result;
+    // Llamar al SP con transacción y cursor
+    const client = await pool.connect();
+    let payload;
+    try {
+      await client.query('BEGIN');
+      const cursorName = 'cur_guardar_evaluacion_psicologia';
+      await client.query('CALL public.sp_guardar_evaluacion_psicologia($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)', [...params, cursorName]);
+      const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+      payload = fetchRes.rows?.[0]?.result;
+      await client.query('COMMIT');
+    } catch (e) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+      throw e;
+    } finally {
+      client.release();
+    }
 
     return res.status(201).json({
       message: 'Evaluación psicológica guardada exitosamente',
