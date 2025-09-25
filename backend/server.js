@@ -40,6 +40,11 @@ const backEgresoPacientes = require('./src/controllers/BackEgresoPacientes');
 const backActualizacionPacientes = require('./src/controllers/BackActualizacionPacientes');
 //const backRegistroPacientes = require('./src/controllers/BackRegistroPacientes');
 const backReingresoPacientesRouter = require('./src/controllers/BackReingresoPacientes');
+// Importar router de consulta de pacientes
+const backConsultaPacientesRouter = require('./src/controllers/BackConsultaPacientes');
+// Importar router de registro de laboratorios
+const backRegistroLaboratoriosRouter = require('./src/controllers/BackRegistroLaboratorios');
+
 // Pool compartido
 const pool = require('./db/pool');
 
@@ -100,6 +105,10 @@ app.use(backActualizacionPacientes);
 app.use(backEgresoPacientes);
 //app.use('/api/pacientes', backRegistroPacientes); 
 app.use('/api/reingreso', backReingresoPacientesRouter);
+// Usar router de consulta de pacientes
+app.use(backConsultaPacientesRouter);
+// Usar router de registro/listado de laboratorios
+app.use('/laboratorios', backRegistroLaboratoriosRouter);
 
 app.post('/upload-foto/:noAfiliacion', async (req, res) => {
     const { noAfiliacion } = req.params;
