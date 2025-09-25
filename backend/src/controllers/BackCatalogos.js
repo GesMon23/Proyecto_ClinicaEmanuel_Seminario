@@ -3,15 +3,26 @@ const pool = require('../../db/pool');
 const router = express.Router();
 router.use(express.json());
 
-// GET /medicos - listado de médicos desde función
+// GET /medicos - listado de médicos desde SP
 router.get('/medicos', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM FN_mostrar_medicos()');
-    const rows = result.rows || [];
+    const client = await pool.connect();
+    let rows = [];
+    try {
+      await client.query('BEGIN');
+      const cursorName = 'cur_mostrar_medicos';
+      await client.query('CALL public.sp_mostrar_medicos($1)', [cursorName]);
+      const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+      rows = fetchRes.rows || [];
+      await client.query('COMMIT');
+    } catch (e) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+      throw e;
+    } finally {
+      client.release();
+    }
     const mapped = rows.map(r => {
-      // Detectar posibles nombres para ID
       const id = r.idmedico ?? r.id_medico ?? r.id ?? r.iddoctor ?? r.id_doctor ?? null;
-      // Detectar posibles nombres para nombre completo
       const nombre = r.nombrecompleto ?? r.nombre_completo ?? r.nombre ?? r.nombremedico ?? r.nombre_medico ?? null;
       return {
         idmedico: id,
