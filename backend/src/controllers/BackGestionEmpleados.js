@@ -40,18 +40,29 @@ router.get('/empleados', verifyJWT, requireRole(['RolGestionUsuarios']), async (
   const term = String(q || '').trim();
   const hasEstado = typeof estado !== 'undefined' && estado !== '';
 
-  // La función fn_listar_empleados ya aplica filtros, orden y paginación, y devuelve las columnas listas para la UI
-  const sql = `SELECT * FROM fn_listar_empleados($1, $2, $3, $4)`;
+  // Usar SP con cursor: sp_listar_empleados
   const params = [term || null, hasEstado ? String(estado) === 'true' : null, Number(limit) || 50, Number(offset) || 0];
 
   try {
-    const result = await pool.query(sql, params);
-    return res.json(result.rows);
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const cursorName = 'cur_listar_empleados';
+      await client.query('CALL public.sp_listar_empleados($1, $2, $3, $4, $5)', [...params, cursorName]);
+      const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+      await client.query('COMMIT');
+      return res.json(fetchRes.rows);
+    } catch (e) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+      throw e;
+    } finally {
+      client.release();
+    }
   } catch (err) {
-    console.error('Error en GET /empleados (función):', err);
+    console.error('Error en GET /empleados (SP):', err);
     return res.status(501).json({
       error: 'Listado de empleados no disponible',
-      detalle: 'Asegúrate de tener la función fn_listar_empleados(q, estado, limit, offset) en la BD o ajusta el nombre/parámetros.',
+      detalle: 'Verifica que exista sp_listar_empleados(q, estado, limit, offset, refcursor) en la BD.',
     });
   }
 });
@@ -84,27 +95,35 @@ router.put('/empleados/:dpi', verifyJWT, requireRole(['RolGestionUsuarios']), as
   const rActor = await pool.query('SELECT public.fn_resolver_actor($1, $2) AS actor_nombre', [nombreJWT, idJWT]);
   const actorNombre = rActor.rows?.[0]?.actor_nombre || null;
 
-  // Llamamos a función en BD (sp_actualizar_empleado)
-  const sql = `SELECT fn_actualizar_empleado($1, $2::jsonb, $3) AS success`;
-  const params = [dpi, JSON.stringify(datos), actorNombre];
-
+  // Usar SP con cursor: sp_actualizar_empleado
   try {
-    const result = await pool.query(sql, params);
-    const ok = result?.rows?.[0]?.success === true || result?.rows?.[0]?.sp_actualizar_empleado === true;
+    const client = await pool.connect();
+    let ok = false;
+    try {
+      await client.query('BEGIN');
+      const cursorName = 'cur_actualizar_empleado';
+      await client.query('CALL public.sp_actualizar_empleado($1, $2, $3, $4)', [dpi, JSON.stringify(datos), actorNombre, cursorName]);
+      const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+      ok = fetchRes.rows?.[0]?.success === true;
+      await client.query('COMMIT');
+    } catch (e) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+      throw e;
+    } finally {
+      client.release();
+    }
     if (!ok) {
-      // Si la función devuelve false, asumimos que no encontró el registro
       return res.status(404).json({ error: 'Empleado no encontrado' });
     }
     return res.json({ success: true });
   } catch (err) {
-    console.error('Error en PUT /empleados/:dpi (función):', err);
-    // Manejo de violación de unique (por ejemplo, DPI duplicado)
+    console.error('Error en PUT /empleados/:dpi (SP):', err);
     if (err && err.code === '23505') {
       return res.status(409).json({ error: 'Conflicto de datos', detalle: 'El DPI ya existe.' });
     }
     return res.status(501).json({
       error: 'Actualización no disponible',
-      detalle: 'Asegúrate de tener sp_actualizar_empleado(original_dpi, datos jsonb, actor) en la BD o ajusta el nombre/parámetros.',
+      detalle: 'Verifica que exista sp_actualizar_empleado(original_dpi, datos jsonb, actor, refcursor) en la BD.',
     });
   }
 });
@@ -122,22 +141,32 @@ router.patch('/empleados/:dpi/estado', verifyJWT, requireRole(['RolGestionUsuari
   const rActor2 = await pool.query('SELECT public.fn_resolver_actor($1, $2) AS actor_nombre', [nombreJWT2, idJWT2]);
   const actorNombre = rActor2.rows?.[0]?.actor_nombre || null;
 
-  // Procedimiento/función en BD
-  // sp_cambiar_estado_empleado(dpi text, activo boolean, actor text) RETURNS boolean
-  const sql = `SELECT fn_cambiar_estado_empleado($1, $2, $3) AS success`;
-  const params = [dpi, Boolean(activo), actorNombre];
+  // Usar SP con cursor: sp_cambiar_estado_empleado
   try {
-    const result = await pool.query(sql, params);
-    const ok = result?.rows?.[0]?.success === true || result?.rows?.[0]?.sp_cambiar_estado_empleado === true;
+    const client = await pool.connect();
+    let ok = false;
+    try {
+      await client.query('BEGIN');
+      const cursorName = 'cur_cambiar_estado_empleado';
+      await client.query('CALL public.sp_cambiar_estado_empleado($1, $2, $3, $4)', [dpi, Boolean(activo), actorNombre, cursorName]);
+      const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+      ok = fetchRes.rows?.[0]?.success === true;
+      await client.query('COMMIT');
+    } catch (e) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+      throw e;
+    } finally {
+      client.release();
+    }
     if (!ok) {
       return res.status(404).json({ error: 'Empleado no encontrado' });
     }
     return res.json({ success: true });
   } catch (err) {
-    console.error('Error en PATCH /empleados/:dpi/estado (función):', err);
+    console.error('Error en PATCH /empleados/:dpi/estado (SP):', err);
     return res.status(501).json({
       error: 'Cambio de estado no disponible',
-      detalle: 'Asegúrate de tener sp_cambiar_estado_empleado(dpi, activo, actor) en la BD o ajusta el nombre/parámetros.',
+      detalle: 'Verifica que exista sp_cambiar_estado_empleado(dpi, activo, actor, refcursor) en la BD.',
     });
   }
 });

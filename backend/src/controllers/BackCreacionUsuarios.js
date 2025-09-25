@@ -42,8 +42,20 @@ router.get(
   requireRole(['RolGestionUsuarios']),
   async (_req, res) => {
     try {
-      const { rows } = await pool.query('SELECT * FROM public.fn_empleados_sin_usuario()');
-      return res.json(rows);
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const cursorName = 'cur_empleados_sin_usuario';
+        await client.query('CALL public.sp_empleados_sin_usuario($1)', [cursorName]);
+        const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+        await client.query('COMMIT');
+        return res.json(fetchRes.rows);
+      } catch (e) {
+        try { await client.query('ROLLBACK'); } catch (_) {}
+        throw e;
+      } finally {
+        client.release();
+      }
     } catch (err) {
       console.error('Error en GET /empleados/sin-usuario:', err);
       return res.status(500).json({ error: 'No fue posible obtener empleados sin usuario' });
@@ -62,11 +74,21 @@ router.get(
       const usuario = (req.query.usuario || '').toString().trim();
       if (!usuario) return res.status(400).json({ error: 'usuario es requerido' });
 
-      const { rows } = await pool.query(
-        'SELECT public.fn_usuario_existe($1) AS existe',
-        [usuario]
-      );
-      return res.json({ existe: rows?.[0]?.existe === true });
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const cursorName = 'cur_usuario_existe';
+        await client.query('CALL public.sp_usuario_existe($1, $2)', [usuario, cursorName]);
+        const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+        await client.query('COMMIT');
+        const existe = fetchRes.rows?.[0]?.existe === true;
+        return res.json({ existe });
+      } catch (e) {
+        try { await client.query('ROLLBACK'); } catch (_) {}
+        throw e;
+      } finally {
+        client.release();
+      }
     } catch (err) {
       console.error('Error en GET /usuarios/existe:', err);
       return res.status(500).json({ error: 'No fue posible validar usuario' });
@@ -88,10 +110,25 @@ router.post('/usuarios', verifyJWT, requireRole(['RolGestionUsuarios']), async (
       return res.status(400).json({ error: 'id_empleado es requerido' });
     }
 
-    // Verificar existencia de usuario via función
-    const existRes = await pool.query('SELECT public.fn_usuario_existe($1) AS existe', [usuario]);
-    if (existRes.rows?.[0]?.existe === true) {
-      return res.status(409).json({ error: 'El nombre de usuario ya existe' });
+    // Verificar existencia de usuario via SP
+    {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const cursorName = 'cur_usuario_existe_pre';
+        await client.query('CALL public.sp_usuario_existe($1, $2)', [usuario, cursorName]);
+        const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+        await client.query('COMMIT');
+        if (fetchRes.rows?.[0]?.existe === true) {
+          client.release();
+          return res.status(409).json({ error: 'El nombre de usuario ya existe' });
+        }
+      } catch (e) {
+        try { await client.query('ROLLBACK'); } catch (_) {}
+        client.release();
+        throw e;
+      }
+      client.release();
     }
 
     // Preparar hash de contraseña genérica (se mantiene en Node)
@@ -122,12 +159,18 @@ router.post('/usuarios', verifyJWT, requireRole(['RolGestionUsuarios']), async (
     const usuario_creacion = String(actorNombre || 'sistema');
     const rolesArr = Array.isArray(roles) ? roles : [];
 
-    // Crear usuario + asignar roles en DB
-    const { rows } = await client.query(
-      'SELECT public.fn_crear_usuario_con_roles($1, $2, $3, $4, $5) AS id_usuario',
-      [usuario, id_empleado, hash, rolesArr, usuario_creacion]
-    );
-    const id_usuario = rows?.[0]?.id_usuario;
+    // Crear usuario + asignar roles en DB via SP con cursor
+    const cursorName = 'cur_crear_usuario_con_roles';
+    await client.query('CALL public.sp_crear_usuario_con_roles($1, $2, $3, $4, $5, $6)', [
+      usuario,
+      id_empleado,
+      hash,
+      rolesArr,
+      usuario_creacion,
+      cursorName,
+    ]);
+    const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+    const id_usuario = fetchRes.rows?.[0]?.id_usuario || null;
 
     await client.query('COMMIT');
     return res.status(201).json({ id_usuario });

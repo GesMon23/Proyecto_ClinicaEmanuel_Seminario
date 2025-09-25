@@ -41,8 +41,20 @@ router.get(
   requireRole(['RolGestionUsuarios']),
   async (_req, res) => {
     try {
-      const { rows } = await pool.query('SELECT * FROM public.fn_roles_activos()');
-      return res.json(rows);
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const cursorName = 'cur_roles_activos';
+        await client.query('CALL public.sp_roles_activos($1)', [cursorName]);
+        const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+        await client.query('COMMIT');
+        return res.json(fetchRes.rows);
+      } catch (e) {
+        try { await client.query('ROLLBACK'); } catch (_) {}
+        throw e;
+      } finally {
+        client.release();
+      }
     } catch (err) {
       console.error('Error en GET /roles/activos:', err);
       return res.status(500).json({ error: 'No fue posible obtener roles' });
@@ -59,13 +71,22 @@ router.get(
     try {
       const usuario = (req.query.usuario || '').toString().trim();
       if (!usuario) return res.status(400).json({ error: 'usuario es requerido' });
-      
-      const { rows } = await pool.query(
-        'SELECT * FROM public.fn_buscar_usuario_por_nombre($1)',
-        [usuario]
-      );
-      if (!rows[0]) return res.status(404).json({ error: 'Usuario no encontrado' });
-      return res.json(rows[0]);
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const cursorName = 'cur_buscar_usuario_por_nombre';
+        await client.query('CALL public.sp_buscar_usuario_por_nombre($1, $2)', [usuario, cursorName]);
+        const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+        await client.query('COMMIT');
+        if (!fetchRes.rows[0]) return res.status(404).json({ error: 'Usuario no encontrado' });
+        return res.json(fetchRes.rows[0]);
+      } catch (e) {
+        try { await client.query('ROLLBACK'); } catch (_) {}
+        throw e;
+      } finally {
+        client.release();
+      }
     } catch (err) {
       console.error('Error en GET /usuarios/by-usuario:', err);
       return res.status(500).json({ error: 'No fue posible buscar el usuario' });
@@ -82,12 +103,21 @@ router.get(
     try {
       const id = Number(req.params.id);
       if (!id) return res.status(400).json({ error: 'id inválido' });
-      
-      const { rows } = await pool.query(
-        'SELECT * FROM public.fn_roles_usuario_detalle($1)',
-        [id]
-      );
-      return res.json(rows);
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const cursorName = 'cur_roles_usuario_detalle';
+        await client.query('CALL public.sp_roles_usuario_detalle($1, $2)', [id, cursorName]);
+        const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+        await client.query('COMMIT');
+        return res.json(fetchRes.rows);
+      } catch (e) {
+        try { await client.query('ROLLBACK'); } catch (_) {}
+        throw e;
+      } finally {
+        client.release();
+      }
     } catch (err) {
       console.error('Error en GET /usuarios/:id/roles:', err);
       return res.status(500).json({ error: 'No fue posible obtener roles del usuario' });
@@ -150,13 +180,8 @@ router.patch(
         return res.status(400).json({ error: 'No puedes inactivar tu propio usuario' });
       }
 
-      // Resolver actor (nombre de usuario) vía función en BD
-      const nombreJWT = (req.user && (req.user.nombre_usuario || req.user.usuario)) || null;
-      const idJWT = Number(req.user && (req.user.id_usuario || req.user.id || req.user.sub)) || null;
-      const rActor = await pool.query('SELECT public.fn_resolver_actor($1, $2) AS actor_nombre', [nombreJWT, idJWT]);
-      const actorNombre = rActor.rows?.[0]?.actor_nombre || null;
-
-      await pool.query('SELECT public.fn_actualizar_estado_usuario($1, $2, $3)', [id, estado, actorNombre]);
+      // Actualizar estado con SP (sin cursor)
+      await pool.query('CALL public.sp_actualizar_estado_usuario($1, $2)', [id, estado]);
       return res.json({ ok: true });
     } catch (err) {
       console.error('Error en PATCH /usuarios/:id/estado:', err);

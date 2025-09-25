@@ -6,8 +6,22 @@ const pool = require('../../db/pool');
 router.get('/historial/:noafiliacion', async (req, res) => {
   try {
     const { noafiliacion } = req.params;
-    const sql = 'SELECT * FROM public.fn_historial_nutricion_por_afiliacion($1)';
-    const { rows } = await pool.query(sql, [noafiliacion]);
+    // Usar SP con cursor
+    const client = await pool.connect();
+    let rows = [];
+    try {
+      await client.query('BEGIN');
+      const cursorName = 'cur_hist_nutri_afiliacion';
+      await client.query('CALL public.sp_historial_nutricion_por_afiliacion($1, $2)', [noafiliacion, cursorName]);
+      const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+      rows = fetchRes.rows;
+      await client.query('COMMIT');
+    } catch (e) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+      throw e;
+    } finally {
+      client.release();
+    }
     return res.json({ success: true, data: rows });
   } catch (error) {
     console.error('Error en Nutrición /historial:', error);
@@ -39,8 +53,22 @@ router.get('/historial', async (req, res) => {
       toValOrNull(idinforme),
       normSexo,
     ];
-    const sql = 'SELECT * FROM public.fn_historial_nutricion_filtrado($1, $2, $3, $4, $5)';
-    const { rows } = await pool.query(sql, params);
+    // Usar SP con cursor
+    const client = await pool.connect();
+    let rows = [];
+    try {
+      await client.query('BEGIN');
+      const cursorName = 'cur_hist_nutri_filtrado';
+      await client.query('CALL public.sp_historial_nutricion_filtrado($1, $2, $3, $4, $5, $6)', [...params, cursorName]);
+      const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+      rows = fetchRes.rows;
+      await client.query('COMMIT');
+    } catch (e) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+      throw e;
+    } finally {
+      client.release();
+    }
     return res.json({ success: true, data: rows });
   } catch (error) {
     console.error('Error en Nutrición /historial (filtros):', error);
