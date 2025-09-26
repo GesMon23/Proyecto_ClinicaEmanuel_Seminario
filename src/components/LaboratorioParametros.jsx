@@ -3,6 +3,7 @@ import React, { useState, useRef } from "react";
 import api from '../config/api';
 import './LaboratorioParametros.css';
 import { Row, Col, Form, Button, Card, Table } from "react-bootstrap";
+import CustomModal from '@/components/CustomModal.jsx';
 
 // Parámetros base y utilidades (restaurados)
 const PARAMETROS_LAB_BASE = [
@@ -86,6 +87,11 @@ function LaboratorioParametros({ onSubmit }) {
   const [fechasParametro, setFechasParametro] = useState({}); // mapa: nombre canónico -> fecha_laboratorio
   const [originalValores, setOriginalValores] = useState({}); // valores originales desde el último laboratorio
   const noAfiRef = useRef(null);
+  // Modal de confirmación (similar a EgresoPacientes)
+  const [showModal, setShowModal] = useState(false);
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalMessage, setModalMessage] = useState('');
+  const [modalType, setModalType] = useState('info');
   
   // Helpers de mapeo a booleanos
   const mapSiNoToBoolean = (v) => {
@@ -298,6 +304,11 @@ function LaboratorioParametros({ onSubmit }) {
       // Refrescar historial
       const { data } = await api.get(`/laboratorios/${noafiliacion}`);
       setRegistros(data?.data || []);
+      // Mostrar confirmación de guardado exitoso
+      setModalTitle('Éxito');
+      setModalMessage('Registro de laboratorio guardado correctamente.');
+      setModalType('success');
+      setShowModal(true);
       // Limpiar formulario y enfocar campo de No. Afiliación
       setNoAfiliacion("");
       setValores({});
@@ -307,6 +318,8 @@ function LaboratorioParametros({ onSubmit }) {
       setFechasParametro({});
       setOriginalValores({});
       setRegistros([]);
+      // Después de guardar, volver a los parámetros base para el próximo paciente/registro
+      setParametrosLab(PARAMETROS_LAB_BASE);
       setTimeout(() => noAfiRef.current?.focus(), 0);
     } catch (err) {
       // Mostrar información útil del backend si existe
@@ -322,6 +335,13 @@ function LaboratorioParametros({ onSubmit }) {
 
   return (
     <>
+    <CustomModal
+      show={showModal}
+      onClose={() => setShowModal(false)}
+      title={modalTitle}
+      message={modalMessage}
+      type={modalType}
+    />
     <Form onSubmit={handleSubmit} className="space-y-6">
       {/* Campo de afiliación y búsqueda de paciente */}
       {paciente && (
@@ -374,6 +394,9 @@ function LaboratorioParametros({ onSubmit }) {
                           p.apellido_casada
                         ].filter(Boolean).join(' ');
                         setPaciente(nombreCompleto || p.no_afiliacion);
+                        // Al cambiar de paciente, restablecer parámetros al set base.
+                        // Los parámetros extras agregados manualmente solo aplican al paciente actual.
+                        setParametrosLab(PARAMETROS_LAB_BASE);
                         // Cargar historial de laboratorios
                         try {
                           const { data } = await api.get(`/laboratorios/${noafiliacion}`);
@@ -403,6 +426,8 @@ function LaboratorioParametros({ onSubmit }) {
                     setBusquedaError("");
                     setBloqueados({});
                     setFechasParametro({});
+                    // Restablecer a los parámetros base al limpiar (los agregados solo son por paciente actual)
+                    setParametrosLab(PARAMETROS_LAB_BASE);
                   }}
                 >
                   Limpiar
