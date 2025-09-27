@@ -1,298 +1,256 @@
-// Endpoint para buscar pacientes por filtros para reporte
-app.get('/api/pacientes', async (req, res) => {
-    const log = (...args) => { console.log('[PACIENTES]', ...args); }
-    try {
-        const { fechainicio, fechafin, estado, numeroformulario } = req.query;
-        let baseQuery = `SELECT 
-    pac.noafiliacion as noafiliacion,
-    pac.dpi as dpi,
-    pac.nopacienteproveedor as nopacienteproveedor,
-    pac.primernombre as primernombre,
-pac.segundonombre as segundonombre,
-pac.otrosnombres as otrosnombres,
-pac.primerapellido as primerapellido,
-pac.segundoapellido as segundoapellido,
-pac.apellidocasada as apellidocasada,
-TO_CHAR(pac.fechanacimiento, 'YYYY-MM-DD') as fechanacimiento,
-    pac.sexo as sexo,
-    pac.direccion as direccion,
-    dep.nombre as departamento,
-    TO_CHAR(pac.fechaingreso, 'YYYY-MM-DD') as fechaingreso,
-    est.descripcion as estado,
-    jor.descripcion as jornada,
-    acc.descripcion as accesovascular,
-    pac.numeroformulario as numeroformulario,
-    TO_CHAR(pac.fechainicioperiodo, 'YYYY-MM-DD') as fechainicioperiodo,
-    TO_CHAR(pac.fechafinperiodo, 'YYYY-MM-DD') as fechafinperiodo,
-    pac.sesionesautorizadasmes as sesionesautorizadasmes,
-    pac.sesionesrealizadasmes as sesionesrealizadasmes,
-    pac.observaciones as observaciones,
-    pac.fechanacimiento as fechanacimiento_raw,
-    pac.idcausa as idcausa,
-    pac.causaegreso as causaegreso,
-    pac.comorbilidades as comorbilidades,
-pac.lugarfallecimiento as lugarfallecimiento,
-pac.causafallecimiento as causafallecimiento,
-    cau.descripcion as causaegreso_descripcion,
-    To_Char(pac.fechaegreso, 'YYYY-MM-DD') as fechaegreso,
-    pac.nocasoconcluido as nocasoconcluido
-FROM tbl_pacientes pac
-LEFT JOIN tbl_estadospaciente est ON pac.idestado = est.idestado
-LEFT JOIN tbl_accesovascular acc ON pac.idacceso = acc.idacceso
-LEFT JOIN tbl_departamentos dep ON pac.iddepartamento = dep.iddepartamento
-LEFT JOIN tbl_jornadas jor ON pac.idjornada = jor.idjornada
-LEFT JOIN tbl_causaegreso cau ON pac.idcausa = cau.idcausa
-WHERE 1=1`;
+const express = require('express');
+const router = express.Router();
+const pool = require('../../db/pool');
+const ExcelJS = require('exceljs');
+const fs = require('fs');
+const path = require('path');
 
-        let params = [];
-        let idx = 1;
-        if (fechainicio) {
-            baseQuery += ` AND pac.fechainicioperiodo >= $${idx}`;
-            params.push(fechainicio);
-            idx++;
-        }
-        if (fechafin) {
-            baseQuery += ` AND pac.fechainicioperiodo <= $${idx}`;
-            params.push(fechafin);
-            idx++;
-        }
-        if (estado) {
-            baseQuery += ` AND est.descripcion = $${idx}`;
-            params.push(estado);
-            idx++;
-        }
-        if (numeroformulario) {
-            baseQuery += ` AND pac.numeroformulario ILIKE $${idx}`;
-            params.push(`%${numeroformulario}%`);
-            idx++;
-        }
-        baseQuery += ' ORDER BY pac.fechainicioperiodo DESC LIMIT 100';
-        log('Consulta SQL:', baseQuery);
-        log('Parámetros:', params);
-        const result = await pool.query(baseQuery, params);
-        log('Resultados:', result.rows.length);
-        res.json(result.rows);
-    } catch (error) {
-        log('ERROR:', error);
-        res.status(500).json({ error: 'Error al buscar pacientes para el reporte.', detalle: error.message });
+
+
+// GET /api/nuevoingreso - lista filtrada (SP + cursor)
+router.get('/api/nuevoingreso', async (req, res) => {
+  try {
+    const { fechainicio, fechafin, numeroformulario, jornada, accesovascular, sexo, departamento } = req.query;
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const cursorName = 'cur_nuevo_ingreso_filtrado';
+      await client.query(
+        'CALL public.sp_nuevo_ingreso_filtrado($1,$2,$3,$4,$5,$6,$7,$8)',
+        [
+          fechainicio || null,
+          fechafin || null,
+          numeroformulario || null,
+          jornada || null,
+          accesovascular || null,
+          sexo || null,
+          departamento || null,
+          cursorName,
+        ]
+      );
+      const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+      await client.query('COMMIT');
+      return res.json(fetchRes.rows || []);
+    } catch (e) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+      throw e;
+    } finally {
+      client.release();
     }
+  } catch (error) {
+    console.error('[NuevoIngreso] /api/nuevoingreso error:', error);
+    res.status(500).json({ error: 'Error al buscar nuevo ingreso.' });
+  }
 });
 
-
-app.get('/api/reportes/nuevoingreso/excel', async (req, res) => {
-    try {
-        const { fechainicio, fechafin } = req.query;
-        let baseQuery = `SELECT 
-            pac.noafiliacion as noafiliacion,
-            pac.dpi as dpi,
-            pac.nopacienteproveedor as nointernoproveedor,
-            CONCAT_WS(' ', pac.primernombre, pac.segundonombre, pac.otrosnombres, pac.primerapellido, pac.segundoapellido, pac.apellidocasada) as NombreCompleto,
-            TO_CHAR(pac.fechanacimiento, 'YYYY-MM-DD') as FechaNacimiento,
-            pac.sexo as Sexo,
-            pac.direccion as Direccion,
-            dep.nombre as Departamento,
-            TO_CHAR(pac.fechaingreso, 'YYYY-MM-DD') as FechaIngreso,
-            est.descripcion as EstadoPaciente,
-            jor.descripcion as Jornada,
-            acc.descripcion as AccesoVascular,
-            pac.numeroformulario as NumeroFormulario,
-            TO_CHAR(pac.fechainicioperiodo, 'YYYY-MM-DD') as fechainicioperiodo,
-            TO_CHAR(pac.fechafinperiodo, 'YYYY-MM-DD') as fechafinperiodo,
-            pac.sesionesautorizadasmes as NumeroSesionesAutorizadasMes,
-            pac.sesionesrealizadasmes as NumeroSesionesRealizadasMes,
-            pac.observaciones as Observaciones,
-            pac.fechanacimiento as fechanacimiento_raw,
-    pac.idcausa as idcausa,
-    pac.causaegreso as causaegreso,
-    cau.descripcion as causaegreso_descripcion
-        FROM tbl_pacientes pac
-        LEFT JOIN tbl_estadospaciente est ON pac.idestado = est.idestado
-        LEFT JOIN tbl_accesovascular acc ON pac.idacceso = acc.idacceso
-        LEFT JOIN tbl_departamentos dep ON pac.iddepartamento = dep.iddepartamento
-        LEFT JOIN tbl_jornadas jor ON pac.idjornada = jor.idjornada
-LEFT JOIN tbl_causaegreso cau ON pac.idcausa = cau.idcausa
-        WHERE est.descripcion = 'Nuevo Ingreso'`;
-
-        let params = [];
-        let idx = 1;
-        if (fechainicio) {
-            baseQuery += ` AND pac.fechainicioperiodo >= $${idx}`;
-            params.push(fechainicio);
-            idx++;
-        }
-        if (fechafin) {
-            baseQuery += ` AND pac.fechainicioperiodo <= $${idx}`;
-            params.push(fechafin);
-            idx++;
-        }
-        baseQuery += ' ORDER BY pac.fechainicioperiodo DESC LIMIT 100';
-        const result = await pool.query(baseQuery, params);
-        const pacientes = result.rows.map(p => {
-            // Calcular edad
-            let edad = '';
-            if (p.fechanacimiento_raw) {
-                const fechaNac = new Date(p.fechanacimiento_raw);
-                const hoy = new Date();
-                let anios = hoy.getFullYear() - fechaNac.getFullYear();
-                const m = hoy.getMonth() - fechaNac.getMonth();
-                if (m < 0 || (m === 0 && hoy.getDate() < fechaNac.getDate())) {
-                    anios--;
-                }
-                edad = anios;
-            }
-            // Periodo
-            let periodo = '';
-            if (p.fechainicioperiodo && p.fechafinperiodo) {
-                periodo = `${p.fechainicioperiodo} al ${p.fechafinperiodo}`;
-            }
-            return {
-                noafiliacion: p.noafiliacion,
-                dpi: p.dpi,
-                nointernoproveedor: p.nointernoproveedor,
-                NombreCompleto: p.nombrecompleto,
-                Edad: edad,
-                FechaNacimiento: p.fechanacimiento,
-                Sexo: p.sexo,
-                Direccion: p.direccion,
-                NumeroFormulario: p.NumeroFormulario,
-                Departamento: p.departamento,
-                FechaIngreso: p.fechaingreso,
-                EstadoPaciente: p.estadopaciente,
-                Jornada: p.jornada,
-                AccesoVascular: p.accesovascular,
-                NumeroFormulario: p.numeroformulario,
-                Periodo: periodo,
-                NumeroSesionesAutorizadasMes: p.numerosesionesautorizadasmes,
-                NumeroSesionesRealizadasMes: p.numerosesionesrealizadasmes,
-                NumeroSesionesNoRealizadasMes: (Number(p.numerosesionesautorizadasmes || 0) - Number(p.numerosesionesrealizadasmes || 0)),
-                Observaciones: p.observaciones
-            };
-        });
-        const ExcelJS = require('exceljs');
-        const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('Pacientes');
-        // Insertar logo y título
-        const logoPath = __dirname + '/assets/img/logoClinica.png';
-        if (fs.existsSync(logoPath)) {
-            const imageId = workbook.addImage({
-                filename: logoPath,
-                extension: 'png',
-            });
-            worksheet.addImage(imageId, {
-                tl: { col: 0, row: 0 }, // A1
-                br: { col: 2, row: 7 }  // B7
-            });
-        }
-        // Insertar título de la fila 1 a la 7 en columnas C a Q (centrado)
-        worksheet.mergeCells('C1:Q7');
-        worksheet.getCell('C1').value = 'REPORTE PACIENTES NUEVO INGRESO';
-        worksheet.getCell('C1').alignment = { horizontal: 'center', vertical: 'middle' };
-        worksheet.getCell('C1').font = { name: 'Arial', size: 26, bold: true, color: { argb: 'FF003366' } };
-        // La tabla comienza en la fila 8
-        const startRow = 8;
-        worksheet.columns = [
-            { key: 'noafiliacion', width: 15 },
-            { key: 'dpi', width: 18 },
-            { key: 'nointernoproveedor', width: 18 },
-            { key: 'NombreCompleto', width: 32 },
-            { key: 'Edad', width: 8 },
-            { key: 'FechaNacimiento', width: 15 },
-            { key: 'Sexo', width: 10 },
-            { key: 'Direccion', width: 28 },
-            { key: 'Departamento', width: 18 },
-            { key: 'FechaIngreso', width: 15 },
-            { key: 'EstadoPaciente', width: 18 },
-            { key: 'Jornada', width: 15 },
-            { key: 'AccesoVascular', width: 18 },
-            { key: 'NumeroFormulario', width: 20 },
-            { key: 'Periodo', width: 25 },
-            { key: 'NumeroSesionesAutorizadasMes', width: 15 },
-            { key: 'NumeroSesionesRealizadasMes', width: 15 },
-            { key: 'NumeroSesionesNoRealizadasMes', width: 18 },
-            { key: 'Observaciones', width: 32 }
-        ];
-        // Cargar correctamente los datos de pacientes en el orden de las columnas
-        pacientes.forEach(p => {
-            worksheet.addRow([
-                p.NoAfiliacion || '',
-                p.DPI || '',
-                p.NoInternoProveedor || '',
-                p.NombreCompleto || '',
-                p.Edad || '',
-                p.FechaNacimiento || '',
-                p.Sexo || '',
-                p.Direccion || '',
-                p.Departamento || '',
-                p.FechaIngreso || '',
-                p.EstadoPaciente || '',
-                p.Jornada || '',
-                p.AccesoVascular || '',
-                p.NumeroFormulario || '',
-                p.Periodo || '',
-                p.NumeroSesionesAutorizadasMes || '',
-                p.NumeroSesionesRealizadasMes || '',
-                (Number(p.NumeroSesionesAutorizadasMes || 0) - Number(p.NumeroSesionesRealizadasMes || 0)),
-                p.Observaciones || ''
-            ]);
-        });
-        // Agregar formato de tabla
-        worksheet.addTable({
-            name: 'PacientesTable',
-            ref: `A${startRow}`,
-            headerRow: true,
-            totalsRow: false,
-            style: {
-                theme: 'TableStyleMedium9',
-                showRowStripes: true
-            },
-            columns: [
-                { name: 'No. Afiliación', filterButton: true },
-                { name: 'DPI', filterButton: true },
-                { name: 'Número Proveedor', filterButton: true },
-                { name: 'Nombre Completo', filterButton: true },
-                { name: 'Edad', filterButton: true },
-                { name: 'Fecha de Nacimiento', filterButton: true },
-                { name: 'Sexo', filterButton: true },
-                { name: 'Dirección', filterButton: true },
-                { name: 'Departamento', filterButton: true },
-                { name: 'Fecha Ingreso', filterButton: true },
-                { name: 'Estado del Paciente', filterButton: true },
-                { name: 'Jornada', filterButton: true },
-                { name: 'Acceso Vascular', filterButton: true },
-                { name: 'Número de Formulario', filterButton: true },
-                { name: 'Periodo', filterButton: true },
-                { name: 'Sesiones Autorizadas Mes', filterButton: true },
-                { name: 'Sesiones Realizadas Mes', filterButton: true },
-                { name: 'Sesiones No Realizadas Mes', filterButton: true },
-                { name: 'Observaciones', filterButton: true }
-            ],
-            rows: pacientes.map(p => [
-                p.noafiliacion || '',
-                p.dpi || '',
-                p.nointernoproveedor || '',
-                p.NombreCompleto || '',
-                p.Edad || '',
-                p.FechaNacimiento || '',
-                p.Sexo || '',
-                p.Direccion || '',
-                p.Departamento || '',
-                p.FechaIngreso || '',
-                p.EstadoPaciente || '',
-                p.Jornada || '',
-                p.AccesoVascular || '',
-                p.NumeroFormulario || '',
-                p.Periodo || '',
-                p.NumeroSesionesAutorizadasMes || '',
-                p.NumeroSesionesRealizadasMes || '',
-                p.NumeroSesionesNoRealizadasMes || '',
-                p.Observaciones || ''
-            ])
-        });
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', 'attachment; filename="reporte_nuevo_ingreso.xlsx"');
-        await workbook.xlsx.write(res);
-        res.end();
-    } catch (error) {
-        res.status(500).json({ error: 'Error al exportar Excel.', detalle: error.message });
-    }
+// Catálogos
+router.get('/api/nuevoingreso/catalogos', async (_req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const c1 = 'cur_cat_jornadas';
+    const c2 = 'cur_cat_accesos';
+    const c3 = 'cur_cat_deptos';
+    const c4 = 'cur_cat_sexos';
+    await client.query('CALL public.sp_nuevo_ingreso_catalogo_jornadas($1)', [c1]);
+    await client.query('CALL public.sp_nuevo_ingreso_catalogo_accesos($1)', [c2]);
+    await client.query('CALL public.sp_nuevo_ingreso_catalogo_departamentos($1)', [c3]);
+    await client.query('CALL public.sp_nuevo_ingreso_catalogo_sexos($1)', [c4]);
+    const [r1, r2, r3, r4] = await Promise.all([
+      client.query(`FETCH ALL FROM "${c1}"`),
+      client.query(`FETCH ALL FROM "${c2}"`),
+      client.query(`FETCH ALL FROM "${c3}"`),
+      client.query(`FETCH ALL FROM "${c4}"`),
+    ]);
+    await client.query('COMMIT');
+    res.json({
+      jornadas: r1.rows.map(r => r.descripcion).filter(Boolean),
+      accesos: r2.rows.map(r => r.descripcion).filter(Boolean),
+      departamentos: r3.rows.map(r => r.nombre).filter(Boolean),
+      sexos: r4.rows.map(r => r.sexo).filter(Boolean),
+    });
+  } catch (error) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    console.error('[NuevoIngreso] /api/nuevoingreso/catalogos error:', error);
+    res.status(500).json({ error: 'Error al cargar catálogos.' });
+  } finally {
+    client.release();
+  }
 });
+
+// Excel
+router.get('/api/nuevoingreso/excel', async (req, res) => {
+  try {
+    const { fechainicio, fechafin, numeroformulario, jornada, accesovascular, sexo, departamento } = req.query;
+    const client = await pool.connect();
+    let rows = [];
+    try {
+      await client.query('BEGIN');
+      const cursorName = 'cur_nuevo_ingreso_excel';
+      await client.query(
+        'CALL public.sp_nuevo_ingreso_filtrado($1,$2,$3,$4,$5,$6,$7,$8)',
+        [
+          fechainicio || null,
+          fechafin || null,
+          numeroformulario || null,
+          jornada || null,
+          accesovascular || null,
+          sexo || null,
+          departamento || null,
+          cursorName,
+        ]
+      );
+      const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+      rows = fetchRes.rows || [];
+      await client.query('COMMIT');
+    } catch (e) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+      throw e;
+    } finally {
+      client.release();
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Nuevo Ingreso');
+    worksheet.columns = [
+      { header: 'No. Afiliación', key: 'noafiliacion', width: 18 },
+      { header: 'DPI', key: 'dpi', width: 16 },
+      { header: 'No. Proveedor', key: 'nopacienteproveedor', width: 18 },
+      { header: 'Nombre Completo', key: 'nombrecompleto', width: 32 },
+      { header: 'Fecha Nacimiento', key: 'fechanacimiento', width: 16 },
+      { header: 'Edad', key: 'edad', width: 8 },
+      { header: 'Sexo', key: 'sexo', width: 8 },
+      { header: 'Dirección', key: 'direccion', width: 30 },
+      { header: 'Departamento', key: 'departamento', width: 18 },
+      { header: 'Fecha Ingreso', key: 'fechaingreso', width: 16 },
+      { header: 'Estancia (D-M-A)', key: 'estancia', width: 16 },
+      { header: 'Jornada', key: 'jornada', width: 14 },
+      { header: 'Acceso Vascular', key: 'accesovascular', width: 18 },
+      { header: 'No. Formulario', key: 'numeroformulario', width: 18 },
+      { header: 'Inicio Periodo', key: 'fechainicioperiodo', width: 16 },
+      { header: 'Fin Periodo', key: 'fechafinperiodo', width: 16 },
+    ];
+
+    // Encabezado con logo y título
+    worksheet.spliceRows(1, 0, [], [], [], [], []);
+    for (let r = 1; r <= 5; r++) worksheet.getRow(r).height = 28;
+    try {
+      const logoPath = path.join(__dirname, '../../../src/assets/logoClinica2.png');
+      if (fs.existsSync(logoPath)) {
+        const imageId = workbook.addImage({ filename: logoPath, extension: 'png' });
+        worksheet.addImage(imageId, 'A1:D5');
+      }
+    } catch {}
+    const colCount = worksheet.columns.length;
+    worksheet.mergeCells(2, 1, 2, colCount);
+    worksheet.getCell(2, 1).value = 'Reporte Pacientes Nuevo Ingreso';
+    worksheet.getCell(2, 1).font = { bold: true, size: 16, color: { argb: 'FF166534' } };
+    worksheet.getCell(2, 1).alignment = { horizontal: 'center' };
+
+    const filtrosResumen = (() => {
+      const parts = [];
+      if (fechainicio) parts.push(`Desde: ${fechainicio}`);
+      if (fechafin) parts.push(`Hasta: ${fechafin}`);
+      if (numeroformulario) parts.push(`Formulario: ${numeroformulario}`);
+      if (jornada) parts.push(`Jornada: ${jornada}`);
+      if (accesovascular) parts.push(`Acceso: ${accesovascular}`);
+      if (sexo) parts.push(`Sexo: ${sexo}`);
+      if (departamento) parts.push(`Depto: ${departamento}`);
+      return parts.join(' | ') || 'Sin filtros';
+    })();
+    worksheet.mergeCells(3, 1, 3, colCount);
+    worksheet.getCell(3, 1).value = `Generado: ${new Date().toLocaleString()} — ${filtrosResumen}`;
+    worksheet.getCell(3, 1).font = { size: 11, color: { argb: 'FF475569' } };
+    worksheet.getCell(3, 1).alignment = { horizontal: 'center' };
+
+    // Encabezado de columnas con color verde y texto blanco
+    const headerRowIndex = 6;
+    const headerValues = worksheet.columns.map(c => c.header);
+    worksheet.insertRow(headerRowIndex, headerValues);
+    const headerRow = worksheet.getRow(headerRowIndex);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+    headerRow.height = 22;
+    headerRow.eachCell((cell) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF16A34A' } }; // verde
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FF0F172A' } },
+        left: { style: 'thin', color: { argb: 'FF0F172A' } },
+        bottom: { style: 'thin', color: { argb: 'FF0F172A' } },
+        right: { style: 'thin', color: { argb: 'FF0F172A' } },
+      };
+    });
+
+    // AutoFilter y congelar panel
+    const colCountForFilter = worksheet.columns.length;
+    const colLetter = (n) => {
+      let s = '';
+      while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); }
+      return s;
+    };
+    worksheet.autoFilter = { from: `A${headerRowIndex}`, to: `${colLetter(colCountForFilter)}${headerRowIndex}` };
+    worksheet.views = [{ state: 'frozen', ySplit: headerRowIndex }];
+
+    const toExcelDate = (v) => { if (!v) return null; const d = new Date(v); return isNaN(d) ? null : d; };
+    const diffDMA = (desdeStr, hastaStr) => {
+      if (!desdeStr) return '';
+      const desde = new Date(desdeStr);
+      const hasta = hastaStr ? new Date(hastaStr) : new Date();
+      if (isNaN(desde) || isNaN(hasta) || hasta < desde) return '0-0-0';
+      let anios = hasta.getFullYear() - desde.getFullYear();
+      let meses = hasta.getMonth() - desde.getMonth();
+      let dias = hasta.getDate() - desde.getDate();
+      if (dias < 0) { meses -= 1; const prev = new Date(hasta.getFullYear(), hasta.getMonth(), 0).getDate(); dias += prev; }
+      if (meses < 0) { anios -= 1; meses += 12; }
+      return `${dias}-${meses}-${anios}`;
+    };
+
+    const calcEdad = (nac, corte) => {
+      if (!nac) return '';
+      const nacimiento = new Date(nac);
+      const h = corte ? new Date(corte) : new Date();
+      if (isNaN(nacimiento) || isNaN(h)) return '';
+      let a = h.getFullYear() - nacimiento.getFullYear();
+      const m = h.getMonth() - nacimiento.getMonth();
+      const d = h.getDate() - nacimiento.getDate();
+      if (m < 0 || (m === 0 && d < 0)) a--;
+      return a >= 0 ? a : '';
+    };
+
+    rows.forEach((r) => {
+      const nombre = [r.primernombre, r.segundonombre, r.otrosnombres, r.primerapellido, r.segundoapellido, r.apellidocasada].filter(Boolean).join(' ');
+      const edad = calcEdad(r.fechanacimiento, r.fechafallecido || null);
+      const estancia = diffDMA(r.fechaingreso, r.fechafallecido || null);
+      worksheet.addRow({
+        noafiliacion: r.noafiliacion || '',
+        dpi: r.dpi || '',
+        nopacienteproveedor: r.nopacienteproveedor || '',
+        nombrecompleto: nombre,
+        fechanacimiento: toExcelDate(r.fechanacimiento),
+        edad: edad,
+        sexo: r.sexo || '',
+        direccion: r.direccion || '',
+        departamento: r.departamento || '',
+        fechaingreso: toExcelDate(r.fechaingreso),
+        estancia: estancia,
+        jornada: r.jornada || '',
+        accesovascular: r.accesovascular || '',
+        numeroformulario: r.numeroformulario || '',
+        fechainicioperiodo: toExcelDate(r.fechainicioperiodo),
+        fechafinperiodo: toExcelDate(r.fechafinperiodo),
+      });
+    });
+
+    // (El estilo del encabezado ya fue aplicado en headerRowIndex)
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="reporte_nuevo_ingreso.xlsx"');
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error('[NuevoIngreso] /api/nuevoingreso/excel error:', error);
+    res.status(500).json({ error: 'Error al exportar Excel.' });
+  }
+});
+
+module.exports = router;

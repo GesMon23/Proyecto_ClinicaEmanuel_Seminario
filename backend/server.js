@@ -8,6 +8,17 @@ const PDFDocument = require('pdfkit');
 
 const nz = (v) => (v === undefined || v === null || v === '' ? null : v);
 
+// Configuración de CORS y JSON body parsing
+app.use(cors({
+  origin: 'http://localhost:3000',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+}));
+
+app.use(express.json({ limit: '50mb' }));
+app.use(bodyParser.json({ limit: '50mb' }));
+
 // (Desmontado) Router legacy de actualización masiva para evitar conflicto de rutas
 // const updateMasivoPacientesRouter = require('./update-masivo-pacientes');
 // Importar router de login/roles centralizado
@@ -34,36 +45,34 @@ const backConsultaNutricionRouter = require('./src/controllers/BackConsultaNutri
 const backRegistroReferenciasRouter = require('./src/controllers/BackRegistroReferencias');
 // Importar router de consulta de referencias
 const backConsultaReferenciasRouter = require('./src/controllers/BackConsultaReferencias');
-// Importar router de catálogos (médicos, etc.)
+// Importar router de consulta de laboratorios
+const backConsultaLaboratoriosRouter = require('./src/controllers/BackConsultaLaboratorios');
+// Importar router de catálogos
 const backCatalogosRouter = require('./src/controllers/BackCatalogos');
-const backEgresoPacientes = require('./src/controllers/BackEgresoPacientes');
+// Importar router de reporte de pacientes
+const backPacientesReporteRouter = require('./src/controllers/BackPacientesReporte');
+
+const backNuevoIngresoReportesRouter = require('./src/controllers/BackNuevoIngresoReportes');
+// Importar otros routers usados más abajo
+// Usar router de consulta de laboratorios
+app.use(backConsultaLaboratoriosRouter);
 const backActualizacionPacientes = require('./src/controllers/BackActualizacionPacientes');
-//const backRegistroPacientes = require('./src/controllers/BackRegistroPacientes');
+const backEgresoPacientes = require('./src/controllers/BackEgresoPacientes');
 const backReingresoPacientesRouter = require('./src/controllers/BackReingresoPacientes');
+const backEgresoReportesRouter = require('./src/controllers/BackEgresoReportes');
+
+const backFallecidosReportesRouter = require('./src/controllers/BackFallecidosReportes');
+
+
+
 // Pool compartido
 const pool = require('./db/pool');
 
-// Definir colores usados en el PDF
-const VERDE = '#16a085';
-const ROJO = '#e74c3c';
-
-app.use(cors({
-    origin: 'http://localhost:3000',
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
-}));
-
-app.use(express.json({ limit: '50mb' }));
-app.use(bodyParser.json({ limit: '50mb' }));
-
-// Asegurarnos de que la carpeta 'fotos' existe
+// Asegurarnos de que la carpeta 'fotos' existe y servir estáticos
 const fotosDir = path.join(__dirname, 'fotos');
 if (!fs.existsSync(fotosDir)) {
-    fs.mkdirSync(fotosDir);
+  fs.mkdirSync(fotosDir);
 }
-
-// Servir archivos estáticos desde la carpeta 'fotos'
 app.use('/fotos', express.static(fotosDir));
 // (Desmontado) Usar el router legacy para actualización masiva de pacientes
 // app.use(updateMasivoPacientesRouter);
@@ -89,17 +98,24 @@ app.use('/api/nutricion', backNutricionRouter);
 app.use('/api/nutricion', backConsultaNutricionRouter);
 // Usar router de registro de referencias
 app.use(backRegistroReferenciasRouter);
+// Usar router de Nuevo Ingreso Reportes (expone /api/nuevoingreso y /api/nuevoingreso/excel)
+app.use(backNuevoIngresoReportesRouter);
 // Usar router de consulta de referencias
 app.use(backConsultaReferenciasRouter);
 // Usar router de catálogos
 app.use(backCatalogosRouter);
-// Endpoint para subir/reemplazar foto de paciente
-
-
+// Otros routers existentes
 app.use(backActualizacionPacientes);
 app.use(backEgresoPacientes);
-//app.use('/api/pacientes', backRegistroPacientes); 
 app.use('/api/reingreso', backReingresoPacientesRouter);
+  // Usar router de reporte de pacientes (expone /api/pacientes y /api/pacientes/excel)
+  app.use(backPacientesReporteRouter);
+
+  // Usar router de reporte de egresos (expone /api/egreso y /api/egreso/excel)
+  app.use(backEgresoReportesRouter);
+// Usar router de reporte de fallecidos (expone /api/fallecidos y /api/fallecidos/excel)
+app.use(backFallecidosReportesRouter);
+
 
 app.post('/upload-foto/:noAfiliacion', async (req, res) => {
     const { noAfiliacion } = req.params;
