@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import api from '../config/api';
 import { Spinner } from 'react-bootstrap';
 import CustomModal from '@/components/CustomModal.jsx';
@@ -14,7 +14,7 @@ const formatearFechaInput = (fecha) => {
 };
 
 const ActualizacionPacientes = () => {
-  // ... (toda la lógica original permanece igual)
+  // ... (toda la lÃ³gica original permanece igual)
   const handleLimpiarTodo = () => {
     setPaciente(null);
     setFormData({});
@@ -85,7 +85,7 @@ const ActualizacionPacientes = () => {
         url += `dpi=${busqueda.dpi.trim()}`;
       } else {
         setShowModal(true);
-        setModalMessage('Debe ingresar el número de afiliación o el DPI');
+        setModalMessage('Debe ingresar el nÃºmero de afiliaciÃ³n o el DPI');
         setModalType('error');
         setLoading(false);
         return;
@@ -102,7 +102,7 @@ const ActualizacionPacientes = () => {
           setModalType('error');
           return;
         }
-        console.log("📸 url_foto crudo desde backend:", pacienteData.url_foto);
+        console.log("ðŸ“¸ url_foto crudo desde backend:", pacienteData.url_foto);
         // Procesar foto si existe
         if (pacienteData.url_foto) {
           const filename = pacienteData.url_foto.replace(/^.*[\\\/]/, '');
@@ -110,7 +110,7 @@ const ActualizacionPacientes = () => {
         } else {
           pacienteData.url_foto = null;
         }
-        console.log("✅ url_foto procesado:", pacienteData.url_foto);
+        console.log("âœ… url_foto procesado:", pacienteData.url_foto);
         setPaciente(pacienteData);
         setFormData(pacienteData);
         setEditando(false);
@@ -172,7 +172,7 @@ const ActualizacionPacientes = () => {
         sesiones_autorizadas_mes: formData.sesiones_autorizadas_mes || null
       };
 
-      // Si se tomó una nueva foto en base64, subirla primero
+      // Si se tomÃ³ una nueva foto en base64, subirla primero
       if (formData.urlfoto && formData.urlfoto.startsWith('data:image')) {
         const resFoto = await api.post(`/Aupload-foto/${formData.no_afiliacion}`, { imagenBase64: formData.urlfoto });
         if (resFoto.data && resFoto.data.success) {
@@ -219,15 +219,15 @@ const ActualizacionPacientes = () => {
       <CustomModal
         show={showModal}
         onClose={() => setShowModal(false)}
-        title={modalType === 'success' ? 'Éxito' : 'Error'}
+        title={modalType === 'success' ? 'Ã‰xito' : 'Error'}
         message={modalMessage}
         type={modalType}
       />
 
-      {/* Header con logo y formulario de búsqueda */}
+      {/* Header con logo y formulario de bÃºsqueda */}
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 overflow-hidden mb-8">
         <div className="p-6">
-          {/* Logo y título */}
+          {/* Logo y tÃ­tulo */}
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-6 flex-wrap mb-4">
               <img
@@ -242,7 +242,7 @@ const ActualizacionPacientes = () => {
             <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-slate-600 to-transparent"></div>
           </div>
 
-          {/* Formulario de búsqueda */}
+          {/* Formulario de bÃºsqueda */}
           <form onSubmit={buscarPaciente} className="max-w-md mx-auto">
             <div className="space-y-4">
               {/* numero de afiliacion */}
@@ -253,7 +253,7 @@ const ActualizacionPacientes = () => {
                   placeholder="Número de Afiliación"
                   value={busqueda.no_afiliacion}
                   onChange={handleBusquedaChange}
-                  className="w-full text-lg px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                  disabled={Boolean(busqueda.dpi)} className="w-full text-lg px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 disabled:opacity-60"
                 />
               </div>
               {/* dpi */}
@@ -264,7 +264,7 @@ const ActualizacionPacientes = () => {
                   placeholder="DPI"
                   value={busqueda.dpi}
                   onChange={handleBusquedaChange}
-                  className="w-full text-lg px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                  disabled={Boolean(busqueda.no_afiliacion)} className="w-full text-lg px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 disabled:opacity-60"
                 />
               </div>
 
@@ -301,7 +301,7 @@ const ActualizacionPacientes = () => {
       {paciente && (
         <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
           <div className="p-6">
-            {/* Título del formulario */}
+            {/* TÃ­tulo del formulario */}
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                 Información del Paciente
@@ -309,11 +309,11 @@ const ActualizacionPacientes = () => {
               <div className="flex items-center gap-2">
                 <div className={`w-3 h-3 rounded-full ${editando ? 'bg-orange-500' : 'bg-green-500'}`}></div>
                 <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  {editando ? 'Modo Edición' : 'Solo Lectura'}
+                  {editando ? 'Modo EdiciÃ³n' : 'Solo Lectura'}
                 </span>
               </div>
             </div>
-            {/* Botones de acción */}
+            {/* Botones de acciÃ³n */}
             <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md mt-0 mb-4">
               {!editando ? (
                 <>
@@ -522,10 +522,10 @@ const ActualizacionPacientes = () => {
                 />
               </div>
 
-              {/* No. Afiliación */}
+              {/* No. AfiliaciÃ³n */}
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  No. Afiliación
+                  No. AfiliaciÃ³n
                 </label>
                 <input
                   type="text"
@@ -537,7 +537,7 @@ const ActualizacionPacientes = () => {
                 />
               </div>
 
-              {/* Dirección */}
+              {/* DirecciÃ³n */}
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
                   Dirección
@@ -625,16 +625,16 @@ const ActualizacionPacientes = () => {
             {/* Separador */}
             <div className="border-t border-gray-200 dark:border-slate-700 my-8"></div>
 
-            {/* Sección de foto */}
+            {/* SecciÃ³n de foto */}
             <div className="flex flex-col items-center space-y-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Fotografía del Paciente
+                FotografÃ­a del Paciente
               </h3>
 
               {/* Contenedor de la foto */}
               <div className="relative">
                 <div className="w-48 h-48 sm:w-56 sm:h-56 lg:w-64 lg:h-64 rounded-2xl overflow-hidden border-4 border-green-600 dark:border-green-400 shadow-xl bg-gray-100 dark:bg-slate-800">
-                  {console.log("🖼️ URL usada para mostrar foto:", formData.urlfoto || formData.url_foto)}
+                  {console.log("ðŸ–¼ï¸ URL usada para mostrar foto:", formData.urlfoto || formData.url_foto)}
                   <img
                     alt="Foto del paciente"
                     src={
@@ -654,13 +654,13 @@ const ActualizacionPacientes = () => {
                 {editando && (
                   <div className="absolute -bottom-2 -right-2">
                     <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">✎</span>
+                      <span className="text-white text-xs font-bold">âœŽ</span>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Botón para tomar nueva foto */}
+              {/* BotÃ³n para tomar nueva foto */}
               <button
                 onClick={() => setShowWebcam(true)}
                 disabled={!editando}
@@ -676,7 +676,7 @@ const ActualizacionPacientes = () => {
         </div>
       )}
 
-      {/* Modal para la cámara */}
+      {/* Modal para la cÃ¡mara */}
       {showWebcam && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 max-w-2xl w-full max-h-[90vh] overflow-auto">
@@ -684,7 +684,7 @@ const ActualizacionPacientes = () => {
               <div className="flex items-center justify-between mb-6">
                 <h3 className="flex items-center gap-2 text-xl font-bold text-gray-900 dark:text-white">
                   <Camera className="w-6 h-6" />
-                  Capturar Fotografía
+                  Capturar FotografÃ­a
                 </h3>
                 <button
                   onClick={() => setShowWebcam(false)}

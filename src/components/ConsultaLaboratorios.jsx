@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import api from '../config/api';
 import logoClinica from '@/assets/logoClinica2.png';
 
@@ -8,6 +8,8 @@ const ConsultaLaboratorios = () => {
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
   const [sexo, setSexo] = useState('');
+  const [periodicidad, setPeriodicidad] = useState('');
+  const [catalogos, setCatalogos] = useState({ periodicidades: [], sexos: [] });
   const [historial, setHistorial] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -207,6 +209,22 @@ const ConsultaLaboratorios = () => {
     }, 300);
   };
 
+  // Cargar catálogos
+  useEffect(() => {
+    const cargarCatalogos = async () => {
+      try {
+        const { data } = await api.get('/api/laboratorios/catalogos');
+        setCatalogos({
+          periodicidades: data?.periodicidades || [],
+          sexos: data?.sexos || [],
+        });
+      } catch (e) {
+        setCatalogos({ periodicidades: [], sexos: [] });
+      }
+    };
+    cargarCatalogos();
+  }, []);
+
   const buscarHistorial = async () => {
     setError('');
     setHistorial([]);
@@ -218,6 +236,7 @@ const ConsultaLaboratorios = () => {
       if (noAfiliacion) params.noafiliacion = noAfiliacion;
       if (idLaboratorio) params.idlaboratorio = idLaboratorio;
       if (sexo) params.sexo = sexo;
+      if (periodicidad) params.periodicidad = periodicidad;
       const { data } = await api.get(`/api/laboratorios/historial`, { params });
       if (data?.success) {
         setHistorial(data.data || []);
@@ -291,6 +310,20 @@ const ConsultaLaboratorios = () => {
         </div>
 
         <div className="col-span-1 lg:col-span-2">
+          <label className="block text-[16px] font-medium text-gray-800 dark:text-white mb-1">Periodicidad</label>
+          <select
+            value={periodicidad}
+            onChange={(e) => setPeriodicidad(e.target.value)}
+            className="focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 w-full border rounded-md px-4 py-2 dark:bg-slate-800 dark:text-white dark:border-slate-600"
+          >
+            <option value="">Todas</option>
+            {catalogos.periodicidades.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="col-span-1 lg:col-span-2">
           <label className="block text-[16px] font-medium text-gray-800 dark:text-white mb-1">No. Laboratorio</label>
           <input
             type="text"
@@ -309,8 +342,9 @@ const ConsultaLaboratorios = () => {
             className="focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 w-full border rounded-md px-4 py-2 dark:bg-slate-800 dark:text-white dark:border-slate-600"
           >
             <option value="">Todos</option>
-            <option value="M">Masculino</option>
-            <option value="F">Femenino</option>
+            {catalogos.sexos.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
           </select>
         </div>
 
