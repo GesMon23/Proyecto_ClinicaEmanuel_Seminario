@@ -38,6 +38,7 @@ const backConsultaReferenciasRouter = require('./src/controllers/BackConsultaRef
 const backCatalogosRouter = require('./src/controllers/BackCatalogos');
 const backEgresoPacientes = require('./src/controllers/BackEgresoPacientes');
 const backActualizacionPacientes = require('./src/controllers/BackActualizacionPacientes');
+<<<<<<< Updated upstream
 //const backRegistroPacientes = require('./src/controllers/BackRegistroPacientes');
 const backReingresoPacientesRouter = require('./src/controllers/BackReingresoPacientes');
 // Importar router de consulta de pacientes
@@ -45,6 +46,9 @@ const backConsultaPacientesRouter = require('./src/controllers/BackConsultaPacie
 // Importar router de registro de laboratorios
 const backRegistroLaboratoriosRouter = require('./src/controllers/BackRegistroLaboratorios');
 
+=======
+const backGestionTurnos = require('./src/controllers/BackGestionTurno');
+>>>>>>> Stashed changes
 // Pool compartido
 const pool = require('./db/pool');
 
@@ -103,12 +107,17 @@ app.use(backCatalogosRouter);
 
 app.use(backActualizacionPacientes);
 app.use(backEgresoPacientes);
+<<<<<<< Updated upstream
 //app.use('/api/pacientes', backRegistroPacientes); 
 app.use('/api/reingreso', backReingresoPacientesRouter);
 // Usar router de consulta de pacientes
 app.use(backConsultaPacientesRouter);
 // Usar router de registro/listado de laboratorios
 app.use('/laboratorios', backRegistroLaboratoriosRouter);
+=======
+app.use(backGestionTurnos);
+
+>>>>>>> Stashed changes
 
 app.post('/upload-foto/:noAfiliacion', async (req, res) => {
     const { noAfiliacion } = req.params;
@@ -139,24 +148,6 @@ app.post('/upload-foto/:noAfiliacion', async (req, res) => {
     }
 });
 // Endpoints de auth/usuarios ahora están en BackLogin.js
-
-
-
-// Endpoint para verificar si existe una foto
-// Endpoint para actualizar el estado de un turno llamado a 6
-app.put('/turnoLlamado/:idturno', async (req, res) => {
-    const { idturno } = req.params;
-    const { idturnoestado } = req.body;
-    try {
-        // Si no se manda un estado, por defecto 6 (como antes)
-        const nuevoEstado = idturnoestado ? parseInt(idturnoestado, 10) : 6;
-        await pool.query('UPDATE tbl_turnos SET idturnoestado = $1 WHERE idturno = $2', [nuevoEstado, idturno]);
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Error al actualizar el estado del turno:', error);
-        res.status(500).json({ error: 'Error al actualizar el estado del turno.' });
-    }
-});
 
 // Endpoint para obtener el turno llamado actual
 app.get('/turnoLlamado', async (req, res) => {
@@ -2161,6 +2152,7 @@ app.get('/reporte-turnos', async (req, res) => {
 });
 
 // Consultar todos los turnos con filtros
+<<<<<<< Updated upstream
 app.get('/turnos', async (req, res) => {
     try {
         const { numeroafiliacion, fecha, clinica } = req.query;
@@ -2202,6 +2194,9 @@ app.get('/turnos', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+=======
+
+>>>>>>> Stashed changes
 
 // Obtener turno más antiguo por clínica
 app.get('/turno-mas-antiguo/:clinica', async (req, res) => {
@@ -2374,23 +2369,7 @@ app.put('/finalizar-turno/:turno_id', async (req, res) => {
     }
 });
 
-// Asignar turno (cambia a estado 1)
-app.put('/asignar-turno/:turno_id', async (req, res) => {
-    try {
-        const { turno_id } = req.params;
-        await pool.query(
-            'UPDATE tbl_Turnos SET idturnoestado = 1, fechaasignacion=now() WHERE idTurno = $1',
-            [turno_id]
-        );
 
-        res.json({
-            success: true,
-            message: "Turno asignado exitosamente"
-        });
-    } catch (err) {
-        res.status(500).json({ detail: err.message });
-    }
-});
 
 // Llamar turno (cambia a estado 3)
 app.put('/llamar-turno/:turno_id', async (req, res) => {
@@ -2980,6 +2959,7 @@ app.delete('/eliminar-turno/:idturno', async (req, res) => {
     }
 });
 
+<<<<<<< Updated upstream
 app.post('/registrar-faltista', async (req, res) => {
     const { noafiliacion, fechaFalta, motivoFalta } = req.body;
     if (!noafiliacion || !fechaFalta || !motivoFalta) {
@@ -3052,3 +3032,5 @@ app.get('/jornadas', async (req, res) => {
         res.status(500).json({ error: 'Error al obtener jornadas' });
     }
 });
+=======
+>>>>>>> Stashed changes
