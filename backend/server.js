@@ -59,11 +59,12 @@ app.use(backConsultaLaboratoriosRouter);
 const backActualizacionPacientes = require('./src/controllers/BackActualizacionPacientes');
 const backEgresoPacientes = require('./src/controllers/BackEgresoPacientes');
 const backReingresoPacientesRouter = require('./src/controllers/BackReingresoPacientes');
-const backEgresoReportesRouter = require('./src/controllers/BackEgresoReportes');
-
-const backFallecidosReportesRouter = require('./src/controllers/BackFallecidosReportes');
 
 
+// Importar router de consulta de pacientes
+const backConsultaPacientesRouter = require('./src/controllers/BackConsultaPacientes');
+// Importar router de registro de laboratorios
+const backRegistroLaboratoriosRouter = require('./src/controllers/BackRegistroLaboratorios');
 
 // Pool compartido
 const pool = require('./db/pool');
@@ -108,14 +109,11 @@ app.use(backCatalogosRouter);
 app.use(backActualizacionPacientes);
 app.use(backEgresoPacientes);
 app.use('/api/reingreso', backReingresoPacientesRouter);
-  // Usar router de reporte de pacientes (expone /api/pacientes y /api/pacientes/excel)
-  app.use(backPacientesReporteRouter);
 
-  // Usar router de reporte de egresos (expone /api/egreso y /api/egreso/excel)
-  app.use(backEgresoReportesRouter);
-// Usar router de reporte de fallecidos (expone /api/fallecidos y /api/fallecidos/excel)
-app.use(backFallecidosReportesRouter);
-
+// Usar router de consulta de pacientes
+app.use(backConsultaPacientesRouter);
+// Usar router de registro/listado de laboratorios
+app.use('/laboratorios', backRegistroLaboratoriosRouter);
 
 app.post('/upload-foto/:noAfiliacion', async (req, res) => {
     const { noAfiliacion } = req.params;
