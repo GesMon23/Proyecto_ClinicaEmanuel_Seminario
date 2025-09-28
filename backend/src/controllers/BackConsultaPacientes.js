@@ -276,6 +276,111 @@ router.get('/historial/:noafiliacion', async (req, res) => {
     }
 });
 
+// Listar referencias por número de afiliación
+router.get('/referencias/:noafiliacion', async (req, res) => {
+    try {
+        const noafiliacion = req.params.noafiliacion;
+        const query = `
+            SELECT 
+                r.id_referencia,
+                r.no_afiliacion,
+                r.fecha_referencia,
+                r.motivo_traslado,
+                r.id_medico,
+                r.especialidad_referencia
+            FROM public.tbl_referencias r
+            WHERE r.no_afiliacion = $1
+              AND (r.fecha_eliminacion IS NULL)
+            ORDER BY r.fecha_referencia DESC NULLS LAST, r.fecha_creacion DESC NULLS LAST
+        `;
+        const result = await pool.query(query, [noafiliacion]);
+        return res.json(result.rows || []);
+    } catch (error) {
+        console.error('Error al obtener referencias:', error);
+        return res.status(500).json({ error: 'Error al obtener referencias', detalle: error.message });
+    }
+});
+
+// Listar informes de nutrición por número de afiliación
+router.get('/nutricion/:noafiliacion', async (req, res) => {
+    try {
+        const noafiliacion = req.params.noafiliacion;
+        const query = `
+            SELECT 
+                n.id_informe,
+                n.no_afiliacion,
+                n.motivo_consulta,
+                n.estado_nutricional,
+                n.observaciones,
+                n.altura_cm,
+                n.peso_kg,
+                n.imc
+            FROM public.tbl_informe_nutricion n
+            WHERE n.no_afiliacion = $1
+              AND (n.fecha_eliminacion IS NULL)
+            ORDER BY n.fecha_creacion DESC NULLS LAST
+        `;
+        const result = await pool.query(query, [noafiliacion]);
+        return res.json(result.rows || []);
+    } catch (error) {
+        console.error('Error al obtener informes de nutrición:', error);
+        return res.status(500).json({ error: 'Error al obtener informes de nutrición', detalle: error.message });
+    }
+});
+
+// Listar informes de psicología por número de afiliación
+router.get('/psicologia/:noafiliacion', async (req, res) => {
+    try {
+        const noafiliacion = req.params.noafiliacion;
+        const query = `
+            SELECT 
+                p.id_informe,
+                p.no_afiliacion,
+                p.motivo_consulta,
+                p.tipo_consulta,
+                p.observaciones,
+                p.tipo_atencion,
+                p.pronostico,
+                p.kdqol
+            FROM public.tbl_informes_psicologia p
+            WHERE p.no_afiliacion = $1
+              AND (p.fecha_eliminacion IS NULL)
+            ORDER BY p.fecha_creacion DESC NULLS LAST
+        `;
+        const result = await pool.query(query, [noafiliacion]);
+        return res.json(result.rows || []);
+    } catch (error) {
+        console.error('Error al obtener informes de psicología:', error);
+        return res.status(500).json({ error: 'Error al obtener informes de psicología', detalle: error.message });
+    }
+});
+
+// Listar formularios por número de afiliación
+router.get('/formularios/:noafiliacion', async (req, res) => {
+    try {
+        const noafiliacion = req.params.noafiliacion;
+        const query = `
+            SELECT 
+                hf.numero_formulario,
+                hf.sesiones_autorizadas_mes,
+                hf.sesiones_realizadas_mes,
+                hf.sesiones_no_realizadas_mes,
+                hf.inicio_prest_servicios,
+                hf.fin_prest_servicios,
+                hf.id_historial
+            FROM public.tbl_historial_formularios hf
+            WHERE hf.no_afiliacion = $1
+              AND (hf.fecha_eliminacion IS NULL)
+            ORDER BY COALESCE(hf.inicio_prest_servicios, hf.fecha_creacion) DESC NULLS LAST, hf.fecha_creacion DESC NULLS LAST
+        `;
+        const result = await pool.query(query, [noafiliacion]);
+        return res.json(result.rows || []);
+    } catch (error) {
+        console.error('Error al obtener formularios:', error);
+        return res.status(500).json({ error: 'Error al obtener formularios', detalle: error.message });
+    }
+});
+
 // Endpoint para verificar si existe una foto
 // Directorio compartido de fotos (raíz del backend)
 const FOTOS_DIR = path.join(__dirname, '../../fotos');
