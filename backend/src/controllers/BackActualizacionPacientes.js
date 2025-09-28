@@ -52,9 +52,6 @@ router.get('/Acheck-photo/:filename', (req, res) => {
     }
 });
 
-
-
-
 // Actualizar paciente por No. Afiliación
 router.put('/Apacientes/:no_afiliacion', async (req, res) => {
   const { no_afiliacion } = req.params;
@@ -171,10 +168,6 @@ router.post('/Aupload-foto/:no_Afiliacion', async (req, res) => {
         res.status(500).json({ detail: 'Error al guardar la foto.' });
     }
 });
-
-
-
-
 
 router.get('/api/Apacientes/actualizacion', async (req, res) => {
     const { dpi, no_afiliacion } = req.query;
