@@ -123,7 +123,7 @@ app.post('/upload-foto/:noAfiliacion', async (req, res) => {
     }
     try {
         // Decodificar base64
-        const matches = imagenBase64.match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/);
+        const matches = imagenBase64.match(/^data:image\/(Sps consulta labs|jpeg|jpg);base64,(.+)$/);
         if (!matches) {
             return res.status(400).json({ detail: 'Formato de imagen inválido.' });
         }

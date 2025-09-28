@@ -294,7 +294,6 @@ const EgresoPacientes = () => {
                       Egreso Pacientes
                     </span>
                   </div>
-                  <hr className="border-t border-slate-500 dark:border-white my-4" />
                 </div>
                 <div className="flex justify-center">
                   <div className="w-full max-w-md mb-4">

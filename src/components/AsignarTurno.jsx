@@ -1,73 +1,36 @@
 import React, { useState, useRef } from 'react';
 import api from '../config/api';
-import {
-    Container,
-    Row,
-    Col,
-    Card,
-    Form,
-    Button,
-    Table
-} from 'react-bootstrap';
 import WebcamFoto from '@/components/WebcamFoto.jsx';
-import logoClinica from "@/assets/logoClinica2.png"
+import logoClinica from "@/assets/logoClinica2.png";
 
 const CustomModal = ({ show, onClose, title, message, type, action, children }) => {
     if (!show) return null;
 
-    const modalStyle = {
-        position: 'fixed',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        backgroundColor: 'white',
-        padding: '20px',
-        borderRadius: '8px',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-        zIndex: 1000
-    };
-
-    const overlayStyle = {
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        zIndex: 999
-    };
-
     return (
         <>
-            <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+            <div 
+                className="fixed inset-0 bg-black bg-opacity-50 z-50"
                 onClick={onClose}
-            >
-                <div
-                    className="bg-white dark:bg-slate-900 p-6 rounded-lg shadow-lg w-full max-w-md mx-4"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <h4 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
-                        {title}
-                    </h4>
-                    <p className='text-gray-800 dark:text-white mb-4'>{message}</p>
-                    {children}
-                </div>
+            />
+            <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 p-6 rounded-lg shadow-xl z-50 max-w-md w-full mx-4">
+                <h4 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">{title}</h4>
+                {message && <p className="text-gray-700 dark:text-gray-300 mb-4">{message}</p>}
+                {children}
             </div>
         </>
     );
 };
 
 const AsignarTurno = () => {
-    const [asignacionPacientes, setAsignacionPacientes] = useState([]); // Estado para los pacientes
-    const [numeroAfiliacion, setNumeroAfiliacion] = useState(''); // Estado para el número de afiliación
-    const [loading, setLoading] = useState(false); // Estado para manejar la carga
-    const [error, setError] = useState(null); // Estado para manejar errores
-    const [showModal, setShowModal] = useState(false); // Estado para controlar el modal
+    const [asignacionPacientes, setAsignacionPacientes] = useState([]);
+    const [numeroAfiliacion, setNumeroAfiliacion] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [showModal, setShowModal] = useState(false);
     const [modalMessage, setModalMessage] = useState('');
     const [modalType, setModalType] = useState('info');
-    const [pacienteSinFoto, setPacienteSinFoto] = useState(null); // Nuevo estado para el paciente sin foto
-    const [photo, setPhoto] = useState(null); // Estado para la foto capturada
+    const [pacienteSinFoto, setPacienteSinFoto] = useState(null);
+    const [photo, setPhoto] = useState(null);
     const webcamRef = useRef(null);
     const [imgSrc, setImgSrc] = useState(null);
     const [isSendingPhoto, setIsSendingPhoto] = useState(false);
@@ -76,6 +39,14 @@ const AsignarTurno = () => {
     const [motivoFalta, setMotivoFalta] = useState('');
     const [pacienteFaltante, setPacienteFaltante] = useState(null);
     const [sendingFaltante, setSendingFaltante] = useState(false);
+    // Paginación (similar a GestionTurno.jsx)
+    const [paginaActual, setPaginaActual] = useState(1);
+    const [filasPorPagina, setFilasPorPagina] = useState(5);
+    const totalPaginas = Math.ceil(asignacionPacientes.length / filasPorPagina) || 1;
+    const turnosPaginados = asignacionPacientes.slice(
+        (paginaActual - 1) * filasPorPagina,
+        paginaActual * filasPorPagina
+    );
 
     // Función para buscar pacientes por número de afiliación
     const buscarPacientes = async () => {
@@ -83,13 +54,17 @@ const AsignarTurno = () => {
         setError(null);
 
         try {
-            // Primero verificamos si el paciente tiene foto
-            const pacienteResponse = await api.get(`/pacientes/${numeroAfiliacion}`);
+            if (!numeroAfiliacion) {
+                setShowModal(true);
+                setModalMessage('Ingrese el número de afiliación');
+                setModalType('error');
+                return;
+            }
 
-            // Luego buscamos los turnos disponibles
-            const turnosResponse = await api.get(`/asignacionPacientes?noafiliacion=${numeroAfiliacion}`);
+            // Endpoints alineados con BackGestionTurno.js
+            const pacienteResponse = await api.get(`/GpacientesT/${numeroAfiliacion}`);
+            const turnosResponse = await api.get(`/GmuestraTurnosT?noafiliacion=${numeroAfiliacion}`);
 
-            // Verificar si existen turnos
             if (turnosResponse.data.length === 0) {
                 setShowModal(true);
                 setModalMessage('No se encontraron registros para el número de afiliación proporcionado');
@@ -97,17 +72,12 @@ const AsignarTurno = () => {
                 return;
             }
 
-            // Si el paciente no tiene foto, abrir directamente el modal de cámara y no permitir continuar sin foto
-            if (!pacienteResponse.data.urlfoto) {
-                setPacienteSinFoto(turnosResponse.data[0]);
-                setShowCamModal(true);
-                setImgSrc(null);
-                return;
-            }
+            // Si no hay foto, no bloqueamos el flujo de asignación. Podrías mostrar aviso opcional.
+            // if (!pacienteResponse.data.url_foto) { ... }
 
-            // Si tiene foto, mostramos los turnos directamente
             setAsignacionPacientes(turnosResponse.data);
             setNumeroAfiliacion('');
+            setPaginaActual(1);
         } catch (error) {
             console.error('Error fetching data:', error);
             setError(error);
@@ -119,7 +89,6 @@ const AsignarTurno = () => {
         }
     };
 
-    // Nueva función para abrir/cerrar el modal de cámara y capturar la imagen usando WebcamFoto
     const openCamModal = () => setShowCamModal(true);
     const closeCamModal = () => setShowCamModal(false);
     const handleCapturePhoto = (imageSrc) => {
@@ -127,7 +96,6 @@ const AsignarTurno = () => {
         setShowCamModal(false);
     };
 
-    // Función para enviar la foto al servidor
     const sendPhoto = async (photoData) => {
         if (!photoData || !pacienteSinFoto) return;
 
@@ -141,7 +109,6 @@ const AsignarTurno = () => {
             });
 
             if (response.data.success) {
-                // Después de guardar la foto exitosamente, volvemos a buscar los turnos
                 const turnosResponse = await api.get(`/asignacionPacientes?noafiliacion=${pacienteSinFoto.noafiliacion}`);
                 setAsignacionPacientes(turnosResponse.data);
                 handleModalAction('aceptar');
@@ -158,29 +125,24 @@ const AsignarTurno = () => {
         }
     };
 
-    // Función para manejar el clic en el botón del modal
-    // Ya no se usa para advertencia, solo para éxito/error
     const handleModalAction = (action) => {
         setShowModal(false);
     };
 
-    // Función para cerrar el modal
     const handleCloseModal = (action) => {
         setImgSrc(null);
         handleModalAction(action);
     };
 
-    // Función para manejar el clic en "Asignar"
     const handleAsignar = async (turnoId) => {
         try {
-            const response = await api.put(`/asignar-turno/${turnoId}`);
+            const response = await api.put(`/Gasignar-turnoT/${turnoId}`);
             setShowModal(true);
             setModalMessage('Turno asignado exitosamente');
             setModalType('success');
 
-            // Limpia la vista después de asignar
-            setAsignacionPacientes([]); // Restablece la lista de pacientes a vacío
-            setNumeroAfiliacion(''); // Limpia el campo de búsqueda
+            setAsignacionPacientes([]);
+            setNumeroAfiliacion('');
         } catch (error) {
             console.error('Error asignando turno:', error);
             setShowModal(true);
@@ -189,7 +151,6 @@ const AsignarTurno = () => {
         }
     };
 
-    // Función para manejar el clic en "Faltante"
     const handleFaltante = (paciente) => {
         setPacienteFaltante(paciente);
         setMotivoFalta('');
@@ -205,20 +166,42 @@ const AsignarTurno = () => {
         }
         setSendingFaltante(true);
         try {
-            // Update tbl_turnos usando el endpoint correcto
-            await api.put(`/turnoLlamado/${pacienteFaltante.idturno}`, { idturnoestado: 7 });
-            // Insert into tbl_faltistas
-            await api.post('/registrar-faltista', {
+            // Asegurar campos correctos provenientes de la tabla: id_turno, fecha_turno, nombre_clinica
+            const idTurno = pacienteFaltante?.id_turno;
+            const fechaTurno = pacienteFaltante?.fecha_turno;
+            const nombreClinica = pacienteFaltante?.nombre_clinica;
+
+            if (!idTurno) {
+                throw new Error('No se encontró el identificador del turno.');
+            }
+
+            const fechaFaltaStr = fechaTurno ? new Date(fechaTurno).toISOString().split('T')[0] : null;
+            if (!fechaFaltaStr) {
+                throw new Error('No se pudo determinar la fecha del turno para registrar la falta.');
+            }
+
+            await api.put(`/Gfaltante-turnoT/${idTurno}`, { idturnoestado: 7 });
+            await api.post('/Gregistrar-faltistaT', {
                 noafiliacion: pacienteFaltante.noafiliacion,
-                fechaFalta: pacienteFaltante.fechaturno.split('T')[0],
-                motivoFalta: motivoFalta.trim()
+                fechaFalta: fechaFaltaStr,
+                motivoFalta: motivoFalta.trim(),
+                nombreClinica: nombreClinica
             });
+            // Refrescar automáticamente la lista de turnos del paciente afectado
+            try {
+                const turnosRefrescados = await api.get(`/GmuestraTurnosT?noafiliacion=${pacienteFaltante.noafiliacion}`);
+                setAsignacionPacientes(turnosRefrescados.data || []);
+                // Ajustar la página si quedó fuera de rango
+                const nuevasPaginas = Math.max(1, Math.ceil((turnosRefrescados.data || []).length / filasPorPagina));
+                setPaginaActual(prev => Math.min(prev, nuevasPaginas));
+            } catch (e) {
+                console.warn('No se pudo refrescar la lista tras registrar falta', e);
+            }
+
             setShowFaltanteModal(false);
             setShowModal(true);
-            setModalMessage('Falta registrada correctamente.');
+            setModalMessage(`Falta registrada correctamente. Turno #${pacienteFaltante.id_turno_cod || idTurno}`);
             setModalType('success');
-            setAsignacionPacientes([]);
-            setNumeroAfiliacion('');
         } catch (error) {
             console.error('Error registrando falta:', error);
             setShowModal(true);
@@ -230,7 +213,7 @@ const AsignarTurno = () => {
     };
 
     return (
-        <>
+        <div className="w-full">
             <CustomModal
                 show={showModal}
                 onClose={handleCloseModal}
@@ -241,11 +224,10 @@ const AsignarTurno = () => {
                 {modalType !== 'success' && modalType !== 'error' ? null : (
                     <button
                         onClick={handleCloseModal}
-                        className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded transition duration-200 mt-4"
+                        className={`w-full ${modalType === 'success' ? 'bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700' : 'bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700'} text-white font-semibold py-2 px-4 rounded transition-colors`}
                     >
                         Cerrar
                     </button>
-
                 )}
             </CustomModal>
 
@@ -254,139 +236,174 @@ const AsignarTurno = () => {
             </CustomModal>
 
             <CustomModal show={showFaltanteModal} onClose={() => setShowFaltanteModal(false)} title="Registrar falta">
-                <Form>
-                    <Form.Group>
-                        <Form.Label>Motivo</Form.Label>
-                        <Form.Control
-                            as="textarea"
+                <div>
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Motivo
+                        </label>
+                        <textarea
                             rows={3}
                             value={motivoFalta}
                             onChange={e => setMotivoFalta(e.target.value)}
                             placeholder="Ingrese el motivo de la falta"
                             disabled={sendingFaltante}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
                         />
-                    </Form.Group>
-                    <div className="mt-3 d-flex justify-content-end" style={{ gap: 8 }}>
-                        <Button variant="danger" onClick={handleEnviarFaltante} disabled={sendingFaltante}>
-                            {sendingFaltante ? 'Enviando...' : 'Enviar'}
-                        </Button>
-                        <Button variant="secondary" onClick={() => setShowFaltanteModal(false)} disabled={sendingFaltante}>
-                            Cancelar
-                        </Button>
                     </div>
-                </Form>
+                    <div className="flex justify-end gap-2">
+                        <button
+                            onClick={handleEnviarFaltante}
+                            disabled={sendingFaltante}
+                            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded transition-colors dark:bg-green-600 dark:hover:bg-green-700 dark:disabled:bg-gray-600"
+                        >
+                            {sendingFaltante ? 'Enviando...' : 'Enviar'}
+                        </button>
+                        <button
+                            onClick={() => setShowFaltanteModal(false)}
+                            disabled={sendingFaltante}
+                            className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded transition-colors dark:bg-gray-600 dark:hover:bg-gray-700 dark:disabled:bg-gray-600"
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
             </CustomModal>
 
-            <Container fluid className="px-3 md:px-5 lg:px-8 py-4">
-                <Row className="justify-content-center">
-                    <Col md="12">
-                        <Card className="shadow-sm rounded-lg">
-                            <Card.Body className="p-4 sm:p-5 md:p-6">
-                                <div className="form-container flex flex-col items-center">
-                                    <Row className="w-full justify-content-center">
-                                        <Col xs="12" md="8" className="text-center">
-                                            <img
-                                                alt="Logo Clínica"
-                                                src={logoClinica}
-                                                className=" mx-auto mb-4"
-                                            />
-                                            <hr className="my-4 border-t border-gray-300 dark:border-gray-600" />
-                                        </Col>
+                <div className="flex flex-col items-center">
+                    {/* Header (igual que en EgresoPacientes: solo imagen y H1) */}
+                    <div className="w-full text-center mb-6">
+                        <div className="flex items-center justify-center gap-6 flex-wrap">
+                            <img
+                                src={logoClinica}
+                                alt="Logo Clínica"
+                                className="h-[180px] max-w-[320px] object-contain bg-white rounded-xl shadow-md p-2 dark:bg-slate-800"
+                            />
+                            <h1 className="text-3xl font-bold text-green-800 dark:text-white">
+                                Asignar Turno
+                            </h1>
+                        </div>
+                    </div>
 
-                                        <Col md="12">
-                                            <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-3 mb-4">
-                                                {/* Input */}
-                                                <div className="w-full sm:w-1/2 md:w-1/3">
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Número de Afiliación"
-                                                        value={numeroAfiliacion}
-                                                        onChange={(e) => setNumeroAfiliacion(e.target.value)}
-                                                        className="w-full text-base px-4 py-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-slate-800 dark:text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]"
-                                                    />
-                                                </div>
+                    {/* Controles de búsqueda */}
+                    <div className="flex items-center gap-4 flex-wrap mb-6 w-full justify-center">
+                        <input
+                            type="text"
+                            placeholder="Número de Afiliación"
+                            value={numeroAfiliacion}
+                            onChange={(e) => setNumeroAfiliacion(e.target.value)}
+                            className="text-lg px-4 py-2 w-56 rounded border border-gray-300 dark:border-gray-600 dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                        />
+                        <button
+                            type="button"
+                            onClick={buscarPacientes}
+                            disabled={loading}
+                            className="bg-green-700 hover:bg-green-800 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-base font-semibold py-2 px-5 rounded transition-colors dark:bg-green-600 dark:hover:bg-green-700 dark:disabled:bg-gray-600"
+                        >
+                            {loading ? 'Buscando...' : 'Buscar'}
+                        </button>
+                    </div>
 
-                                                {/* Botón */}
-                                                <div className="w-full sm:w-auto text-center">
-                                                    <button
-                                                        type="button"
-                                                        onClick={buscarPacientes}
-                                                        disabled={loading}
-                                                        className="w-full sm:w-auto bg-[#2d6a4f] hover:bg-[#24543d] text-white font-semibold px-6 py-2 rounded shadow-sm transition duration-200 disabled:opacity-60"
-                                                    >
-                                                        {loading ? 'Buscando...' : 'Buscar'}
-                                                    </button>
-                                                </div>
-                                            </div>
+                    <hr className="w-full border-gray-300 dark:border-gray-600 mb-6" />
 
-                                            <hr className="my-4 border-t border-gray-300 dark:border-gray-600" />
-                                        </Col>
+                    {/* Tabla de pacientes */}
+                    {asignacionPacientes.length > 0 && (
+                        <div className="w-full">
+                            {/* Controles de tabla */}
+                            <div className="flex items-center justify-end mb-2 gap-3">
+                                <label className="text-sm text-gray-700 dark:text-gray-300">Filas por página:</label>
+                                <select
+                                    value={filasPorPagina}
+                                    onChange={(e) => { setFilasPorPagina(parseInt(e.target.value, 10)); setPaginaActual(1); }}
+                                    className="px-2 py-1 border border-gray-300 dark:border-slate-700 rounded-md dark:bg-slate-800 dark:text-white"
+                                >
+                                    <option value={3}>3</option>
+                                    <option value={5}>5</option>
+                                    <option value={10}>10</option>
+                                    <option value={15}>15</option>
+                                </select>
+                            </div>
 
+                            <div className="overflow-x-auto">
+                                <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
+                                    <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">
+                                        <tr>
+                                            <th className="p-3 border dark:border-gray-600 font-semibold">No. Afiliación</th>
+                                            <th className="p-3 border dark:border-gray-600 font-semibold">Nombre</th>
+                                            <th className="p-3 border dark:border-gray-600 font-semibold">Código Turno</th>
+                                            <th className="p-3 border dark:border-gray-600 font-semibold">Clínica</th>
+                                            <th className="p-3 border dark:border-gray-600 font-semibold">Fecha</th>
+                                            <th className="p-3 border dark:border-gray-600 font-semibold">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                                        {turnosPaginados.map((t, idx) => (
+                                            <tr key={t.id_turno || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                                                <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.noafiliacion}</td>
+                                                <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.nombrepaciente}</td>
+                                                <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.id_turno_cod || t.id_turno}</td>
+                                                <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.nombre_clinica}</td>
+                                                <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.fecha_turno ? new Date(t.fecha_turno).toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' }) : ''}</td>
+                                                <td className="p-3 border dark:border-gray-600">
+                                                    <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                                                        <button
+                                                            onClick={() => handleAsignar(t.id_turno)}
+                                                            className="bg-green-700 hover:bg-green-800 text-white text-base font-semibold py-1 px-3 rounded transition-colors dark:bg-green-600 dark:hover:bg-green-700"
+                                                        >
+                                                            Asignar
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleFaltante(t)}
+                                                            disabled={!(t.nombre_clinica && t.nombre_clinica.toLowerCase().includes("hemodialisis"))}
+                                                            className={`bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-base font-semibold py-1 px-3 rounded transition-colors dark:bg-red-600 dark:hover:bg-red-700 dark:disabled:bg-gray-600 ${!(t.nombre_clinica && t.nombre_clinica.toLowerCase().includes("hemodialisis")) ? "opacity-60" : ""}`}
+                                                        >
+                                                            Faltante
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
 
-                                        {/* Tabla de pacientes */}
-                                        <div className="overflow-x-auto mt-4 rounded-lg shadow">
-                                            <table className="w-full mt-4 table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800">
-                                                <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">
-
-                                                    <tr>
-                                                        <th className="p-2 border dark:border-gray-600">No. Afiliación</th>
-                                                        <th className="p-2 border dark:border-gray-600">Nombre</th>
-                                                        <th className="p-2 border dark:border-gray-600">Turno</th>
-                                                        <th className="p-2 border dark:border-gray-600">Clínica</th>
-                                                        <th className="p-2 border dark:border-gray-600">Fecha</th>
-                                                        <th className="p-2 border dark:border-gray-600">Acciones</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-slate-800">
-                                                    {asignacionPacientes.map((paciente) => (
-                                                        <tr key={paciente.noafiliacion}>
-                                                            <td className="p-2 border dark:border-gray-600">{paciente.noafiliacion}</td>
-                                                            <td className="p-2 border dark:border-gray-600">{paciente.nombrepaciente}</td>
-                                                            <td className="p-2 border dark:border-gray-600">{paciente.idturno}</td>
-                                                            <td className="p-2 border dark:border-gray-600">{paciente.nombreclinica}</td>
-                                                            <td className="p-2 border dark:border-gray-600">
-                                                                {new Date(paciente.fechaturno).toLocaleDateString()}
-                                                            </td>
-                                                            <td className="p-2 border dark:border-gray-600 flex flex-col sm:flex-row gap-2">
-                                                                <button
-                                                                    onClick={() => handleAsignar(paciente.idturno)}
-                                                                    className="bg-[#2d6a4f] hover:bg-[#24543d] text-white font-semibold px-4 py-2 rounded shadow-sm transition w-full sm:w-auto"
-                                                                >
-                                                                    Asignar
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleFaltante(paciente)}
-                                                                    disabled={
-                                                                        !(
-                                                                            paciente.nombreclinica &&
-                                                                            paciente.nombreclinica.toLowerCase().includes("hemodialisis")
-                                                                        )
-                                                                    }
-                                                                    className={`bg-[#dc3545] hover:bg-[#b02a37] text-white font-semibold px-4 py-2 rounded shadow-sm transition w-full sm:w-auto ${!(paciente.nombreclinica &&
-                                                                        paciente.nombreclinica.toLowerCase().includes("hemodialisis"))
-                                                                        ? "opacity-60 cursor-not-allowed"
-                                                                        : ""
-                                                                        }`}
-                                                                >
-                                                                    Faltante
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-
-                                        <div className="clearfix"></div>
-                                    </Row>
+                            {/* Paginación */}
+                            {totalPaginas > 1 && (
+                                <div className="flex flex-wrap justify-center items-center gap-2 mt-4">
+                                    <button
+                                        className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400 transition-colors"
+                                        disabled={paginaActual === 1}
+                                        onClick={() => setPaginaActual(paginaActual - 1)}
+                                    >
+                                        Anterior
+                                    </button>
+                                    {[...Array(totalPaginas)].map((_, i) => (
+                                        <button
+                                            key={i}
+                                            className={`px-3 py-2 rounded-lg transition-colors ${
+                                                paginaActual === i + 1
+                                                    ? 'bg-green-600 text-white'
+                                                    : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-slate-600'
+                                            }`}
+                                            onClick={() => setPaginaActual(i + 1)}
+                                        >
+                                            {i + 1}
+                                        </button>
+                                    ))}
+                                    <button
+                                        className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400 transition-colors"
+                                        disabled={paginaActual === totalPaginas}
+                                        onClick={() => setPaginaActual(paginaActual + 1)}
+                                    >
+                                        Siguiente
+                                    </button>
                                 </div>
-                            </Card.Body>
-                        </Card>
-                    </Col>
-                </Row>
-            </Container>
-        </>
+                            )}
+                        </div>
+                    )}
+                </div>
+            
+        </div>
     );
-}
+};
 
 export default AsignarTurno;
