@@ -15,7 +15,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 }));
-
 app.use(express.json({ limit: '50mb' }));
 app.use(bodyParser.json({ limit: '50mb' }));
 
@@ -23,6 +22,9 @@ app.use(bodyParser.json({ limit: '50mb' }));
 // const updateMasivoPacientesRouter = require('./update-masivo-pacientes');
 // Importar router de login/roles centralizado
 const backLoginRouter = require('./BackLogin');
+
+const backGestionTurnosRouter = require('./src/controllers/BackGestionTurno');
+const backFallecidosReportesRouter = require('./src/controllers/BackFallecidosReportes');
 // Importar router de registro de formularios
 const backRegistroFormulariosRouter = require('./src/controllers/BackRegistroFormularios');
 // Importar router de registro de empleados
@@ -52,6 +54,9 @@ const backCatalogosRouter = require('./src/controllers/BackCatalogos');
 // Importar router de reporte de pacientes
 const backPacientesReporteRouter = require('./src/controllers/BackPacientesReporte');
 
+const backReporteFaltistasRouter = require('./src/controllers/BackReporteFaltistas');
+
+
 const backNuevoIngresoReportesRouter = require('./src/controllers/BackNuevoIngresoReportes');
 // Importar otros routers usados más abajo
 // Usar router de consulta de laboratorios
@@ -60,6 +65,7 @@ const backActualizacionPacientes = require('./src/controllers/BackActualizacionP
 const backEgresoPacientes = require('./src/controllers/BackEgresoPacientes');
 const backReingresoPacientesRouter = require('./src/controllers/BackReingresoPacientes');
 
+const backEgresoReportesRouter = require('./src/controllers/BackEgresoReportes');
 
 // Importar router de consulta de pacientes
 const backConsultaPacientesRouter = require('./src/controllers/BackConsultaPacientes');
@@ -74,6 +80,14 @@ const fotosDir = path.join(__dirname, 'fotos');
 if (!fs.existsSync(fotosDir)) {
   fs.mkdirSync(fotosDir);
 }
+
+app.use(backGestionTurnosRouter);
+
+
+app.use(backConsultaLaboratoriosRouter);
+
+app.use(backPacientesReporteRouter);
+app.use(backFallecidosReportesRouter);
 app.use('/fotos', express.static(fotosDir));
 // (Desmontado) Usar el router legacy para actualización masiva de pacientes
 // app.use(updateMasivoPacientesRouter);
@@ -109,11 +123,15 @@ app.use(backCatalogosRouter);
 app.use(backActualizacionPacientes);
 app.use(backEgresoPacientes);
 app.use('/api/reingreso', backReingresoPacientesRouter);
-
 // Usar router de consulta de pacientes
 app.use(backConsultaPacientesRouter);
 // Usar router de registro/listado de laboratorios
 app.use('/laboratorios', backRegistroLaboratoriosRouter);
+
+
+app.use(backReporteFaltistasRouter);
+
+app.use(backEgresoReportesRouter);
 
 app.post('/upload-foto/:noAfiliacion', async (req, res) => {
     const { noAfiliacion } = req.params;
@@ -123,7 +141,7 @@ app.post('/upload-foto/:noAfiliacion', async (req, res) => {
     }
     try {
         // Decodificar base64
-        const matches = imagenBase64.match(/^data:image\/(Sps consulta labs|jpeg|jpg);base64,(.+)$/);
+        const matches = imagenBase64.match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/);
         if (!matches) {
             return res.status(400).json({ detail: 'Formato de imagen inválido.' });
         }
@@ -170,9 +188,9 @@ app.get('/turnoLlamado', async (req, res) => {
         const result = await pool.query(`
                 SELECT 
                     t.idturno,
-                    CONCAT(p.primernombre, ' ', COALESCE(p.segundonombre, ''), ' ', COALESCE(p.primerapellido, ''), ' ', COALESCE(p.segundoapellido, '')) AS nombrepaciente,
+                    CONCAT_WS(' ', p.primer_nombre, COALESCE(p.segundo_nombre, ''), COALESCE(p.primer_apellido, ''), COALESCE(p.segundo_apellido, '')) AS nombrepaciente,
                     c.descripcion AS nombreclinica,
-                    p.urlfoto
+                    p.url_foto AS urlfoto
                 FROM tbl_turnos t
                 INNER JOIN tbl_pacientes p ON t.noafiliacion = p.no_afiliacion
                 INNER JOIN tbl_clinica c ON t.idclinica = c.idsala
@@ -1360,59 +1378,7 @@ const definirCarnetPaciente = async (pacienteData, fotoPath, carnetPath) => {
 };
 
 
-// Endpoint para obtener faltistas
-app.get('/api/faltistas', async (req, res) => {
-    try {
-        const { fechainicio, fechafin } = req.query;
-        let query = `
-                SELECT 
-                    pac.noafiliacion,  
-                    pac.primernombre, 
-                    pac.segundonombre, 
-                    pac.otrosnombres, 
-                    pac.primerapellido, 
-                    pac.segundoapellido, 
-                    pac.apellidocasada,
-                    pac.sexo,
-                    cli.descripcion as clinica,
-                    to_char(fal.fechafalta, 'YYYY-MM-DD') as fechafalta,
-                    fal.motivofalta
-                FROM 
-                    tbl_faltistas fal
-                INNER JOIN 
-                    tbl_clinica cli ON fal.idclinica = cli.idsala
-                INNER JOIN 
-                    tbl_pacientes pac ON pac.noafiliacion = fal.noafiliacion
-                WHERE 1=1`;
-        const params = [];
-        let idx = 1;
-        if (fechainicio) {
-            query += ` AND fal.fechafalta >= $${idx}`;
-            params.push(fechainicio);
-            idx++;
-        }
-        if (fechafin) {
-            query += ` AND fal.fechafalta <= $${idx}`;
-            params.push(fechafin);
-            idx++;
-        }
-        query += " ORDER BY fal.fechafalta DESC";
-        const result = await pool.query(query, params);
-        const faltistas = result.rows.map(f => ({
-            noafiliacion: f.noafiliacion,
-            nombres: [f.primernombre, f.segundonombre, f.otrosnombres].filter(Boolean).join(' '),
-            apellidos: [f.primerapellido, f.segundoapellido, f.apellidocasada].filter(Boolean).join(' '),
-            sexo: f.sexo,
-            clinica: f.clinica,
-            fechafalta: f.fechafalta,
-            motivofalta: f.motivofalta
-        }));
-        res.json(faltistas);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ detail: 'Error al obtener los faltistas' });
-    }
-});
+
 
 // Endpoint para obtener paciente por número de afiliación con descripciones de llaves foráneas
 app.get('/pacientes/:noafiliacion', async (req, res) => {
