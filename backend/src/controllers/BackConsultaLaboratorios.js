@@ -4,18 +4,28 @@ const pool = require('../../db/pool');
 
 // GET /api/laboratorios/catalogos - catálogos para filtros (SELECT simple)
 router.get('/api/laboratorios/catalogos', async (_req, res) => {
+  const client = await pool.connect();
   try {
-    const [periodicidades, sexos] = await Promise.all([
-      pool.query('SELECT descripcion FROM public.tbl_periodicidadlaboratorio ORDER BY descripcion'),
-      pool.query("SELECT DISTINCT sexo FROM public.tbl_pacientes WHERE sexo IS NOT NULL ORDER BY sexo"),
+    await client.query('BEGIN');
+    const cPer = 'cur_cat_periodicidades_lab';
+    const cSex = 'cur_cat_sexos_lab';
+    await client.query('CALL public.sp_laboratorios_catalogo_periodicidades($1)', [cPer]);
+    await client.query('CALL public.sp_laboratorios_catalogo_sexos($1)', [cSex]);
+    const [rPer, rSex] = await Promise.all([
+      client.query(`FETCH ALL FROM "${cPer}"`),
+      client.query(`FETCH ALL FROM "${cSex}"`),
     ]);
+    await client.query('COMMIT');
     res.json({
-      periodicidades: periodicidades.rows.map(r => r.descripcion).filter(Boolean),
-      sexos: sexos.rows.map(r => r.sexo).filter(Boolean),
+      periodicidades: rPer.rows.map(r => r.descripcion).filter(Boolean),
+      sexos: rSex.rows.map(r => r.sexo).filter(Boolean),
     });
   } catch (error) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
     console.error('Error en Laboratorios /catalogos:', error);
     res.status(500).json({ error: 'Error al cargar catálogos.' });
+  } finally {
+    client.release();
   }
 });
 
