@@ -14,28 +14,39 @@ router.get('/pacientes/reingreso', async (req, res) => {
     const filtroCampo = noafiliacion ? 'p.no_afiliacion' : 'p.dpi';
     const filtroVal   = noafiliacion ? noafiliacion : dpi;
 
-    // Trae datos del paciente (id_estado=3) + último egreso
+    // Trae datos del paciente (id_estado=3) + último egreso + descripciones
     // Requisito: que exista egreso
     const sql = `
       SELECT
-        p.no_afiliacion        AS noafiliacion,
+        p.no_afiliacion          AS noafiliacion,
         p.dpi,
-        p.no_paciente_proveedor AS nopacienteproveedor,
-        p.primer_nombre        AS primernombre,
-        p.segundo_nombre       AS segundonombre,
-        p.otros_nombres        AS otrosnombres,
-        p.primer_apellido      AS primerapellido,
-        p.segundo_apellido     AS segundoapellido,
-        p.apellido_casada      AS apellidocasada,
-        p.fecha_nacimiento     AS fechanacimiento,
+        p.no_paciente_proveedor  AS nopacienteproveedor,
+        p.primer_nombre          AS primernombre,
+        p.segundo_nombre         AS segundonombre,
+        p.otros_nombres          AS otrosnombres,
+        p.primer_apellido        AS primerapellido,
+        p.segundo_apellido       AS segundoapellido,
+        p.apellido_casada        AS apellidocasada,
+        p.fecha_nacimiento       AS fechanacimiento,
         p.sexo,
         p.direccion,
-        p.id_estado            AS idestado,
-        eg.id_causa_egreso     AS idcausa,
-        eg.descripcion         AS descripcionegreso,
-        eg.fecha_egreso        AS fechaegreso,
-        p.url_foto             AS urlfoto
+        p.id_estado              AS idestado,
+        dpt.nombre               AS departamento_nombre,
+        est.descripcion          AS estado_descripcion,
+        jor.descripcion          AS jornada_descripcion,
+        acc.descripcion          AS acceso_descripcion,
+        p.sesiones_autorizadas_mes AS sesiones_autorizadas_mes,
+        p.inicio_prest_servicios   AS inicio_prest_servicios,
+        p.fin_prest_servicios      AS fin_prest_servicios,
+        eg.id_causa_egreso       AS idcausa,
+        eg.descripcion           AS descripcionegreso,
+        eg.fecha_egreso          AS fechaegreso,
+        p.url_foto               AS urlfoto
       FROM public.tbl_pacientes p
+      LEFT JOIN public.tbl_departamento dpt     ON dpt.id_departamento = p.id_departamento
+      LEFT JOIN public.tbl_estados_paciente est ON est.id_estado       = p.id_estado
+      LEFT JOIN public.tbl_jornadas jor         ON jor.id_jornada      = p.id_jornada
+      LEFT JOIN public.tbl_acceso_vascular acc  ON acc.id_acceso       = p.id_acceso
       JOIN LATERAL (
         SELECT e.id_causa_egreso, e.descripcion, e.fecha_egreso
         FROM public.tbl_egresos e
@@ -56,7 +67,7 @@ router.get('/pacientes/reingreso', async (req, res) => {
 });
 
 // POST /api/reingreso/pacientes/reingreso
-// Body: { noAfiliacion, numeroFormulario, fechaReingreso, observaciones, usuario }
+// Body: { noAfiliacion, numeroFormulario, fechaReingreso, observaciones, inicioPrestServicios, finPrestServicios, sesionesAutorizadasMes, usuario }
 router.post('/pacientes/reingreso', async (req, res) => {
   const client = await pool.connect();
   try {
@@ -66,6 +77,12 @@ router.post('/pacientes/reingreso', async (req, res) => {
     const fechaReingreso   = String(b.fechaReingreso || '').trim(); // 'YYYY-MM-DD'
     const observaciones    = (b.observaciones ?? '').trim() || null;
     const usuario          = (b.usuario ?? 'web').trim();
+    // Nuevos campos opcionales
+    const inicioPrest      = (b.inicioPrestServicios ? String(b.inicioPrestServicios).trim() : null) || null; // date
+    const finPrest         = (b.finPrestServicios ? String(b.finPrestServicios).trim() : null) || null;        // date
+    const sesionesMes      = (b.sesionesAutorizadasMes !== undefined && b.sesionesAutorizadasMes !== null && b.sesionesAutorizadasMes !== '')
+                              ? Number(b.sesionesAutorizadasMes)
+                              : null; // integer
 
     if (!noAfiliacion || !numeroFormulario || !fechaReingreso) {
       return res.status(400).json({ success: false, error: 'noAfiliacion, numeroFormulario y fechaReingreso son obligatorios.' });
@@ -98,30 +115,48 @@ router.post('/pacientes/reingreso', async (req, res) => {
       return res.status(409).json({ success: false, error: 'No existe egreso registrado para este paciente.' });
     }
 
+    // 2.1) Verificar existencia previa del mismo (no_afiliacion, numero_formulario) en reingresos
+    const qExistRei = `SELECT 1 FROM public.tbl_reingresos WHERE no_afiliacion = $1 AND numero_formulario = $2 LIMIT 1`;
+    const rExistRei = await client.query(qExistRei, [noAfiliacion, numeroFormulario]);
+    const shouldInsertReingreso = rExistRei.rowCount === 0;
+
     // 3) Actualizar paciente: numero_formulario_activo + id_estado = 4 (Reingreso)
+    //    y nuevos campos: sesiones_autorizadas_mes, inicio_prest_servicios, fin_prest_servicios
     const qUpd = `
       UPDATE public.tbl_pacientes
       SET
         numero_formulario_activo = $2,
-        id_estado               = 4,
-        usuario_actualizacion   = $3,
-        fecha_actualizacion     = NOW()
+        id_estado                 = 4,
+        sesiones_autorizadas_mes  = $3,
+        inicio_prest_servicios    = $4,
+        fin_prest_servicios       = $5,
+        usuario_actualizacion     = $6,
+        fecha_actualizacion       = NOW()
       WHERE no_afiliacion = $1
     `;
-    await client.query(qUpd, [noAfiliacion, numeroFormulario, usuario]);
+    await client.query(qUpd, [
+      noAfiliacion,
+      numeroFormulario,
+      sesionesMes,
+      inicioPrest,
+      finPrest,
+      usuario,
+    ]);
 
-    // 4) Insert en tbl_reingresos
-    const qIns = `
-      INSERT INTO public.tbl_reingresos
-      (no_afiliacion, numero_formulario, fecha_reingreso, observaciones,
-       usuario_creacion, fecha_creacion, usuario_actualizacion, fecha_actualizacion,
-       usuario_eliminacion, fecha_eliminacion)
-      VALUES ($1,$2,$3,$4,$5,NOW(),NULL,NULL,NULL,NULL)
-    `;
-    await client.query(qIns, [noAfiliacion, numeroFormulario, fechaReingreso, observaciones, usuario]);
+    // 4) Insert en tbl_reingresos (solo si no existe ya ese par)
+    if (shouldInsertReingreso) {
+      const qIns = `
+        INSERT INTO public.tbl_reingresos
+        (no_afiliacion, numero_formulario, fecha_reingreso, observaciones,
+         usuario_creacion, fecha_creacion, usuario_actualizacion, fecha_actualizacion,
+         usuario_eliminacion, fecha_eliminacion)
+        VALUES ($1,$2,$3,$4,$5,NOW(),NULL,NULL,NULL,NULL)
+      `;
+      await client.query(qIns, [noAfiliacion, numeroFormulario, fechaReingreso, observaciones, usuario]);
+    }
 
     await client.query('COMMIT');
-    return res.json({ success: true });
+    return res.json({ success: true, inserted: shouldInsertReingreso });
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('[POST /api/reingreso/pacientes/reingreso] ERROR:', err);

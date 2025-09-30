@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../config/api';
 import { Spinner } from 'react-bootstrap';
 import CustomModal from '@/components/CustomModal.jsx';
@@ -85,7 +85,7 @@ const ActualizacionPacientes = () => {
         url += `dpi=${busqueda.dpi.trim()}`;
       } else {
         setShowModal(true);
-        setModalMessage('Debe ingresar el nÃºmero de afiliaciÃ³n o el DPI');
+        setModalMessage('Debe ingresar el número de afiliación o el DPI');
         setModalType('error');
         setLoading(false);
         return;
@@ -142,9 +142,29 @@ const ActualizacionPacientes = () => {
   };
 
   const handleGuardar = async () => {
-    if (!formData.primer_nombre || formData.primer_nombre.trim() === '') {
+    // Validación de campos críticos obligatorios
+    const errores = [];
+    const clean = (v) => (v ?? '').toString().trim();
+    const isEmpty = (v) => clean(v) === '';
+
+    // DPI: exactamente 13 dígitos
+    const dpiStr = clean(formData.dpi);
+    if (!/^\d{13}$/.test(dpiStr)) {
+      errores.push('DPI debe contener exactamente 13 dígitos numéricos.');
+    }
+
+    if (isEmpty(formData.primer_nombre)) errores.push('Primer Nombre es obligatorio.');
+    if (isEmpty(formData.primer_apellido)) errores.push('Primer Apellido es obligatorio.');
+    if (isEmpty(formData.sexo)) errores.push('Sexo es obligatorio.');
+    if (isEmpty(formData.fecha_nacimiento)) errores.push('Fecha de Nacimiento es obligatoria.');
+    if (isEmpty(formData.direccion)) errores.push('Dirección es obligatoria.');
+    if (!formData.id_departamento) errores.push('Departamento es obligatorio.');
+    if (!formData.id_jornada) errores.push('Jornada es obligatoria.');
+    if (!formData.id_acceso) errores.push('Acceso Vascular es obligatorio.');
+
+    if (errores.length > 0) {
       setShowModal(true);
-      setModalMessage('El campo "Primer Nombre" es obligatorio.');
+      setModalMessage('Corrija los siguientes campos:\n\n- ' + errores.join('\n- '));
       setModalType('error');
       return;
     }
@@ -219,7 +239,7 @@ const ActualizacionPacientes = () => {
       <CustomModal
         show={showModal}
         onClose={() => setShowModal(false)}
-        title={modalType === 'success' ? 'Ã‰xito' : 'Error'}
+        title={modalType === 'success' ? 'Éxito' : 'Error'}
         message={modalMessage}
         type={modalType}
       />
@@ -263,8 +283,21 @@ const ActualizacionPacientes = () => {
                   name="dpi"
                   placeholder="DPI"
                   value={busqueda.dpi}
-                  onChange={handleBusquedaChange}
+                  onChange={(e) => {
+                    const onlyDigits = (e.target.value || '').replace(/\D+/g, '').slice(0, 13);
+                    setBusqueda(prev => ({ ...prev, dpi: onlyDigits }));
+                  }}
                   disabled={Boolean(busqueda.no_afiliacion)} className="w-full text-lg px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 disabled:opacity-60"
+                  inputMode="numeric"
+                  maxLength={13}
+                  pattern="\\d{13}"
+                  onKeyDown={(e) => {
+                    if (["e","E","+","-",".",","," "].includes(e.key)) e.preventDefault();
+                  }}
+                  onPaste={(e) => {
+                    const t = (e.clipboardData.getData('text') || '').trim();
+                    if (/[^0-9]/.test(t)) e.preventDefault();
+                  }}
                 />
               </div>
 
@@ -309,7 +342,7 @@ const ActualizacionPacientes = () => {
               <div className="flex items-center gap-2">
                 <div className={`w-3 h-3 rounded-full ${editando ? 'bg-orange-500' : 'bg-green-500'}`}></div>
                 <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  {editando ? 'Modo EdiciÃ³n' : 'Solo Lectura'}
+                  {editando ? 'Modo Edición' : 'Solo Lectura'}
                 </span>
               </div>
             </div>
@@ -513,19 +546,32 @@ const ActualizacionPacientes = () => {
                   type="text"
                   name="dpi"
                   value={formData.dpi || ''}
-                  onChange={handleInputChange}
+                  onChange={(e) => {
+                    const onlyDigits = (e.target.value || '').replace(/\D+/g, '').slice(0, 13);
+                    setFormData(prev => ({ ...prev, dpi: onlyDigits }));
+                  }}
                   disabled={!editando}
                   className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent ${!editando
                     ? 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-400'
                     : 'bg-white dark:bg-slate-700 border-gray-300 dark:border-slate-500 text-gray-900 dark:text-white'
                     }`}
+                  inputMode="numeric"
+                  maxLength={13}
+                  pattern="\\d{13}"
+                  onKeyDown={(e) => {
+                    if (["e","E","+","-",".",","," "].includes(e.key)) e.preventDefault();
+                  }}
+                  onPaste={(e) => {
+                    const t = (e.clipboardData.getData('text') || '').trim();
+                    if (/[^0-9]/.test(t)) e.preventDefault();
+                  }}
                 />
               </div>
 
               {/* No. AfiliaciÃ³n */}
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  No. AfiliaciÃ³n
+                  No. Afiliación
                 </label>
                 <input
                   type="text"
@@ -628,7 +674,7 @@ const ActualizacionPacientes = () => {
             {/* SecciÃ³n de foto */}
             <div className="flex flex-col items-center space-y-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                FotografÃ­a del Paciente
+                Fotografía del Paciente
               </h3>
 
               {/* Contenedor de la foto */}
@@ -654,7 +700,7 @@ const ActualizacionPacientes = () => {
                 {editando && (
                   <div className="absolute -bottom-2 -right-2">
                     <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">âœŽ</span>
+                      <span className="text-white text-xs font-bold"></span>
                     </div>
                   </div>
                 )}
@@ -684,7 +730,7 @@ const ActualizacionPacientes = () => {
               <div className="flex items-center justify-between mb-6">
                 <h3 className="flex items-center gap-2 text-xl font-bold text-gray-900 dark:text-white">
                   <Camera className="w-6 h-6" />
-                  Capturar FotografÃ­a
+                  Capturar Fotografía
                 </h3>
                 <button
                   onClick={() => setShowWebcam(false)}
