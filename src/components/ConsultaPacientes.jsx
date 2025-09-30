@@ -695,7 +695,7 @@ const ConsultaPacientes = () => {
                                     <nav className="w-full mb-4" role="tablist" aria-label="Secciones de paciente">
                                         <div className="w-full bg-white dark:bg-slate-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 overflow-x-auto px-2">
                                             <div className="flex items-center justify-center gap-0 flex-wrap">
-                                                {['Datos Personales', 'Historial', 'Referencias', 'Nutrición', 'Psicologia', 'Formularios'].map((tab, idx, arr) => {
+                                                {['Datos Personales', 'Historial', 'Referencias', 'Nutrición', 'Psicologia', 'Formularios', 'Turnos', 'Faltistas', 'Laboratorios'].map((tab, idx, arr) => {
                                                     const active = selectedTab === tab;
                                                     const panelId = `panel-${tab.replace(/\s+/g, '-')}`;
                                                     const isFirst = idx === 0;
@@ -749,6 +749,28 @@ const ConsultaPacientes = () => {
                                                                         <path d="M16 13H8"/>
                                                                         <path d="M16 17H8"/>
                                                                         <path d="M10 9H8"/>
+                                                                    </svg>
+                                                                );
+                                                            case 'Turnos':
+                                                                return (
+                                                                    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                                        <circle cx="12" cy="12" r="10"/>
+                                                                        <path d="M12 6v6l4 2"/>
+                                                                    </svg>
+                                                                );
+                                                            case 'Faltistas':
+                                                                return (
+                                                                    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                                        <path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                                                        <circle cx="9" cy="7" r="4"/>
+                                                                        <path d="M22 11h-6"/>
+                                                                    </svg>
+                                                                );
+                                                            case 'Laboratorios':
+                                                                return (
+                                                                    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                                        <path d="M6 2v6l-3 7a4 4 0 0 0 4 5h10a4 4 0 0 0 4-5l-3-7V2"/>
+                                                                        <path d="M6 6h12"/>
                                                                     </svg>
                                                                 );
                                                             default:
@@ -840,7 +862,6 @@ const ConsultaPacientes = () => {
 
                                     {selectedTab === 'Historial' && (
                                         <div id="panel-Historial" role="tabpanel" className="w-full mb-8">
-                                            <h3 className="text-2xl font-bold text-green-800 mb-4 text-center">Historial del Paciente</h3>
                                             {/* Controles de búsqueda y página */}
                                             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between mb-3">
                                                 <input
@@ -911,7 +932,6 @@ const ConsultaPacientes = () => {
                                     )}
                                     {selectedTab === 'Referencias' && (
                                         <div id="panel-Referencias" role="tabpanel" className="w-full mb-8">
-                                            <h3 className="text-2xl font-bold text-green-800 mb-4 text-center">Referencias</h3>
                                             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between mb-3">
                                                 <input
                                                     className="border border-gray-300 rounded px-3 py-1 text-sm dark:bg-slate-900 dark:text-gray-200"
@@ -974,7 +994,6 @@ const ConsultaPacientes = () => {
                                     )}
                                     {selectedTab === 'Nutrición' && (
                                         <div id="panel-Nutrición" role="tabpanel" className="w-full mb-8">
-                                            <h3 className="text-2xl font-bold text-green-800 mb-4 text-center">Informes de Nutrición</h3>
                                             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between mb-3">
                                                 <input
                                                     className="border border-gray-300 rounded px-3 py-1 text-sm dark:bg-slate-900 dark:text-gray-200"
@@ -1041,7 +1060,6 @@ const ConsultaPacientes = () => {
                                     )}
                                     {selectedTab === 'Psicologia' && (
                                         <div id="panel-Psicologia" role="tabpanel" className="w-full mb-8">
-                                            <h3 className="text-2xl font-bold text-green-800 mb-4 text-center">Informes de Psicología</h3>
                                             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between mb-3">
                                                 <input
                                                     className="border border-gray-300 rounded px-3 py-1 text-sm dark:bg-slate-900 dark:text-gray-200"
@@ -1108,7 +1126,6 @@ const ConsultaPacientes = () => {
                                     )}
                                     {selectedTab === 'Formularios' && (
                                         <div id="panel-Formularios" role="tabpanel" className="w-full mb-8">
-                                            <h3 className="text-2xl font-bold text-green-800 mb-4 text-center">Historial de Formularios</h3>
                                             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between mb-3">
                                                 <input
                                                     className="border border-gray-300 rounded px-3 py-1 text-sm dark:bg-slate-900 dark:text-gray-200"
@@ -1170,6 +1187,27 @@ const ConsultaPacientes = () => {
                                                     <button className="px-3 py-1 rounded border text-sm disabled:opacity-50" onClick={() => setPageFormularios(Math.max(1, pageFormularios - 1))} disabled={pageFormularios <= 1}>Anterior</button>
                                                     <button className="px-3 py-1 rounded border text-sm disabled:opacity-50" onClick={() => setPageFormularios(Math.min(formTotalPages, pageFormularios + 1))} disabled={pageFormularios >= formTotalPages}>Siguiente</button>
                                                 </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {selectedTab === 'Turnos' && (
+                                        <div id="panel-Turnos" role="tabpanel" className="w-full mb-8">
+                                            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 shadow-sm p-6">
+                                                <p className="text-center text-gray-600 dark:text-gray-300">Contenido de Turnos pendiente. Indícame qué campos y acciones deseas aquí.</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {selectedTab === 'Faltistas' && (
+                                        <div id="panel-Faltistas" role="tabpanel" className="w-full mb-8">
+                                            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 shadow-sm p-6">
+                                                <p className="text-center text-gray-600 dark:text-gray-300">Contenido de Faltistas pendiente. Dime cómo quieres visualizar las ausencias.</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {selectedTab === 'Laboratorios' && (
+                                        <div id="panel-Laboratorios" role="tabpanel" className="w-full mb-8">
+                                            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 shadow-sm p-6">
+                                                <p className="text-center text-gray-600 dark:text-gray-300">Contenido de Laboratorios pendiente. Indícame los parámetros y filtros deseados.</p>
                                             </div>
                                         </div>
                                     )}
