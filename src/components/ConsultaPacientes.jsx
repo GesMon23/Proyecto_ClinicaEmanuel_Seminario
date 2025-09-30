@@ -1,4 +1,4 @@
-import Footer from "@/layouts/footer"
+﻿import Footer from "@/layouts/footer"
 import logoClinica from "@/assets/logoClinica2.png"
 import avatarDefault from "@/assets/default-avatar.png"
 import React, { useState } from 'react';
@@ -7,10 +7,7 @@ import {
     Container,
     Row,
     Col,
-    Card,
-    Form,
-    Button,
-    Table
+    Card
 } from 'react-bootstrap';
 
 const CustomModal = ({ show, onClose, title, message, type }) => {
@@ -548,156 +545,238 @@ const ConsultaPacientes = () => {
                 <Col md="12">
                     <Card className="bg-white dark:bg-slate-800">
                         <Card.Body className="dark:bg-slate-800 dark:text-gray-200">
-                            <div className="dark:bg-slate-800 dark:text-gray-200" style={{ maxWidth: 1000, margin: '0 auto', padding: '0 24px' }}>
-                                <Row className="align-items-center" style={{ marginTop: 32, marginBottom: 24 }}>
-                                    <div className="max-w-5xl mx-auto px-6 py-8">
-                                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
-
-                                            {/* DERECHA: Logo + texto (ahora primero para que se muestre a la izquierda en pantallas grandes) */}
-                                            <div className="flex flex-col items-center w-full md:w-1/2">
-                                                <img
-                                                    src={logoClinica}
-                                                    alt="Logo de la clínica"
-                                                    className="max-w-xs mb-2 max-w-md"
-                                                />
-                                                <h2 className="text-3xl font-bold text-center text-green-700 dark:text-white">
-                                                    Consulta de Pacientes
-                                                </h2>
-                                            </div>
-
-                                            {/* IZQUIERDA: Formulario (ahora segundo para que se muestre a la derecha en pantallas grandes) */}
-                                            <form
-                                                onSubmit={buscarPacientes}
-                                                className="w-full md:w-1/2"
-                                            >
-                                                <input
-                                                    placeholder="Número de Afiliación"
-                                                    type="text"
-                                                    name="noafiliacion"
-                                                    value={busqueda.noafiliacion}
-                                                    onChange={handleBusquedaChange}
-                                                    className="w-full rounded-md border border-gray-300 px-4 py-2 text-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-900 dark:text-white"
-                                                />
-
-                                                <input
-                                                    placeholder="DPI"
-                                                    type="text"
-                                                    name="dpi"
-                                                    value={busqueda.dpi}
-                                                    onChange={handleBusquedaChange}
-                                                    className="w-full rounded-md border border-gray-300 px-4 py-2 text-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-900 dark:text-white"
-                                                />
-
-                                                <div className="flex gap-4">
-                                                    <button
-                                                        className="w-1/2 bg-green-700 hover:bg-green-900 text-white py-2 px-4 rounded"
-                                                        type="submit"
-                                                        disabled={loading}
-                                                    >
-                                                        {loading ? 'Buscando...' : 'Buscar'}
-                                                    </button>
-                                                    <button
-                                                        className="w-1/2 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded"
-                                                        type="button"
-                                                        onClick={handleLimpiarBusqueda}
-                                                    >
-                                                        Limpiar
-                                                    </button>
-                                                </div>
-                                            </form>
+                            <div className="dark:bg-slate-800 dark:text-gray-200">
+                                <div className="flex flex-col items-center">
+                                    {/* Header al estilo AsignarTurno */}
+                                    <div className="w-full text-center mb-6">
+                                        <div className="flex items-center justify-center gap-6 flex-wrap">
+                                            <img
+                                                src={logoClinica}
+                                                alt="Logo de la clínica"
+                                                className="h-[180px] max-w-[320px] object-contain bg-white rounded-xl shadow-md p-2 dark:bg-slate-800"
+                                            />
+                                            <h1 className="text-3xl font-bold text-green-800 dark:text-white">
+                                                Consulta de Pacientes
+                                            </h1>
                                         </div>
                                     </div>
 
+                                    {/* Controles de búsqueda centrados */}
+                                    <form onSubmit={buscarPacientes} className="flex items-center gap-4 flex-wrap mb-6 w-full justify-center">
+                                    <input
+                                        placeholder="Número de Afiliación"
+                                        type="text"
+                                        name="noafiliacion"
+                                        value={busqueda.noafiliacion}
+                                        onChange={handleBusquedaChange}
+                                        disabled={Boolean(busqueda.dpi)}
+                                        className="text-lg px-4 py-2 w-56 rounded border border-gray-300 dark:border-gray-600 dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    />
 
-                                </Row>
+                                    <input
+                                        placeholder="DPI"
+                                        type="text"
+                                        name="dpi"
+                                        value={busqueda.dpi}
+                                        onChange={(e) => {
+                                        const onlyDigits = (e.target.value || '').replace(/\D+/g, '').slice(0, 13);
+                                        setBusqueda(prev => ({ ...prev, dpi: onlyDigits }));
+                                        }}
+                                        disabled={Boolean(busqueda.noafiliacion)}
+                                        inputMode="numeric"
+                                        pattern="\d{13}"
+                                        maxLength={13}
+                                        onKeyDown={(e) => {
+                                        if (["e", "E", "+", "-", ".", ",", " "].includes(e.key)) e.preventDefault();
+                                        }}
+                                        onPaste={(e) => {
+                                        const t = (e.clipboardData.getData('text') || '').trim();
+                                        if (/[^0-9]/.test(t)) e.preventDefault();
+                                        }}
+                                        className="text-lg px-4 py-2 w-56 rounded border border-gray-300 dark:border-gray-600 dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    />
+
+                                    <div className="flex gap-4">
+                                        <button
+                                        className="bg-green-700 hover:bg-green-800 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-base font-semibold py-2 px-5 rounded transition-colors dark:bg-green-600 dark:hover:bg-green-700 dark:disabled:bg-gray-600"
+                                        type="submit"
+                                        disabled={loading}
+                                        >
+                                        {loading ? 'Buscando...' : 'Buscar'}
+                                        </button>
+                                        <button
+                                        className="bg-red-600 hover:bg-red-700 text-white text-base font-semibold py-2 px-5 rounded transition-colors dark:bg-red-600 dark:hover:bg-red-700"
+                                        type="button"
+                                        onClick={handleLimpiarBusqueda}
+                                        >
+                                        Limpiar
+                                        </button>
+                                    </div>
+                                    </form>
+                                </div>
                             </div>
-                            <hr className="border-t border-green-300 dark:border-gray-600 my-4" />
+                            <hr className="w-full border-gray-300 dark:border-gray-600 mb-6" />
 
 
                             {/* BLOQUE DE FOTO Y DATOS CLAVE */}
                             {paciente && (
-                                <div
-                                    className="flex flex-col md:flex-row"
-                                    style={{
-                                        display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '2.5rem', margin: '2.5rem 0', border: '1px solid #eee', borderRadius: 20, padding: 32,
-                                        boxShadow: '0 8px 32px rgba(0,0,0,0.14)', background: 'var(--bs-body-bg)', width: '100%', maxWidth: 'none', minHeight: 300, color: 'var(--bs-body-color)'
-                                    }}
-                                >
-                                    {/* Foto a la izquierda */}
-                                    <div
-                                        className="w-48 h-48 sm:w-60 sm:h-60 md:w-72 md:h-72"
-                                        style={{
-                                            borderRadius: '24px', overflow: 'hidden',
-                                            border: '4px solid #2d6a4f', boxShadow: '0 8px 32px rgba(0,0,0,0.16)',
-                                            backgroundColor: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                                        }}
-                                    >
+                                <section className="w-full my-10">
+                                    <div className="w-full rounded-2xl border border-gray-200 dark:border-gray-700 bg-gradient-to-br from-white to-green-50/60 dark:from-slate-800 dark:to-slate-800/60 shadow-lg p-6 md:p-8">
+                                        <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
+                                            {/* Foto */}
+                                            <div className="w-48 h-48 sm:w-60 sm:h-60 md:w-72 md:h-72 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 border-4 border-green-700/70 shadow-xl flex items-center justify-center flex-shrink-0">
                                         {fotoCargando ? (
                                             <span>Cargando foto...</span>
                                         ) : (
                                             <img
                                                 alt="Foto del paciente"
                                                 src={paciente.url_foto ? `http://localhost:3001/fotos/${paciente.url_foto}?${Date.now()}` : avatarDefault}
-                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                className="w-full h-full object-cover"
                                                 onError={(e) => {
                                                     e.target.onerror = null;
                                                     e.target.src = avatarDefault;
                                                 }}
                                             />
                                         )}
-                                    </div>
-                                    {/* Columna de datos a la derecha */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 18, width: '100%' }}>
-                                        {/* Nombre completo */}
-                                        <h2 className="m-0 font-extrabold text-2xl sm:text-3xl md:text-4xl text-[#1b4332] uppercase tracking-wider text-left leading-tight">
-                                            {`${paciente.primer_nombre || ''} ${paciente.segundo_nombre || ''} ${paciente.otros_nombres || ''} ${paciente.primer_apellido || ''} ${paciente.segundo_apellido || ''} ${paciente.apellido_casada || ''}`.replace(/ +/g, ' ').trim()}
-                                        </h2>
-                                        {/* Datos clave debajo del nombre */}
-                                        <div className="flex flex-col gap-3 mt-3 w-full max-w-xs sm:max-w-md text-base sm:text-lg md:text-xl">
-                                            <div><b style={{ color: '#2d6a4f', fontSize: '1.15em' }}>No. Afiliación:</b> {paciente.no_afiliacion}</div>
-                                            <div><b style={{ color: '#2d6a4f', fontSize: '1.15em' }}>DPI:</b> {paciente.dpi}</div>
-                                            <div><b style={{ color: '#2d6a4f', fontSize: '1.15em' }}>No. Paciente Proveedor:</b> {paciente.no_paciente_proveedor || ''}</div>
-                                            <div><b style={{ color: '#2d6a4f', fontSize: '1.15em' }}>Acceso:</b> {paciente.acceso_descripcion || ''}</div>
-                                            <div><b style={{ color: '#2d6a4f', fontSize: '1.15em' }}>Número de Formulario:</b> {paciente.numero_formulario_activo || ''}</div>
-                                            <div><b style={{ color: '#2d6a4f', fontSize: '1.15em' }}>Sesiones Autorizadas Mes:</b> {paciente.sesiones_autorizadas_mes || ''}</div>
+                                            </div>
+                                            {/* Datos a la derecha */}
+                                            <div className="flex-1 flex flex-col gap-4 w-full">
+                                                {/* Nombre completo */}
+                                                <h2 className="m-0 font-extrabold text-2xl sm:text-3xl md:text-4xl text-green-800 dark:text-green-300 tracking-tight">
+                                                    {`${paciente.primer_nombre || ''} ${paciente.segundo_nombre || ''} ${paciente.otros_nombres || ''} ${paciente.primer_apellido || ''} ${paciente.segundo_apellido || ''} ${paciente.apellido_casada || ''}`.replace(/ +/g, ' ').trim()}
+                                                </h2>
+                                                {/* Datos clave como badges */}
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                    <span className="inline-flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-lg bg-white/80 dark:bg-slate-900/50 border border-green-200 dark:border-slate-700 text-green-700 dark:text-white">
+                                                        <strong className="text-green-700 dark:text-white">No. Afiliación:</strong> {paciente.no_afiliacion}
+                                                    </span>
+                                                    <span className="inline-flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-lg bg-white/80 dark:bg-slate-900/50 border border-green-200 dark:border-slate-700 text-green-700 dark:text-white">
+                                                        <strong className="text-green-700 dark:text-white">DPI:</strong> {paciente.dpi}
+                                                    </span>
+                                                    <span className="inline-flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-lg bg-white/80 dark:bg-slate-900/50 border border-green-200 dark:border-slate-700 text-green-700 dark:text-white">
+                                                        <strong className="text-green-700 dark:text-white">No. Proveedor:</strong> {paciente.no_paciente_proveedor || '-' }
+                                                    </span>
+                                                    <span className="inline-flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-lg bg-white/80 dark:bg-slate-900/50 border border-green-200 dark:border-slate-700 text-green-700 dark:text-white">
+                                                        <strong className="text-green-700 dark:text-white">Acceso:</strong> {paciente.acceso_descripcion || '-' }
+                                                    </span>
+                                                    <span className="inline-flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-lg bg-white/80 dark:bg-slate-900/50 border border-green-200 dark:border-slate-700 text-green-700 dark:text-white">
+                                                        <strong className="text-green-700 dark:text-white">Formulario:</strong> {paciente.numero_formulario_activo || '-' }
+                                                    </span>
+                                                    <span className="inline-flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-lg bg-white/80 dark:bg-slate-900/50 border border-green-200 dark:border-slate-700 text-green-700 dark:text-white">
+                                                        <strong className="text-green-700 dark:text-white">Sesiones/mes:</strong> {paciente.sesiones_autorizadas_mes || '-' }
+                                                    </span>
+                                                </div>
+                                                {/* Botones de acciones */}
+                                                <div className="flex gap-3 flex-wrap pt-2">
+                                                    <button
+                                                        onClick={handleGenerarReporte}
+                                                        className="bg-green-700 hover:bg-green-800 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-base font-semibold py-2 px-5 rounded transition-colors dark:bg-green-600 dark:hover:bg-green-700 dark:disabled:bg-gray-600"
+                                                        type="button"
+                                                    >
+                                                        Generar Reporte
+                                                    </button>
+                                                    <button
+                                                        onClick={handleDescargarCarnet}
+                                                        className="bg-green-700 hover:bg-green-800 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-base font-semibold py-2 px-5 rounded transition-colors dark:bg-green-600 dark:hover:bg-green-700 dark:disabled:bg-gray-600"
+                                                        type="button"
+                                                    >
+                                                        Descargar Carnet
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
-                                        {/* Botones de reporte y carné */}
-                                        <div className="flex gap-4 mt-6 flex-wrap">
-                                            <Button
-                                                onClick={handleGenerarReporte}
-                                                className="px-5 py-2.5 rounded-xl font-semibold text-white bg-green-700 hover:bg-green-800 border border-green-700 shadow-sm hover:shadow-md transition-all duration-200 text-lg"
-                                            >
-                                                Generar Reporte
-                                            </Button>
-                                            <Button
-                                                onClick={handleDescargarCarnet}
-                                                className="px-5 py-2.5 rounded-xl font-semibold text-white bg-green-700 hover:bg-green-800 border border-green-700 shadow-sm hover:shadow-md transition-all duration-200 text-lg"
-                                            >
-                                                Descargar Carnet
-                                            </Button>
-                                        </div>
                                     </div>
-                                </div>
+                                </section>
                             )}
 
-                            {/* PESTAÑAS / BOTONES HORIZONTALES */}
+                            {/* PESTAÑAS / BOTONES HORIZONTALES (estilo tabs) */}
                             {paciente && (
                                 <div className="w-full mt-4">
-                                    <div className="w-full flex justify-center mb-4">
-                                        <div className="flex flex-wrap gap-3">
-                                            {['Datos Personales', 'Historial', 'Referencias', 'Nutrición', 'Psicologia', 'Formularios'].map((tab) => (
-                                                <button
-                                                    key={tab}
-                                                    onClick={() => setSelectedTab(tab)}
-                                                    className={`${selectedTab === tab
-                                                        ? 'border-2 border-green-700 bg-green-50 text-green-800 ring-2 ring-green-100'
-                                                        : 'border border-gray-300 bg-white text-green-900 hover:border-green-600 hover:bg-green-50 hover:shadow-md'} px-4 py-2 rounded-xl font-semibold transition-all duration-200 shadow-sm`}
-                                                >
-                                                    {tab}
-                                                </button>
-                                            ))}
+                                    <nav className="w-full mb-4" role="tablist" aria-label="Secciones de paciente">
+                                        <div className="w-full bg-white dark:bg-slate-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 overflow-x-auto px-2">
+                                            <div className="flex items-center justify-center gap-0 flex-wrap">
+                                                {['Datos Personales', 'Historial', 'Referencias', 'Nutrición', 'Psicologia', 'Formularios'].map((tab, idx, arr) => {
+                                                    const active = selectedTab === tab;
+                                                    const panelId = `panel-${tab.replace(/\s+/g, '-')}`;
+                                                    const isFirst = idx === 0;
+                                                    const isLast = idx === arr.length - 1;
+                                                    // Iconos inline por pestaña
+                                                    const icon = (() => {
+                                                        const cls = `h-5 w-5 ${active ? 'text-green-700 dark:text-green-400' : 'text-gray-600 dark:text-gray-300'}`;
+                                                        switch (tab) {
+                                                            case 'Datos Personales':
+                                                                return (
+                                                                    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                                                        <circle cx="12" cy="7" r="4"/>
+                                                                    </svg>
+                                                                );
+                                                            case 'Historial':
+                                                                return (
+                                                                    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                                        <path d="M3 12a9 9 0 1 0 9-9"/>
+                                                                        <path d="M3 3v6h6"/>
+                                                                        <path d="M12 7v5l3 3"/>
+                                                                    </svg>
+                                                                );
+                                                            case 'Referencias':
+                                                                return (
+                                                                    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                                        <path d="M10 13a5 5 0 0 0 7.07 0l3.54-3.54a5 5 0 0 0-7.07-7.07L11 4"/>
+                                                                        <path d="M14 11a5 5 0 0 0-7.07 0L3.39 14.54a5 5 0 0 0 7.07 7.07L13 20"/>
+                                                                    </svg>
+                                                                );
+                                                            case 'Nutrición':
+                                                                return (
+                                                                    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                                        <path d="M12 2v20"/>
+                                                                        <path d="M7 7h10"/>
+                                                                        <path d="M5 12h14"/>
+                                                                        <path d="M7 17h10"/>
+                                                                    </svg>
+                                                                );
+                                                            case 'Psicologia':
+                                                                return (
+                                                                    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                                        <path d="M20 12a8 8 0 1 0-15.5 2H3v4h4v-2h3a8 8 0 0 0 10-4z"/>
+                                                                    </svg>
+                                                                );
+                                                            case 'Formularios':
+                                                                return (
+                                                                    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                                                        <path d="M14 2v6h6"/>
+                                                                        <path d="M16 13H8"/>
+                                                                        <path d="M16 17H8"/>
+                                                                        <path d="M10 9H8"/>
+                                                                    </svg>
+                                                                );
+                                                            default:
+                                                                return null;
+                                                        }
+                                                    })();
+                                                    return (
+                                                        <button
+                                                            key={tab}
+                                                            type="button"
+                                                            role="tab"
+                                                            aria-selected={active}
+                                                            aria-controls={panelId}
+                                                            onClick={() => setSelectedTab(tab)}
+                                                            className={`${active
+                                                                ? 'text-green-700 dark:text-green-400 border-b-2 border-green-600 bg-green-50/40 dark:bg-slate-700/40'
+                                                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 border-b-2 border-transparent'} px-5 py-3 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer ${isFirst ? 'rounded-l-xl' : ''} ${isLast ? 'rounded-r-xl' : ''}`}
+                                                        >
+                                                            <span className="inline-flex items-center gap-2">
+                                                                <span>{tab}</span>
+                                                                {icon}
+                                                            </span>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
-                                    </div>
+                                    </nav>
 
                                     {/* Contenido de pestañas */}
                                     {selectedTab === 'Datos Personales' && (() => {
@@ -735,27 +814,32 @@ const ConsultaPacientes = () => {
                                         const izquierda = campos.slice(0, mitad);
                                         const derecha = campos.slice(mitad);
                                         return (
-                                            <div style={{ display: 'flex', gap: 32, fontSize: 20, width: '100%', justifyContent: 'center', margin: '0 0 2.5rem 0', border: '1px solid var(--bs-border-color)', borderRadius: 16, padding: 32, boxShadow: '0 4px 16px rgba(0,0,0,0.07)', background: 'var(--bs-body-bg)', maxWidth: 'none', color: 'var(--bs-body-color)' }}>
-                                                <div style={{ flex: 1 }}>
-                                                    {izquierda.map((campo, idx) => (
-                                                        <div key={idx} style={{ marginBottom: 10 }}>
-                                                            <b style={{ color: 'var(--bs-green)' }}>{campo.label}:</b> <span className="dark:text-gray-300">{campo.value}</span>
-                                                        </div>
-                                                    ))}
+                                            <section id="panel-Datos-Personales" role="tabpanel" className="w-full mb-10">
+                                                <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gradient-to-br from-white to-green-50/60 dark:from-slate-800 dark:to-slate-800/60 shadow-sm p-6 md:p-8">
+                                                    <h4 className="text-xl font-bold text-green-800 dark:text-green-300 mb-4">
+                                                        Datos Personales
+                                                    </h4>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        {izquierda.map((campo, idx) => (
+                                                            <div key={`izq-${idx}`} className="rounded-lg bg-white/70 dark:bg-slate-900/50 border border-gray-200 dark:border-gray-700 p-3">
+                                                                <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{campo.label}</div>
+                                                                <div className="mt-1 text-base font-semibold text-gray-900 dark:text-gray-100">{campo.value || '-'}</div>
+                                                            </div>
+                                                        ))}
+                                                        {derecha.map((campo, idx) => (
+                                                            <div key={`der-${idx}`} className="rounded-lg bg-white/70 dark:bg-slate-900/50 border border-gray-200 dark:border-gray-700 p-3">
+                                                                <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{campo.label}</div>
+                                                                <div className="mt-1 text-base font-semibold text-gray-900 dark:text-gray-100">{campo.value || '-'}</div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 </div>
-                                                <div style={{ flex: 1 }}>
-                                                    {derecha.map((campo, idx) => (
-                                                        <div key={idx} style={{ marginBottom: 10 }}>
-                                                            <b style={{ color: 'var(--bs-green)' }}>{campo.label}:</b> <span className="dark:text-gray-300">{campo.value}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
+                                            </section>
                                         );
                                     })()}
 
                                     {selectedTab === 'Historial' && (
-                                        <div className="w-full mb-8">
+                                        <div id="panel-Historial" role="tabpanel" className="w-full mb-8">
                                             <h3 className="text-2xl font-bold text-green-800 mb-4 text-center">Historial del Paciente</h3>
                                             {/* Controles de búsqueda y página */}
                                             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between mb-3">
@@ -780,31 +864,31 @@ const ConsultaPacientes = () => {
                                                 </div>
                                             </div>
                                             <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 shadow-sm overflow-x-auto md:overflow-hidden" style={{ maxHeight: 420, overflowY: 'auto' }}>
-                                                <Table responsive bordered hover striped size="sm" className="mb-0">
-                                                    <thead className="bg-green-50 dark:bg-slate-700" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                                                <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
+                                                    <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                                                         <tr>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Numero de Gestión</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Estado</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">No. Formulario</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Fecha</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Observaciones</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Periodo</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Causa Egreso</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Descripcion</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Numero de Gestión</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Estado</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">No. Formulario</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Fecha</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Observaciones</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Periodo</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Causa Egreso</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Descripcion</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody className="dark:bg-slate-800 dark:text-gray-200">
+                                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
                                                         {histPageItems && histPageItems.length > 0 ? (
                                                             histPageItems.map((h, idx) => (
-                                                                <tr key={idx}>
-                                                                    <td className="text-center">{(pageHistorial - 1) * pageSizeHistorial + idx + 1}</td>
-                                                                    <td className="text-center">{h.estado || ''}</td>
-                                                                    <td className="text-center">{h.no_formulario || ''}</td>
-                                                                    <td className="text-center">{formatearFecha(h.fecha) || ''}</td>
-                                                                    <td className="text-center">{h.observaciones || ''}</td>
-                                                                    <td className="text-center">{h.periodo || ''}</td>
-                                                                    <td className="text-center">{h.causa_egreso || ''}</td>
-                                                                    <td className="text-center">{h.descripcion || ''}</td>
+                                                                <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{(pageHistorial - 1) * pageSizeHistorial + idx + 1}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{h.estado || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{h.no_formulario || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{formatearFecha(h.fecha) || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{h.observaciones || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{h.periodo || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{h.causa_egreso || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{h.descripcion || ''}</td>
                                                                 </tr>
                                                             ))
                                                         ) : (
@@ -813,7 +897,7 @@ const ConsultaPacientes = () => {
                                                             </tr>
                                                         )}
                                                     </tbody>
-                                                </Table>
+                                                </table>
                                             </div>
                                             {/* Paginación */}
                         	                <div className="flex items-center justify-between mt-3">
@@ -826,7 +910,7 @@ const ConsultaPacientes = () => {
                                         </div>
                                     )}
                                     {selectedTab === 'Referencias' && (
-                                        <div className="w-full mb-8">
+                                        <div id="panel-Referencias" role="tabpanel" className="w-full mb-8">
                                             <h3 className="text-2xl font-bold text-green-800 mb-4 text-center">Referencias</h3>
                                             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between mb-3">
                                                 <input
@@ -850,25 +934,25 @@ const ConsultaPacientes = () => {
                                                 </div>
                                             </div>
                                             <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 shadow-sm overflow-x-auto md:overflow-hidden" style={{ maxHeight: 420, overflowY: 'auto' }}>
-                                                <Table responsive bordered hover striped size="sm" className="mb-0">
-                                                    <thead className="bg-green-50 dark:bg-slate-700" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                                                <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
+                                                    <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                                                         <tr>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">ID Referencia</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Fecha Referencia</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Motivo Traslado</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">ID Médico</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Especialidad Referencia</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">ID Referencia</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Fecha Referencia</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Motivo Traslado</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">ID Médico</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Especialidad Referencia</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody className="dark:bg-slate-800 dark:text-gray-200">
+                                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
                                                         {refPageItems && refPageItems.length > 0 ? (
                                                             refPageItems.map((r, idx) => (
-                                                                <tr key={r.id_referencia || idx}>
-                                                                    <td className="text-center">{r.id_referencia || ''}</td>
-                                                                    <td className="text-center">{formatearFecha(r.fecha_referencia) || ''}</td>
-                                                                    <td className="text-center">{r.motivo_traslado || ''}</td>
-                                                                    <td className="text-center">{r.id_medico || ''}</td>
-                                                                    <td className="text-center">{r.especialidad_referencia || ''}</td>
+                                                                <tr key={r.id_referencia || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{r.id_referencia || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{formatearFecha(r.fecha_referencia) || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{r.motivo_traslado || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{r.id_medico || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{r.especialidad_referencia || ''}</td>
                                                                 </tr>
                                                             ))
                                                         ) : (
@@ -877,7 +961,7 @@ const ConsultaPacientes = () => {
                                                             </tr>
                                                         )}
                                                     </tbody>
-                                                </Table>
+                                                </table>
                                             </div>
                                             <div className="flex items-center justify-between mt-3">
                                                 <span className="text-sm dark:text-gray-300">Página {pageReferencias} de {refTotalPages}</span>
@@ -889,7 +973,7 @@ const ConsultaPacientes = () => {
                                         </div>
                                     )}
                                     {selectedTab === 'Nutrición' && (
-                                        <div className="w-full mb-8">
+                                        <div id="panel-Nutrición" role="tabpanel" className="w-full mb-8">
                                             <h3 className="text-2xl font-bold text-green-800 mb-4 text-center">Informes de Nutrición</h3>
                                             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between mb-3">
                                                 <input
@@ -913,29 +997,29 @@ const ConsultaPacientes = () => {
                                                 </div>
                                             </div>
                                             <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 shadow-sm overflow-x-auto md:overflow-hidden" style={{ maxHeight: 420, overflowY: 'auto' }}>
-                                                <Table responsive bordered hover striped size="sm" className="mb-0">
-                                                    <thead className="bg-green-50 dark:bg-slate-700" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                                                <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
+                                                    <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                                                         <tr>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">ID Informe</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Motivo Consulta</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Estado Nutricional</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Observaciones</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Altura (Cm)</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Peso (kg)</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">IMC</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">ID Informe</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Motivo Consulta</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Estado Nutricional</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Observaciones</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Altura (Cm)</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Peso (kg)</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">IMC</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody className="dark:bg-slate-800 dark:text-gray-200">
+                                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
                                                         {nutPageItems && nutPageItems.length > 0 ? (
                                                             nutPageItems.map((n, idx) => (
-                                                                <tr key={n.id_informe || idx}>
-                                                                    <td className="text-center">{n.id_informe || ''}</td>
-                                                                    <td className="text-center">{n.motivo_consulta || ''}</td>
-                                                                    <td className="text-center">{n.estado_nutricional || ''}</td>
-                                                                    <td className="text-center">{n.observaciones || ''}</td>
-                                                                    <td className="text-center">{n.altura_cm ?? ''}</td>
-                                                                    <td className="text-center">{n.peso_kg ?? ''}</td>
-                                                                    <td className="text-center">{n.imc ?? ''}</td>
+                                                                <tr key={n.id_informe || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{n.id_informe || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{n.motivo_consulta || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{n.estado_nutricional || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{n.observaciones || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{n.altura_cm ?? ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{n.peso_kg ?? ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{n.imc ?? ''}</td>
                                                                 </tr>
                                                             ))
                                                         ) : (
@@ -944,7 +1028,7 @@ const ConsultaPacientes = () => {
                                                             </tr>
                                                         )}
                                                     </tbody>
-                                                </Table>
+                                                </table>
                                             </div>
                                             <div className="flex items-center justify-between mt-3">
                                                 <span className="text-sm dark:text-gray-300">Página {pageNutricion} de {nutTotalPages}</span>
@@ -956,7 +1040,7 @@ const ConsultaPacientes = () => {
                                         </div>
                                     )}
                                     {selectedTab === 'Psicologia' && (
-                                        <div className="w-full mb-8">
+                                        <div id="panel-Psicologia" role="tabpanel" className="w-full mb-8">
                                             <h3 className="text-2xl font-bold text-green-800 mb-4 text-center">Informes de Psicología</h3>
                                             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between mb-3">
                                                 <input
@@ -980,29 +1064,29 @@ const ConsultaPacientes = () => {
                                                 </div>
                                             </div>
                                             <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 shadow-sm overflow-x-auto md:overflow-hidden" style={{ maxHeight: 420, overflowY: 'auto' }}>
-                                                <Table responsive bordered hover striped size="sm" className="mb-0">
-                                                    <thead className="bg-green-50 dark:bg-slate-700" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                                                <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
+                                                    <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                                                         <tr>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">ID Informe</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Motivo Consulta</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Tipo Consulta</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Observaciones</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Tipo Atención</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Pronóstico</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">KDQOL</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">ID Informe</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Motivo Consulta</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Tipo Consulta</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Observaciones</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Tipo Atención</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Pronóstico</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">KDQOL</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody className="dark:bg-slate-800 dark:text-gray-200">
+                                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
                                                         {psiPageItems && psiPageItems.length > 0 ? (
                                                             psiPageItems.map((p, idx) => (
-                                                                <tr key={p.id_informe || idx}>
-                                                                    <td className="text-center">{p.id_informe || ''}</td>
-                                                                    <td className="text-center">{p.motivo_consulta || ''}</td>
-                                                                    <td className="text-center">{p.tipo_consulta || ''}</td>
-                                                                    <td className="text-center">{p.observaciones || ''}</td>
-                                                                    <td className="text-center">{p.tipo_atencion || ''}</td>
-                                                                    <td className="text-center">{p.pronostico || ''}</td>
-                                                                    <td className="text-center">{p.kdqol ? 'Sí' : 'No'}</td>
+                                                                <tr key={p.id_informe || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{p.id_informe || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{p.motivo_consulta || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{p.tipo_consulta || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{p.observaciones || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{p.tipo_atencion || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{p.pronostico || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{p.kdqol ? 'Sí' : 'No'}</td>
                                                                 </tr>
                                                             ))
                                                         ) : (
@@ -1011,7 +1095,7 @@ const ConsultaPacientes = () => {
                                                             </tr>
                                                         )}
                                                     </tbody>
-                                                </Table>
+                                                </table>
                                             </div>
                                             <div className="flex items-center justify-between mt-3">
                                                 <span className="text-sm dark:text-gray-300">Página {pagePsicologia} de {psiTotalPages}</span>
@@ -1023,7 +1107,7 @@ const ConsultaPacientes = () => {
                                         </div>
                                     )}
                                     {selectedTab === 'Formularios' && (
-                                        <div className="w-full mb-8">
+                                        <div id="panel-Formularios" role="tabpanel" className="w-full mb-8">
                                             <h3 className="text-2xl font-bold text-green-800 mb-4 text-center">Historial de Formularios</h3>
                                             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between mb-3">
                                                 <input
@@ -1047,29 +1131,29 @@ const ConsultaPacientes = () => {
                                                 </div>
                                             </div>
                                             <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 shadow-sm overflow-x-auto md:overflow-hidden" style={{ maxHeight: 420, overflowY: 'auto' }}>
-                                                <Table responsive bordered hover striped size="sm" className="mb-0">
-                                                    <thead className="bg-green-50 dark:bg-slate-700" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                                                <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
+                                                    <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                                                         <tr>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Número Formulario</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Sesiones Autorizadas (Mensuales)</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Sesiones Realizadas (Mensuales)</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Sesiones No Realizadas (Mensuales)</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Inicio Prestaciones Servicios</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Fin Prestaciones Servicios</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">ID Historial</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Número Formulario</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Sesiones Autorizadas (Mensuales)</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Sesiones Realizadas (Mensuales)</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Sesiones No Realizadas (Mensuales)</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Inicio Prestaciones Servicios</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Fin Prestaciones Servicios</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">ID Historial</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody className="dark:bg-slate-800 dark:text-gray-200">
+                                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
                                                         {formPageItems && formPageItems.length > 0 ? (
                                                             formPageItems.map((f, idx) => (
-                                                                <tr key={f.id_historial || idx}>
-                                                                    <td className="text-center">{f.numero_formulario || ''}</td>
-                                                                    <td className="text-center">{f.sesiones_autorizadas_mes ?? ''}</td>
-                                                                    <td className="text-center">{f.sesiones_realizadas_mes ?? ''}</td>
-                                                                    <td className="text-center">{f.sesiones_no_realizadas_mes ?? ''}</td>
-                                                                    <td className="text-center">{formatearFecha(f.inicio_prest_servicios) || ''}</td>
-                                                                    <td className="text-center">{formatearFecha(f.fin_prest_servicios) || ''}</td>
-                                                                    <td className="text-center">{f.id_historial ?? ''}</td>
+                                                                <tr key={f.id_historial || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.numero_formulario || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.sesiones_autorizadas_mes ?? ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.sesiones_realizadas_mes ?? ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.sesiones_no_realizadas_mes ?? ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{formatearFecha(f.inicio_prest_servicios) || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{formatearFecha(f.fin_prest_servicios) || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.id_historial ?? ''}</td>
                                                                 </tr>
                                                             ))
                                                         ) : (
@@ -1078,7 +1162,7 @@ const ConsultaPacientes = () => {
                                                             </tr>
                                                         )}
                                                     </tbody>
-                                                </Table>
+                                                </table>
                                             </div>
                                             <div className="flex items-center justify-between mt-3">
                                                 <span className="text-sm dark:text-gray-300">Página {pageFormularios} de {formTotalPages}</span>
