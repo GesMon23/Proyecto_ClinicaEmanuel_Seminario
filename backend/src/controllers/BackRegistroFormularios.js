@@ -6,26 +6,29 @@ router.use(express.json());
 
 // Endpoint para obtener jornadas
 router.get('/jornadas', async (req, res) => {
+  try {
+    // Intento 1: id_jornada con estado
     try {
-        const client = await pool.connect();
-        let rows = [];
-        try {
-            await client.query('BEGIN');
-            const cursorName = 'cur_mostrar_jornadas';
-            await client.query('CALL public.sp_mostrar_jornadas($1)', [cursorName]);
-            const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
-            rows = fetchRes.rows || [];
-            await client.query('COMMIT');
-        } catch (e) {
-            try { await client.query('ROLLBACK'); } catch (_) {}
-            throw e;
-        } finally {
-            client.release();
-        }
-        res.json(rows);
-    } catch (error) {
-        res.status(500).json({ error: 'Error al obtener jornadas.' });
-    }
+      const r1 = await pool.query('SELECT id_jornada, descripcion FROM tbl_jornadas WHERE estado = true ORDER BY descripcion ASC');
+      return res.json(r1.rows || []);
+    } catch (_) {}
+    // Intento 2: idjornada con estado
+    try {
+      const r2 = await pool.query('SELECT idjornada AS id_jornada, descripcion FROM tbl_jornadas WHERE estado = true ORDER BY descripcion ASC');
+      return res.json(r2.rows || []);
+    } catch (_) {}
+    // Intento 3: id_jornada sin estado
+    try {
+      const r3 = await pool.query('SELECT id_jornada, descripcion FROM tbl_jornadas ORDER BY descripcion ASC');
+      return res.json(r3.rows || []);
+    } catch (_) {}
+    // Intento 4: idjornada sin estado
+    const r4 = await pool.query('SELECT idjornada AS id_jornada, descripcion FROM tbl_jornadas ORDER BY descripcion ASC');
+    return res.json(r4.rows || []);
+  } catch (error) {
+    console.error('Error en /jornadas:', error);
+    res.status(500).json({ error: 'Error al obtener jornadas.' });
+  }
 });
 
 
