@@ -37,27 +37,51 @@ function App() {
                 },
                 {
                     path: "consulta-pacientes",
-                    element: <ConsultaPacientesView />
+                    element: (
+                        <RequireRole roles={["RolConsulta"]}>
+                            <ConsultaPacientesView />
+                        </RequireRole>
+                    )
                 },
                 {
                     path: "gestion-pacientes",
-                    element: <GestionPacientes/>
+                    element: (
+                        <RequireRole roles={["RolGestionPaciente"]}>
+                            <GestionPacientes/>
+                        </RequireRole>
+                    )
                 },
                 {
                     path: "llamadopacientes",
-                    element: <h1 className="title">Llamado Pacientes</h1>,
+                    element: (
+                        <RequireRole roles={["RolTurnos"]}>
+                            <h1 className="title">Llamado Pacientes</h1>
+                        </RequireRole>
+                    ),
                 },
                 {
                     path: "turnos",
-                    element: <Turnos/>,
+                    element: (
+                        <RequireRole roles={["RolTurnos"]}>
+                            <Turnos/>
+                        </RequireRole>
+                    ),
                 },
                 {
                     path: "gestion-reportes",
-                    element: <GestionReportes/>,
+                    element: (
+                        <RequireRole roles={["RolReportes"]}>
+                            <GestionReportes/>
+                        </RequireRole>
+                    ),
                 },
                 {
                     path: "gestion-referencias",
-                    element: <GestionReferencias/>,
+                    element: (
+                        <RequireRole roles={["RolReferencias"]}>
+                            <GestionReferencias/>
+                        </RequireRole>
+                    ),
                 },
                 {
                     path: "gestion-laboratorios",

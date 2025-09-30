@@ -3,6 +3,7 @@ const express = require('express');
 const pool = require('./db/pool');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const nodemailer = require('nodemailer');
 
 const router = express.Router();
 router.use(express.json());
@@ -11,6 +12,41 @@ router.use(express.json());
 
 // ===================== HELPERS AUTH =====================
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
+
+// Control de intentos fallidos en memoria (sugerido migrar a BD o Redis)
+const MAX_ATTEMPTS = parseInt(process.env.LOGIN_MAX_ATTEMPTS || '10', 10);
+const LOCK_MINUTES = parseInt(process.env.LOGIN_LOCK_MINUTES || '15', 10);
+// Estructura: { count: number, lockUntil: number (ms epoch) }
+const failedAttempts = new Map(); // key: usuario (string)
+
+function isLocked(usuario) {
+  const rec = failedAttempts.get(String(usuario).toLowerCase());
+  if (!rec) return { locked: false };
+  const now = Date.now();
+  if (rec.lockUntil && rec.lockUntil > now) {
+    const ms = rec.lockUntil - now;
+    return { locked: true, msRemaining: ms };
+  }
+  return { locked: false };
+}
+
+function incAttempt(usuario) {
+  const key = String(usuario).toLowerCase();
+  const now = Date.now();
+  const rec = failedAttempts.get(key) || { count: 0, lockUntil: 0 };
+  rec.count += 1;
+  if (rec.count >= MAX_ATTEMPTS) {
+    rec.lockUntil = now + LOCK_MINUTES * 60 * 1000;
+    rec.count = 0; // opcional: reset count al aplicar lock
+  }
+  failedAttempts.set(key, rec);
+  return rec;
+}
+
+function clearAttempts(usuario) {
+  const key = String(usuario).toLowerCase();
+  if (failedAttempts.has(key)) failedAttempts.delete(key);
+}
 
 function verifyJWT(req, res, next) {
   const auth = req.headers.authorization || '';
@@ -101,6 +137,15 @@ router.post('/auth/login', async (req, res) => {
     if (!usuario || !password) {
       return res.status(400).json({ error: 'usuario y password son requeridos' });
     }
+    // Verificar si la cuenta está temporalmente bloqueada
+    const lock = isLocked(usuario);
+    if (lock.locked) {
+      // Tiempo restante en minutos y segundos
+      const seconds = Math.ceil(lock.msRemaining / 1000);
+      const min = Math.floor(seconds / 60);
+      const sec = seconds % 60;
+      return res.status(429).json({ error: `Usuario bloqueado. Intenta nuevamente en ${min}m ${sec}s` });
+    }
     // Usar SPs con transacción y cursores
     const client = await pool.connect();
     let user;
@@ -116,6 +161,7 @@ router.post('/auth/login', async (req, res) => {
       if (!user || !user.estado) {
         await client.query('ROLLBACK');
         client.release();
+        incAttempt(usuario);
         return res.status(401).json({ error: 'Credenciales inválidas' });
       }
 
@@ -129,6 +175,13 @@ router.post('/auth/login', async (req, res) => {
       if (!ok) {
         await client.query('ROLLBACK');
         client.release();
+        const rec = incAttempt(usuario);
+        if (rec.lockUntil && rec.lockUntil > Date.now()) {
+          const seconds = Math.ceil((rec.lockUntil - Date.now()) / 1000);
+          const min = Math.floor(seconds / 60);
+          const sec = seconds % 60;
+          return res.status(429).json({ error: `Usuario bloqueado. Intenta nuevamente en ${min}m ${sec}s` });
+        }
         return res.status(401).json({ error: 'Credenciales inválidas' });
       }
 
@@ -146,6 +199,9 @@ router.post('/auth/login', async (req, res) => {
       // Si no se ha liberado antes por retornos tempranos
       try { client.release(); } catch (_) {}
     }
+
+    // Éxito: limpiar intentos fallidos
+    clearAttempts(usuario);
 
     const token = jwt.sign({ sub: user.id_usuario, nombre_usuario: user.nombre_usuario, roles }, JWT_SECRET, { expiresIn: '8h' });
     // Considerar genérica si la contraseña del usuario coincide con 'Clinica1.' (hash o texto)
@@ -205,6 +261,67 @@ router.get('/auth/me', verifyJWT, async (req, res) => {
   } catch (err) {
     console.error('Error en /auth/me:', err);
     return res.status(500).json({ error: 'Error al obtener perfil' });
+  }
+});
+
+// Solicitud de recuperación de contraseña (captura de datos)
+router.post('/auth/forgot-password', async (req, res) => {
+  try {
+    const { dpi, nombres, apellidos, telefono, usuario } = req.body || {};
+    if (!dpi || String(dpi).length < 6) return res.status(400).json({ error: 'DPI inválido' });
+    if (!nombres || !apellidos) return res.status(400).json({ error: 'Nombres y apellidos son requeridos' });
+    if (!telefono) return res.status(400).json({ error: 'Teléfono es requerido' });
+    if (!usuario) return res.status(400).json({ error: 'Usuario es requerido' });
+
+    // Enviar correo a soporte con los datos de recuperación
+    const {
+      SMTP_HOST,
+      SMTP_PORT,
+      SMTP_SECURE,
+      SMTP_USER,
+      SMTP_PASS,
+      RECOVERY_EMAIL_TO,
+      RECOVERY_EMAIL_FROM,
+    } = process.env;
+
+    if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS || !RECOVERY_EMAIL_TO) {
+      return res.status(500).json({ error: 'Servidor no configurado para envío de correos (faltan variables de entorno)' });
+    }
+
+    const transporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: Number(SMTP_PORT),
+      secure: String(SMTP_SECURE || 'false').toLowerCase() === 'true',
+      auth: { user: SMTP_USER, pass: SMTP_PASS },
+    });
+
+    const now = new Date().toISOString();
+    const html = `
+      <h3>Solicitud de recuperación de contraseña</h3>
+      <p>Se ha recibido una solicitud de recuperación de contraseña con los siguientes datos:</p>
+      <ul>
+        <li><b>Usuario:</b> ${usuario}</li>
+        <li><b>DPI:</b> ${dpi}</li>
+        <li><b>Nombres:</b> ${nombres}</li>
+        <li><b>Apellidos:</b> ${apellidos}</li>
+        <li><b>Teléfono:</b> ${telefono}</li>
+        <li><b>Fecha/Hora:</b> ${now}</li>
+        <li><b>IP:</b> ${req.ip}</li>
+      </ul>
+      <p>Favor validar la identidad del usuario y proceder según el protocolo.</p>
+    `;
+
+    await transporter.sendMail({
+      from: RECOVERY_EMAIL_FROM || SMTP_USER,
+      to: RECOVERY_EMAIL_TO,
+      subject: `Recuperación de contraseña - Usuario: ${usuario}`,
+      html,
+    });
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('Error en /auth/forgot-password:', err);
+    return res.status(500).json({ error: 'No fue posible procesar la solicitud' });
   }
 });
 
