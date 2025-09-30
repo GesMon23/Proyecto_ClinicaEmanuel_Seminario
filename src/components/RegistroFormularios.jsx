@@ -158,7 +158,12 @@ const RegistroFormularios = () => {
       try {
         const response = await api.get(`/consulta_pacientes_formularios/${noaf}`);
         if (response.data) {
-          if (response.data.idestado === 3) {
+          const idEstado = Number(response.data.idestado ?? response.data.id_estado);
+          const estadoTexto = (response.data.estado_descripcion || response.data.estado || '').toString().toLowerCase();
+          const esEgresado = idEstado === 3 || estadoTexto.includes('egres');
+          const esFallecido = estadoTexto.includes('falle') || estadoTexto.includes('defunc');
+          // Reingreso (id 4) debe ser permitido
+          if (esEgresado || esFallecido) {
             setModalMessage('El paciente no está activo');
             setModalTitle('Paciente no activo');
             setModalType('error');
@@ -213,13 +218,22 @@ const RegistroFormularios = () => {
         setShowModal(true);
         return;
       }
-      if (paciente.idestado === 3) {
-        setModalTitle('Paciente no activo');
-        setModalMessage('El paciente no está activo.');
-        setModalType('error');
-        setShowModal(true);
-        setNuevoPaciente({ ...nuevoPaciente, noafiliacion: '' });
-        return;
+      // Bloquear pacientes Egresados o Fallecidos (por id, descripción textual o datos de egreso)
+      {
+        const estadoTexto = (paciente.estado_descripcion || paciente.estado || paciente.estadoPaciente || '').toString().toLowerCase();
+        const idEstadoRaw = paciente.idestado ?? paciente.id_estado ?? paciente.estado_id;
+        const idEstado = Number(idEstadoRaw);
+        const esEgresado = idEstado === 3 || estadoTexto.includes('egres');
+        const esFallecido = estadoTexto.includes('falle') || estadoTexto.includes('defunc');
+        // Importante: permitir Reingreso (id 4) y no bloquear por egreso histórico
+        if (esEgresado || esFallecido) {
+          setModalTitle('Paciente no disponible');
+          setModalMessage('El paciente está Egresado o Fallecido y no puede agregarse.');
+          setModalType('error');
+          setShowModal(true);
+          setNuevoPaciente({ ...nuevoPaciente, noafiliacion: '' });
+          return;
+        }
       }
       if (pacientesCargados.some(p => p.noafiliacion === paciente.noafiliacion)) {
         setModalTitle('Ya agregado');
@@ -379,9 +393,24 @@ const RegistroFormularios = () => {
                       type="number"
                       name="sesionesautorizadasmes"
                       value={formData.sesionesautorizadasmes}
-                      onChange={handleRegistroFormularioInputChange}
+                      onChange={(e) => {
+                        const digits = (e.target.value ?? '').replace(/\D+/g, '');
+                        setFormData(prev => ({ ...prev, sesionesautorizadasmes: digits }));
+                      }}
                       placeholder="Ingrese cantidad de sesiones"
                       min="0"
+                      step="1"
+                      inputMode="numeric"
+                      onKeyDown={(e) => {
+                        // Bloquear signos, notación científica y separadores decimales
+                        if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E' || e.key === '.' || e.key === ',') {
+                          e.preventDefault();
+                        }
+                      }}
+                      onPaste={(e) => {
+                        const t = (e.clipboardData.getData('text') || '').trim();
+                        if (/[^0-9]/.test(t)) e.preventDefault();
+                      }}
                       required
                       className="mt-1 w-full rounded border border-gray-300 dark:border-gray-600 dark:bg-slate-800 dark:text-white px-4 py-2"
                     />

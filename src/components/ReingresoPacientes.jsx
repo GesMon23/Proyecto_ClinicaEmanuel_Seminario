@@ -22,6 +22,9 @@ const initForm = {
   numeroformulario: "",
   fechaReingreso: "", // YYYY-MM-DD
   observaciones: "",
+  inicioPrestServicios: "", // YYYY-MM-DD
+  finPrestServicios: "",    // YYYY-MM-DD
+  sesionesAutorizadasMes: "", // numeric string
 };
 
 // Normaliza claves
@@ -92,9 +95,12 @@ const ReingresoPacientes = (props) => {
   const verificarExistenciaFoto = async (idOrFilename) => {
     try {
       const response = await api.get(`/check-photo/${idOrFilename}`);
-      return !!response.data?.exists && !!response.data?.filename;
+      if (response.data?.exists && response.data?.filename) {
+        return response.data.filename; // devolver nombre real
+      }
+      return null;
     } catch {
-      return false;
+      return null;
     }
   };
 
@@ -121,9 +127,7 @@ const ReingresoPacientes = (props) => {
       const enriquecidos = await Promise.all(
         (Array.isArray(data) ? data : []).map(async (raw) => {
           let p = normalizePaciente(raw);
-          const fotoOK = p.noafiliacion ? await verificarExistenciaFoto(p.noafiliacion) : false;
-
-          // Si faltan campos de "Información Detallada", intenta enriquecer desde endpoint de egreso
+          // Enriquecer info si faltan campos
           const needsDetails = !p.departamento_nombre || !p.estado_descripcion || !p.jornada_descripcion || !p.acceso_descripcion || !p.direccion;
           if (needsDetails && p.noafiliacion) {
             try {
@@ -140,13 +144,22 @@ const ReingresoPacientes = (props) => {
                 };
               }
             } catch (e) {
-              // Si falla el enriquecimiento, continúa con los datos existentes
+              // continuar con datos existentes
             }
+          }
+
+          // Resolver foto: primero BD (urlfoto), si no hay intentar /check-photo
+          let fotoFilename = null;
+          if (!p.urlfoto && p.noafiliacion) {
+            try {
+              const fn = await verificarExistenciaFoto(p.noafiliacion);
+              if (fn) fotoFilename = fn;
+            } catch (_) {}
           }
 
           return {
             ...p,
-            fotoFilename: fotoOK ? `${p.noafiliacion}.jpg` : null,
+            fotoFilename,
             _cacheBuster: Date.now(),
           };
         })
@@ -199,6 +212,13 @@ const ReingresoPacientes = (props) => {
     if (!f?.numeroformulario || !f?.fechaReingreso) return false;
     const d = new Date(f.fechaReingreso);
     if (isNaN(d.getTime())) return false;
+    // Validaciones opcionales de periodo: si se llena uno, deben llenarse ambos y el inicio <= fin
+    const i = f.inicioPrestServicios ? new Date(f.inicioPrestServicios) : null;
+    const fn = f.finPrestServicios ? new Date(f.finPrestServicios) : null;
+    if ((i && !fn) || (!i && fn)) return false;
+    if (i && fn && i.getTime() > fn.getTime()) return false;
+    // sesiones debe ser entero >= 0 si viene
+    if (f.sesionesAutorizadasMes !== "" && (isNaN(Number(f.sesionesAutorizadasMes)) || Number(f.sesionesAutorizadasMes) < 0)) return false;
     return true;
   };
 
@@ -222,6 +242,9 @@ const ReingresoPacientes = (props) => {
         numeroFormulario: f.numeroformulario,
         fechaReingreso: f.fechaReingreso,
         observaciones: f.observaciones || "",
+        inicioPrestServicios: f.inicioPrestServicios || null,
+        finPrestServicios: f.finPrestServicios || null,
+        sesionesAutorizadasMes: f.sesionesAutorizadasMes === "" ? null : Number(f.sesionesAutorizadasMes),
         usuario: "web",
       };
 
@@ -315,9 +338,22 @@ const ReingresoPacientes = (props) => {
                       type="text"
                       name="dpi"
                       value={busqueda.dpi}
-                      onChange={handleChange}
+                      onChange={(e) => {
+                        const onlyDigits = (e.target.value || '').replace(/\D+/g, '').slice(0, 13);
+                        setBusqueda({ ...busqueda, dpi: onlyDigits });
+                      }}
                       disabled={Boolean(busqueda.noafiliacion)}
                       className="w-full text-lg px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-700 dark:bg-slate-800 dark:text-white disabled:opacity-60"
+                      inputMode="numeric"
+                      maxLength={13}
+                      pattern="\\d{13}"
+                      onKeyDown={(e) => {
+                        if (["e","E","+","-",".",","," "].includes(e.key)) e.preventDefault();
+                      }}
+                      onPaste={(e) => {
+                        const t = (e.clipboardData.getData('text') || '').trim();
+                        if (/[^0-9]/.test(t)) e.preventDefault();
+                      }}
                     />
                   </div>
                 </div>
@@ -350,9 +386,15 @@ const ReingresoPacientes = (props) => {
         resultados.map((p) => {
           const key = getKey(p);
           const f = formsById[key] || initForm;
-          const fotoSrc = p.fotoFilename
-            ? `${baseURL}/fotos/${p.noafiliacion}.jpg?v=${p._cacheBuster}`
-            : defaultAvatar;
+          let fotoSrc = defaultAvatar;
+          if (p.urlfoto) {
+            fotoSrc = `${baseURL}/fotos/${p.urlfoto}`;
+          } else if (p.fotoFilename) {
+            fotoSrc = `${baseURL}/fotos/${p.fotoFilename}`;
+          }
+          if (fotoSrc !== defaultAvatar) {
+            fotoSrc = `${fotoSrc}?v=${p._cacheBuster}`;
+          }
 
           const nombre = `${p.primernombre || ""} ${p.segundonombre || ""} ${
             p.otrosnombres || ""
@@ -437,7 +479,7 @@ const ReingresoPacientes = (props) => {
                           { label: 'Departamento', value: p.departamento_nombre },
                           { label: 'Estado', value: p.estado_descripcion },
                           { label: 'Jornada', value: p.jornada_descripcion },
-                          { label: 'Acceso Vascular', value: p.acceso_descripcion }
+                          { label: 'Acceso Vascular', value: p.acceso_descripcion },
                         ].map((item, index) => (
                           <div key={index} className="bg-gray-50 dark:bg-slate-800 rounded-lg p-3 border border-gray-200 dark:border-slate-700">
                             <div className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
@@ -535,6 +577,69 @@ const ReingresoPacientes = (props) => {
                             required
                             className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
                             aria-required="true"
+                          />
+                        </Form.Group>
+
+                        {/* Periodo Prestación de Servicios */}
+                        <Form.Group controlId={`formPeriodo-${key}`}>
+                          <Form.Label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+                            Período Prestación de Servicios
+                          </Form.Label>
+                          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                            <Form.Control
+                              type="date"
+                              name="inicioPrestServicios"
+                              value={f.inicioPrestServicios || ""}
+                              onChange={(e) =>
+                                handleFormChange(key, e.target.name, e.target.value)
+                              }
+                              placeholder="Inicio"
+                              className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
+                            />
+                            <span className="text-sm text-slate-500">a</span>
+                            <Form.Control
+                              type="date"
+                              name="finPrestServicios"
+                              value={f.finPrestServicios || ""}
+                              onChange={(e) =>
+                                handleFormChange(key, e.target.name, e.target.value)
+                              }
+                              placeholder="Fin"
+                              disabled={!f.inicioPrestServicios}
+                              min={f.inicioPrestServicios || undefined}
+                              className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white disabled:opacity-60"
+                            />
+                          </div>
+                          <small className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
+                            Si ingresa una fecha, complete ambas y asegúrese que el inicio sea menor o igual al fin.
+                          </small>
+                        </Form.Group>
+
+                        {/* Sesiones autorizadas por mes */}
+                        <Form.Group controlId={`formSesiones-${key}`}>
+                          <Form.Label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+                            Sesiones autorizadas por mes
+                          </Form.Label>
+                          <Form.Control
+                            type="number"
+                            min="0"
+                            step="1"
+                            inputMode="numeric"
+                            name="sesionesAutorizadasMes"
+                            value={f.sesionesAutorizadasMes}
+                            onChange={(e) => {
+                              const onlyDigits = (e.target.value || '').replace(/[^0-9]/g, '');
+                              handleFormChange(key, e.target.name, onlyDigits);
+                            }}
+                            onKeyDown={(e) => {
+                              if (["e","E","+","-",".",","," "].includes(e.key)) {
+                                e.preventDefault();
+                              }
+                            }}
+                            onWheel={(e) => e.currentTarget.blur()}
+                            pattern="\\d*"
+                            placeholder="Ingrese cantidad de sesiones"
+                            className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                           />
                         </Form.Group>
                       </div>

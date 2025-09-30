@@ -394,6 +394,13 @@ const Psicologia = () => {
                           value={evaluacion.fisico_mental}
                           onChange={e => handleKdqolChange('fisico_mental', e.target.value)}
                           required={evaluacion.aplicacion_kdqol === 'Si'}
+                          onKeyDown={(e) => {
+                            if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') e.preventDefault();
+                          }}
+                          onPaste={(e) => {
+                            const t = (e.clipboardData.getData('text') || '').trim();
+                            if (/^-/.test(t)) e.preventDefault();
+                          }}
                           className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600"
                         />
                       </div>
@@ -407,6 +414,13 @@ const Psicologia = () => {
                           max="999.99"
                           value={evaluacion.enfermedad_renal}
                           onChange={e => handleKdqolChange('enfermedad_renal', e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') e.preventDefault();
+                          }}
+                          onPaste={(e) => {
+                            const t = (e.clipboardData.getData('text') || '').trim();
+                            if (/^-/.test(t)) e.preventDefault();
+                          }}
                           required={evaluacion.aplicacion_kdqol === 'Si' && evaluacion.fisico_mental}
                           disabled={!evaluacion.fisico_mental}
                           className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
@@ -422,6 +436,13 @@ const Psicologia = () => {
                           max="999.99"
                           value={evaluacion.sintomas_problemas}
                           onChange={e => handleKdqolChange('sintomas_problemas', e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') e.preventDefault();
+                          }}
+                          onPaste={(e) => {
+                            const t = (e.clipboardData.getData('text') || '').trim();
+                            if (/^-/.test(t)) e.preventDefault();
+                          }}
                           required={evaluacion.aplicacion_kdqol === 'Si' && evaluacion.enfermedad_renal}
                           disabled={!evaluacion.enfermedad_renal}
                           className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
@@ -437,6 +458,13 @@ const Psicologia = () => {
                           max="999.99"
                           value={evaluacion.efectos_enfermedad}
                           onChange={e => handleKdqolChange('efectos_enfermedad', e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') e.preventDefault();
+                          }}
+                          onPaste={(e) => {
+                            const t = (e.clipboardData.getData('text') || '').trim();
+                            if (/^-/.test(t)) e.preventDefault();
+                          }}
                           required={evaluacion.aplicacion_kdqol === 'Si' && evaluacion.sintomas_problemas}
                           disabled={!evaluacion.sintomas_problemas}
                           className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
@@ -454,6 +482,13 @@ const Psicologia = () => {
                               max="999.99"
                               value={evaluacion.vida_diaria}
                               onChange={e => handleKdqolChange('vida_diaria', e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') e.preventDefault();
+                              }}
+                              onPaste={(e) => {
+                                const t = (e.clipboardData.getData('text') || '').trim();
+                                if (/^-/.test(t)) e.preventDefault();
+                              }}
                               required={evaluacion.aplicacion_kdqol === 'Si' && evaluacion.efectos_enfermedad}
                               disabled={!evaluacion.efectos_enfermedad}
                               className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
