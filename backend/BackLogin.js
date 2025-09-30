@@ -3,7 +3,6 @@ const express = require('express');
 const pool = require('./db/pool');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const nodemailer = require('nodemailer');
 
 const router = express.Router();
 router.use(express.json());
@@ -273,51 +272,8 @@ router.post('/auth/forgot-password', async (req, res) => {
     if (!telefono) return res.status(400).json({ error: 'Teléfono es requerido' });
     if (!usuario) return res.status(400).json({ error: 'Usuario es requerido' });
 
-    // Enviar correo a soporte con los datos de recuperación
-    const {
-      SMTP_HOST,
-      SMTP_PORT,
-      SMTP_SECURE,
-      SMTP_USER,
-      SMTP_PASS,
-      RECOVERY_EMAIL_TO,
-      RECOVERY_EMAIL_FROM,
-    } = process.env;
-
-    if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS || !RECOVERY_EMAIL_TO) {
-      return res.status(500).json({ error: 'Servidor no configurado para envío de correos (faltan variables de entorno)' });
-    }
-
-    const transporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: Number(SMTP_PORT),
-      secure: String(SMTP_SECURE || 'false').toLowerCase() === 'true',
-      auth: { user: SMTP_USER, pass: SMTP_PASS },
-    });
-
-    const now = new Date().toISOString();
-    const html = `
-      <h3>Solicitud de recuperación de contraseña</h3>
-      <p>Se ha recibido una solicitud de recuperación de contraseña con los siguientes datos:</p>
-      <ul>
-        <li><b>Usuario:</b> ${usuario}</li>
-        <li><b>DPI:</b> ${dpi}</li>
-        <li><b>Nombres:</b> ${nombres}</li>
-        <li><b>Apellidos:</b> ${apellidos}</li>
-        <li><b>Teléfono:</b> ${telefono}</li>
-        <li><b>Fecha/Hora:</b> ${now}</li>
-        <li><b>IP:</b> ${req.ip}</li>
-      </ul>
-      <p>Favor validar la identidad del usuario y proceder según el protocolo.</p>
-    `;
-
-    await transporter.sendMail({
-      from: RECOVERY_EMAIL_FROM || SMTP_USER,
-      to: RECOVERY_EMAIL_TO,
-      subject: `Recuperación de contraseña - Usuario: ${usuario}`,
-      html,
-    });
-
+    // TODO: Integrar verificación contra BD y canal de validación (ej. notificación a un admin)
+    // Por ahora, respondemos éxito para habilitar el flujo del frontend.
     return res.json({ ok: true });
   } catch (err) {
     console.error('Error en /auth/forgot-password:', err);

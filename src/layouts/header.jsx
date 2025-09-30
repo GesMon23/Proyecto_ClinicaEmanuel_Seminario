@@ -2,8 +2,9 @@ import { useTheme } from "@/hooks/use-theme";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth-context";
-import { ChevronsLeft, Moon, Search, Sun, User as UserIcon, Settings } from "lucide-react";
+import { ChevronsLeft, Moon, Search, Sun, User as UserIcon, Settings, SquareArrowOutUpRight } from "lucide-react";
 import api from "@/config/api";
+import { navbarLinks } from "@/constants";
 import PropTypes from "prop-types";
 
 export const Header = ({ collapsed, setCollapsed }) => {
@@ -18,6 +19,53 @@ export const Header = ({ collapsed, setCollapsed }) => {
     const [changeLoading, setChangeLoading] = useState(false);
     const [changeError, setChangeError] = useState("");
     const [changeMsg, setChangeMsg] = useState("");
+
+    // Buscador
+    const [query, setQuery] = useState("");
+    const [results, setResults] = useState([]);
+    const [openSearch, setOpenSearch] = useState(false);
+    const roles = user?.roles || [];
+
+    const canSee = (link) => {
+        const req = link.allowedRoles;
+        if (!Array.isArray(req) || req.length === 0) return true;
+        return roles.some((r) => req.includes(r));
+    };
+
+    const onSearchChange = (e) => {
+        const term = (e.target.value || "").trimStart();
+        setQuery(term);
+        if (!term) {
+            setResults([]);
+            setOpenSearch(false);
+            return;
+        }
+        const lower = term.toLowerCase();
+        const hits = [];
+        for (const group of navbarLinks) {
+            for (const link of group.links) {
+                if (link.path === "/cerrarsesion") continue;
+                if (!canSee(link)) continue;
+                if (link.label.toLowerCase().includes(lower) || (group.title || "").toLowerCase().includes(lower)) {
+                    hits.push({
+                        label: link.label,
+                        path: link.path,
+                        group: group.title,
+                        icon: link.icon,
+                    });
+                }
+            }
+        }
+        setResults(hits.slice(0, 8));
+        setOpenSearch(hits.length > 0);
+    };
+
+    const goTo = (path) => {
+        if (!path) return;
+        navigate(`/layout${path.startsWith('/') ? path : `/${path}`}`);
+        setOpenSearch(false);
+        setQuery("");
+    };
 
     // Línea principal: usuario (en mayúsculas)
     const username = (() => {
@@ -54,19 +102,58 @@ export const Header = ({ collapsed, setCollapsed }) => {
                 >
                     <ChevronsLeft className={collapsed && "rotate-180"} />
                 </button>
-                <div className="input">
+                <div className="input relative">
                     <Search
                         size={20}
-                        className="text-slate-300"
+                        className="text-white/80"
                     />
                     <input
                         type="text"
                         name="search"
                         id="search"
-                        placeholder="Search..."
-                        className="w-full bg-transparent text-slate-900 outline-0 placeholder:text-slate-300 dark:text-slate-50"
+                        placeholder="Buscar opciones..."
+                        className="w-full bg-transparent text-white outline-0 placeholder:text-white/70"
+                        value={query}
+                        onChange={onSearchChange}
+                        onFocus={() => { if (results.length) setOpenSearch(true); }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && results.length > 0) {
+                                e.preventDefault();
+                                goTo(results[0].path);
+                            }
+                        }}
                     />
+                    {openSearch && (
+                        <div className="absolute left-0 right-0 top-full mt-2 z-50 rounded-md border border-slate-200 bg-white text-sm shadow-lg dark:border-slate-700 dark:bg-slate-900">
+                            {results.map((r) => (
+                                <button
+                                    key={`${r.group}-${r.label}`}
+                                    type="button"
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+                                    onClick={() => goTo(r.path)}
+                                >
+                                    {r.icon ? (<r.icon size={16} />) : null}
+                                    <span className="flex-1 truncate">{r.label}</span>
+                                    <span className="text-xs text-slate-400">{r.group}</span>
+                                </button>
+                            ))}
+                            {results.length === 0 && (
+                                <div className="px-3 py-2 text-slate-400">Sin resultados</div>
+                            )}
+                        </div>
+                    )}
                 </div>
+                <button
+                    type="button"
+                    className="btn-ghost size-10 text-white"
+                    title="Abrir nueva pestaña"
+                    onClick={() => {
+                        const url = `${window.location.origin}/layout/dashboard`;
+                        window.open(url, '_blank', 'noopener');
+                    }}
+                >
+                    <SquareArrowOutUpRight size={18} />
+                </button>
             </div>
             <div className="flex items-center gap-x-3">
                 {/* Bloque Usuario: ícono + nombre en dos líneas */}
