@@ -12,6 +12,114 @@ router.get('/departamentos', async (req, res) => {
         res.json(result.rows);
     } catch (error) {
         res.status(500).json({ error: 'Error al obtener departamentos.' });
+
+// Laboratorios por número de afiliación (historial completo) - normalizado
+router.get('/laboratorios/:noafiliacion', async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const noafiliacion = req.params.noafiliacion;
+        await client.query('BEGIN');
+        const cursorName = 'cur_lab_historial_afiliacion_consulta_pac';
+        await client.query('CALL public.sp_laboratorios_historial_por_afiliacion($1,$2)', [
+            noafiliacion,
+            cursorName,
+        ]);
+        const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+        await client.query('COMMIT');
+        const rows = (fetchRes.rows || []).map(r => ({
+            no_afiliacion: r.no_afiliacion ?? r.noafiliacion ?? null,
+            primer_nombre: r.primer_nombre ?? r.primernombre ?? null,
+            segundo_nombre: r.segundo_nombre ?? r.segundonombre ?? null,
+            primer_apellido: r.primer_apellido ?? r.primerapellido ?? null,
+            segundo_apellido: r.segundo_apellido ?? r.segundoapellido ?? null,
+            sexo: r.sexo ?? null,
+            id_laboratorio: r.id_laboratorio ?? r.idlaboratorio ?? null,
+            fecha_laboratorio: r.fecha_laboratorio ?? r.fecha ?? null,
+            periodicidad: r.periodicidad ?? null,
+            examen_realizado: r.examen_realizado ?? r.examen ?? null,
+            virologia: r.virologia ?? null,
+            hiv: r.hiv ?? null,
+            usuario_creacion: r.usuario_creacion ?? null,
+            parametros: r.parametros ?? null,
+        }));
+        return res.json(rows);
+    } catch (error) {
+        try { await client.query('ROLLBACK'); } catch (_) {}
+        console.error('Error al obtener laboratorios por afiliación:', error);
+        return res.status(500).json({ error: 'Error al obtener laboratorios por afiliación' });
+    } finally {
+        client.release();
+    }
+});
+
+// Laboratorios por DPI (resuelve no_afiliacion y reutiliza SP) - normalizado
+router.get('/laboratorios/dpi/:dpi', async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const dpi = req.params.dpi;
+        const p = await pool.query('SELECT no_afiliacion FROM tbl_pacientes WHERE dpi = $1', [dpi]);
+        if (!p.rows.length) return res.json([]);
+        const noafiliacion = p.rows[0].no_afiliacion;
+        await client.query('BEGIN');
+        const cursorName = 'cur_lab_historial_dpi_consulta_pac';
+        await client.query('CALL public.sp_laboratorios_historial_por_afiliacion($1,$2)', [
+            noafiliacion,
+            cursorName,
+        ]);
+        const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+        await client.query('COMMIT');
+        const rows = (fetchRes.rows || []).map(r => ({
+            no_afiliacion: r.no_afiliacion ?? r.noafiliacion ?? null,
+            primer_nombre: r.primer_nombre ?? r.primernombre ?? null,
+            segundo_nombre: r.segundo_nombre ?? r.segundonombre ?? null,
+            primer_apellido: r.primer_apellido ?? r.primerapellido ?? null,
+            segundo_apellido: r.segundo_apellido ?? r.segundoapellido ?? null,
+            sexo: r.sexo ?? null,
+            id_laboratorio: r.id_laboratorio ?? r.idlaboratorio ?? null,
+            fecha_laboratorio: r.fecha_laboratorio ?? r.fecha ?? null,
+            periodicidad: r.periodicidad ?? null,
+            examen_realizado: r.examen_realizado ?? r.examen ?? null,
+            virologia: r.virologia ?? null,
+            hiv: r.hiv ?? null,
+            usuario_creacion: r.usuario_creacion ?? null,
+            parametros: r.parametros ?? null,
+        }));
+        return res.json(rows);
+    } catch (error) {
+        try { await client.query('ROLLBACK'); } catch (_) {}
+        console.error('Error al obtener laboratorios por DPI:', error);
+        return res.status(500).json({ error: 'Error al obtener laboratorios por DPI' });
+    } finally {
+        client.release();
+    }
+});
+    }
+});
+
+// Listar turnos por número de afiliación (solo los del paciente indicado, del día actual)
+router.get('/turnos/:noafiliacion', async (req, res) => {
+    try {
+        const noafiliacion = req.params.noafiliacion;
+        const query = `
+            SELECT 
+                pac.no_afiliacion as noafiliacion,
+                pac.primer_nombre || ' ' || COALESCE(pac.segundo_nombre, '') || ' ' || 
+                pac.primer_apellido || ' ' || COALESCE(pac.segundo_apellido, '') AS nombrepaciente,
+                tur.id_turno,
+                cli.descripcion AS nombre_clinica,
+                tur.fecha_turno,
+                tur.id_turno_cod
+            FROM tbl_turnos tur
+            INNER JOIN tbl_pacientes pac ON tur.no_afiliacion = pac.no_afiliacion
+            INNER JOIN tbl_clinica cli ON tur.id_clinica = cli.id_clinica
+            WHERE pac.no_afiliacion = $1
+            ORDER BY tur.fecha_turno DESC
+        `;
+        const result = await pool.query(query, [noafiliacion]);
+        return res.json(result.rows || []);
+    } catch (error) {
+        console.error('Error al obtener turnos del paciente:', error);
+        return res.status(500).json({ error: 'Error al obtener turnos del paciente', detalle: error.message });
     }
 });
 
@@ -380,6 +488,91 @@ router.get('/formularios/:noafiliacion', async (req, res) => {
     } catch (error) {
         console.error('Error al obtener formularios:', error);
         return res.status(500).json({ error: 'Error al obtener formularios', detalle: error.message });
+    }
+});
+
+// Faltistas por número de afiliación (todos los registros)
+router.get('/faltistas/:noafiliacion', async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const noafiliacion = req.params.noafiliacion;
+        await client.query('BEGIN');
+        const cursorName = 'cur_faltistas_paciente';
+        await client.query('CALL public.sp_faltistas_filtrado($1,$2,$3,$4,$5,$6,$7,$8,$9)', [
+            null, // fechainicio
+            null, // fechafin
+            noafiliacion || null,
+            null, // sexo
+            null, // clinica
+            null, // jornada
+            null, // accesovascular
+            null, // departamento
+            cursorName,
+        ]);
+        const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+        await client.query('COMMIT');
+        const rows = (fetchRes.rows || []).map(r => ({
+            noafiliacion: r.noafiliacion,
+            nombres: [r.primer_nombre, r.segundo_nombre, r.otros_nombres].filter(Boolean).join(' '),
+            apellidos: [r.primer_apellido, r.segundo_apellido, r.apellido_casada].filter(Boolean).join(' '),
+            sexo: r.sexo,
+            clinica: r.clinica,
+            jornada: r.jornada,
+            accesovascular: r.accesovascular,
+            departamento: r.departamento,
+            fechafalta: r.fechafalta,
+        }));
+        res.json(rows);
+    } catch (error) {
+        try { await client.query('ROLLBACK'); } catch (_) {}
+        console.error('Error al obtener faltistas del paciente:', error);
+        res.status(500).json({ error: 'Error al obtener faltistas del paciente' });
+    } finally {
+        client.release();
+    }
+});
+
+// Faltistas por DPI (resuelve no_afiliacion y reutiliza SP)
+router.get('/faltistas/dpi/:dpi', async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const dpi = req.params.dpi;
+        const p = await pool.query('SELECT no_afiliacion FROM tbl_pacientes WHERE dpi = $1', [dpi]);
+        if (!p.rows.length) return res.json([]);
+        const noafiliacion = p.rows[0].no_afiliacion;
+        await client.query('BEGIN');
+        const cursorName = 'cur_faltistas_paciente_dpi';
+        await client.query('CALL public.sp_faltistas_filtrado($1,$2,$3,$4,$5,$6,$7,$8,$9)', [
+            null, // fechainicio
+            null, // fechafin
+            noafiliacion || null,
+            null, // sexo
+            null, // clinica
+            null, // jornada
+            null, // accesovascular
+            null, // departamento
+            cursorName,
+        ]);
+        const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+        await client.query('COMMIT');
+        const rows = (fetchRes.rows || []).map(r => ({
+            noafiliacion: r.noafiliacion,
+            nombres: [r.primer_nombre, r.segundo_nombre, r.otros_nombres].filter(Boolean).join(' '),
+            apellidos: [r.primer_apellido, r.segundo_apellido, r.apellido_casada].filter(Boolean).join(' '),
+            sexo: r.sexo,
+            clinica: r.clinica,
+            jornada: r.jornada,
+            accesovascular: r.accesovascular,
+            departamento: r.departamento,
+            fechafalta: r.fechafalta,
+        }));
+        res.json(rows);
+    } catch (error) {
+        try { await client.query('ROLLBACK'); } catch (_) {}
+        console.error('Error al obtener faltistas por DPI:', error);
+        res.status(500).json({ error: 'Error al obtener faltistas por DPI' });
+    } finally {
+        client.release();
     }
 });
 
