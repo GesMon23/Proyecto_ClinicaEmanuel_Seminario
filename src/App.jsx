@@ -15,15 +15,18 @@ import RequireRole from "@/routes/RequireRole";
 import GestionUsuarios from "@/views/GestionUsuarios.jsx";
 import Nutricion from "@/views/Nutricion.jsx";
 import Psicologia from "@/views/Psicologia.jsx";
+import AdminResetUser from "@/pages/AdminResetUser.jsx";
 function App() {
     const router = createBrowserRouter([
         {
-            
-            
                 path: "/",
                 element: <LoginComponent />,
-              },  
-              {
+        },
+        {
+                path: "/admin/reset-user",
+                element: <AdminResetUser />,
+        },
+        {
             path: "layout/",
             element: (
                 <ProtectedRoute>
