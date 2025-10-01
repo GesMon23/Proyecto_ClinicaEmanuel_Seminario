@@ -128,7 +128,7 @@ const RegistroEmpleados = () => {
             <form className="w-full space-y-6" onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">DPI</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">DPI *</label>
                   <input
                     type="text"
                     name="dpi"
@@ -217,18 +217,19 @@ const RegistroEmpleados = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Fecha de Nacimiento</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Fecha de Nacimiento *</label>
                   <input
                     type="date"
                     name="fecha_nacimiento"
                     value={form.fecha_nacimiento}
                     onChange={handleChange}
+                    required
                     className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Sexo</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Sexo *</label>
                   <select
                     name="sexo"
                     value={form.sexo}
@@ -255,7 +256,7 @@ const RegistroEmpleados = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Teléfono</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Teléfono *</label>
                   <input
                     type="text"
                     name="telefono"
@@ -264,18 +265,20 @@ const RegistroEmpleados = () => {
                     pattern="[0-9]*"
                     value={form.telefono}
                     onChange={handleChange}
+                    required
                     className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600"
                 
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Email</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Email *</label>
                   <input
                     type="email"
                     name="email"
                     value={form.email}
                     onChange={handleChange}
+                    required
                     className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600"
                   />
                 </div>
