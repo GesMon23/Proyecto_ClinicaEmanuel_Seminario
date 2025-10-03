@@ -38,7 +38,7 @@ const backConsultaReferenciasRouter = require('./src/controllers/BackConsultaRef
 const backCatalogosRouter = require('./src/controllers/BackCatalogos');
 const backEgresoPacientes = require('./src/controllers/BackEgresoPacientes');
 const backActualizacionPacientes = require('./src/controllers/BackActualizacionPacientes');
-<<<<<<< Updated upstream
+
 //const backRegistroPacientes = require('./src/controllers/BackRegistroPacientes');
 const backReingresoPacientesRouter = require('./src/controllers/BackReingresoPacientes');
 // Importar router de consulta de pacientes
@@ -46,9 +46,8 @@ const backConsultaPacientesRouter = require('./src/controllers/BackConsultaPacie
 // Importar router de registro de laboratorios
 const backRegistroLaboratoriosRouter = require('./src/controllers/BackRegistroLaboratorios');
 
-=======
 const backGestionTurnos = require('./src/controllers/BackGestionTurno');
->>>>>>> Stashed changes
+
 // Pool compartido
 const pool = require('./db/pool');
 
@@ -107,17 +106,16 @@ app.use(backCatalogosRouter);
 
 app.use(backActualizacionPacientes);
 app.use(backEgresoPacientes);
-<<<<<<< Updated upstream
+
 //app.use('/api/pacientes', backRegistroPacientes); 
 app.use('/api/reingreso', backReingresoPacientesRouter);
 // Usar router de consulta de pacientes
 app.use(backConsultaPacientesRouter);
 // Usar router de registro/listado de laboratorios
 app.use('/laboratorios', backRegistroLaboratoriosRouter);
-=======
+
 app.use(backGestionTurnos);
 
->>>>>>> Stashed changes
 
 app.post('/upload-foto/:noAfiliacion', async (req, res) => {
     const { noAfiliacion } = req.params;
@@ -2151,52 +2149,6 @@ app.get('/reporte-turnos', async (req, res) => {
     }
 });
 
-// Consultar todos los turnos con filtros
-<<<<<<< Updated upstream
-app.get('/turnos', async (req, res) => {
-    try {
-        const { numeroafiliacion, fecha, clinica } = req.query;
-        let filtros = [];
-        let valores = [];
-        let idx = 1;
-        if (numeroafiliacion) {
-            filtros.push(`t.noAfiliacion = $${idx++}`);
-            valores.push(numeroafiliacion);
-        }
-        if (fecha) {
-            filtros.push(`DATE(t.FechaTurno) = $${idx++}`);
-            valores.push(fecha);
-        }
-        if (clinica) {
-            filtros.push(`c.descripcion ILIKE $${idx++}`);
-            valores.push(`%${clinica}%`);
-        }
-        const where = filtros.length > 0 ? 'WHERE ' + filtros.join(' AND ') : '';
-        const consulta = `
-                SELECT 
-                    t.idTurno,
-                    t.noAfiliacion AS numeroafiliacion,
-                    p.primernombre || ' ' || COALESCE(p.segundonombre,'') || ' ' || p.primerapellido || ' ' || COALESCE(p.segundoapellido,'') AS nombrepaciente,
-                    to_char(t.FechaTurno, 'YYYY-MM-DD') AS fecha,
-                    to_char(t.FechaTurno, 'HH24:MI') AS hora,
-                    c.descripcion AS nombreclinica,
-                    e.descripcion AS estado
-                FROM tbl_Turnos t
-                INNER JOIN tbl_pacientes p ON t.noAfiliacion = p.no_Afiliacion
-                INNER JOIN tbl_clinica c ON t.idclinica = c.idsala
-                INNER JOIN tbl_turnoestados e ON t.idturnoestado = e.idturnoestado
-                ${where}
-                ORDER BY t.FechaTurno DESC
-            `;
-        const result = await pool.query(consulta, valores);
-        res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-=======
-
->>>>>>> Stashed changes
 
 // Obtener turno más antiguo por clínica
 app.get('/turno-mas-antiguo/:clinica', async (req, res) => {
@@ -2959,7 +2911,6 @@ app.delete('/eliminar-turno/:idturno', async (req, res) => {
     }
 });
 
-<<<<<<< Updated upstream
 app.post('/registrar-faltista', async (req, res) => {
     const { noafiliacion, fechaFalta, motivoFalta } = req.body;
     if (!noafiliacion || !fechaFalta || !motivoFalta) {
@@ -3032,5 +2983,4 @@ app.get('/jornadas', async (req, res) => {
         res.status(500).json({ error: 'Error al obtener jornadas' });
     }
 });
-=======
->>>>>>> Stashed changes
+
