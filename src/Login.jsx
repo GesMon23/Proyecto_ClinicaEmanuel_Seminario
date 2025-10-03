@@ -17,6 +17,16 @@ const LoginComponent = () => {
   const [changeLoading, setChangeLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth() || {};
+  // Recuperación de contraseña
+  const [showForgot, setShowForgot] = useState(false);
+  const [fpDpi, setFpDpi] = useState('');
+  const [fpNombres, setFpNombres] = useState('');
+  const [fpApellidos, setFpApellidos] = useState('');
+  const [fpTelefono, setFpTelefono] = useState('');
+  const [fpUsuario, setFpUsuario] = useState('');
+  const [fpError, setFpError] = useState('');
+  const [fpMsg, setFpMsg] = useState('');
+  const [fpLoading, setFpLoading] = useState(false);
   // Consultar usuarios activos al montar el componente
   useEffect(() => {
     // Podrías limpiar mensajes al cargar
@@ -27,13 +37,6 @@ const LoginComponent = () => {
     e.preventDefault();
     if (/[A-Z]/.test(usuario)) {
       setMensaje("Todos los caracteres del usuario deben ir en minúsculas");
-      return;
-    }if (usuario.length < 8) {
-      setMensaje("El usuario debe tener 8 caracteres");
-      return;
-    }
-    if (password.length < 8) {
-      setMensaje("La contraseña debe tener al menos 8 caracteres");
       return;
     }
     try {
@@ -143,6 +146,15 @@ const LoginComponent = () => {
                     Iniciar Sesión
                   </button>
                 </div>
+                <div className="mt-4 text-center">
+                  <button
+                    type="button"
+                    onClick={() => { setShowForgot(true); setFpError(''); setFpMsg(''); setFpDpi(''); setFpNombres(''); setFpApellidos(''); setFpTelefono(''); setFpUsuario(''); }}
+                    className="text-sm text-green-800 hover:underline"
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </button>
+                </div>
                 {mensaje && (
                   <div className="mt-4 text-center text-red-600 font-bold">{mensaje}</div>
                 )}
@@ -192,6 +204,114 @@ const LoginComponent = () => {
                 className="px-4 py-2 rounded-md bg-green-700 text-white hover:bg-green-800 disabled:opacity-50"
               >
                 {changeLoading ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal Recuperación de Contraseña */}
+      {showForgot && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-md p-6">
+            <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-2">Recuperar contraseña</h3>
+            <p className="text-slate-600 dark:text-slate-300 mb-4">Completa tus datos para validar tu identidad.</p>
+
+            {fpMsg && (
+              <div className="mb-3 p-2 rounded border border-green-300 bg-green-50 text-green-700 dark:border-green-700 dark:bg-green-900/20 dark:text-green-300">
+                {fpMsg}
+              </div>
+            )}
+            {fpError && (
+              <div className="mb-3 p-2 rounded border border-red-300 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-900/20 dark:text-red-300">
+                {fpError}
+              </div>
+            )}
+
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">DPI</label>
+            <input
+              type="text"
+              value={fpDpi}
+              onChange={(e) => setFpDpi((e.target.value || '').replace(/\D+/g, '').slice(0, 13))}
+              inputMode="numeric"
+              maxLength={13}
+              className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+            />
+
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mt-3">Nombres</label>
+            <input
+              type="text"
+              value={fpNombres}
+              onChange={(e) => setFpNombres(e.target.value)}
+              className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+            />
+
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mt-3">Apellidos</label>
+            <input
+              type="text"
+              value={fpApellidos}
+              onChange={(e) => setFpApellidos(e.target.value)}
+              className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+            />
+
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mt-3">Teléfono</label>
+            <input
+              type="text"
+              value={fpTelefono}
+              onChange={(e) => setFpTelefono((e.target.value || '').replace(/\D+/g, '').slice(0, 8))}
+              inputMode="numeric"
+              maxLength={8}
+              className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+            />
+
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mt-3">Nombre de usuario</label>
+            <input
+              type="text"
+              value={fpUsuario}
+              onChange={(e) => setFpUsuario((e.target.value || '').slice(0, 32))}
+              className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+            />
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                type="button"
+                disabled={fpLoading}
+                onClick={() => { setShowForgot(false); setFpError(''); setFpMsg(''); setFpDpi(''); setFpNombres(''); setFpApellidos(''); setFpTelefono(''); setFpUsuario(''); }}
+                className="px-4 py-2 rounded-md border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={fpLoading}
+                onClick={async () => {
+                  try {
+                    setFpError(''); setFpMsg('');
+                    if (!fpDpi || fpDpi.length !== 13) { setFpError('DPI debe tener 13 dígitos'); return; }
+                    if (!fpNombres || !fpApellidos) { setFpError('Nombres y apellidos son requeridos'); return; }
+                    if (!fpTelefono || fpTelefono.length !== 8) { setFpError('Teléfono debe tener 8 dígitos'); return; }
+                    if (!fpUsuario) { setFpError('Nombre de usuario es requerido'); return; }
+                    setFpLoading(true);
+                    await api.post('/auth/forgot-password', {
+                      dpi: fpDpi,
+                      nombres: fpNombres,
+                      apellidos: fpApellidos,
+                      telefono: fpTelefono,
+                      usuario: fpUsuario,
+                    });
+                    setFpMsg('Solicitud enviada. Nos pondremos en contacto para validar tu identidad.');
+                    setTimeout(() => {
+                      setShowForgot(false);
+                      setFpError(''); setFpMsg(''); setFpDpi(''); setFpNombres(''); setFpApellidos(''); setFpTelefono(''); setFpUsuario('');
+                    }, 1200);
+                  } catch (e) {
+                    setFpError(e?.response?.data?.error || e.message || 'No fue posible enviar la solicitud');
+                  } finally {
+                    setFpLoading(false);
+                  }
+                }}
+                className="px-4 py-2 rounded-md bg-green-700 text-white hover:bg-green-800 disabled:opacity-50"
+              >
+                {fpLoading ? 'Enviando...' : 'Enviar'}
               </button>
             </div>
           </div>

@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const app = express();
@@ -8,10 +9,23 @@ const PDFDocument = require('pdfkit');
 
 const nz = (v) => (v === undefined || v === null || v === '' ? null : v);
 
+// Configuración de CORS y JSON body parsing
+app.use(cors({
+  origin: 'http://localhost:3000',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+}));
+app.use(express.json({ limit: '50mb' }));
+app.use(bodyParser.json({ limit: '50mb' }));
+
 // (Desmontado) Router legacy de actualización masiva para evitar conflicto de rutas
 // const updateMasivoPacientesRouter = require('./update-masivo-pacientes');
 // Importar router de login/roles centralizado
 const backLoginRouter = require('./BackLogin');
+
+const backGestionTurnosRouter = require('./src/controllers/BackGestionTurno');
+const backFallecidosReportesRouter = require('./src/controllers/BackFallecidosReportes');
 // Importar router de registro de formularios
 const backRegistroFormulariosRouter = require('./src/controllers/BackRegistroFormularios');
 // Importar router de registro de empleados
@@ -34,44 +48,47 @@ const backConsultaNutricionRouter = require('./src/controllers/BackConsultaNutri
 const backRegistroReferenciasRouter = require('./src/controllers/BackRegistroReferencias');
 // Importar router de consulta de referencias
 const backConsultaReferenciasRouter = require('./src/controllers/BackConsultaReferencias');
-// Importar router de catálogos (médicos, etc.)
+// Importar router de consulta de laboratorios
+const backConsultaLaboratoriosRouter = require('./src/controllers/BackConsultaLaboratorios');
+// Importar router de catálogos
 const backCatalogosRouter = require('./src/controllers/BackCatalogos');
-const backEgresoPacientes = require('./src/controllers/BackEgresoPacientes');
-const backActualizacionPacientes = require('./src/controllers/BackActualizacionPacientes');
+// Importar router de reporte de pacientes
+const backPacientesReporteRouter = require('./src/controllers/BackPacientesReporte');
 
-//const backRegistroPacientes = require('./src/controllers/BackRegistroPacientes');
+const backReporteFaltistasRouter = require('./src/controllers/BackReporteFaltistas');
+
+
+const backNuevoIngresoReportesRouter = require('./src/controllers/BackNuevoIngresoReportes');
+// Importar otros routers usados más abajo
+// Usar router de consulta de laboratorios
+app.use(backConsultaLaboratoriosRouter);
+const backActualizacionPacientes = require('./src/controllers/BackActualizacionPacientes');
+const backEgresoPacientes = require('./src/controllers/BackEgresoPacientes');
 const backReingresoPacientesRouter = require('./src/controllers/BackReingresoPacientes');
+
+const backEgresoReportesRouter = require('./src/controllers/BackEgresoReportes');
+
 // Importar router de consulta de pacientes
 const backConsultaPacientesRouter = require('./src/controllers/BackConsultaPacientes');
 // Importar router de registro de laboratorios
 const backRegistroLaboratoriosRouter = require('./src/controllers/BackRegistroLaboratorios');
 
-const backGestionTurnos = require('./src/controllers/BackGestionTurno');
-
 // Pool compartido
 const pool = require('./db/pool');
 
-// Definir colores usados en el PDF
-const VERDE = '#16a085';
-const ROJO = '#e74c3c';
-
-app.use(cors({
-    origin: 'http://localhost:3000',
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
-}));
-
-app.use(express.json({ limit: '50mb' }));
-app.use(bodyParser.json({ limit: '50mb' }));
-
-// Asegurarnos de que la carpeta 'fotos' existe
+// Asegurarnos de que la carpeta 'fotos' existe y servir estáticos
 const fotosDir = path.join(__dirname, 'fotos');
 if (!fs.existsSync(fotosDir)) {
-    fs.mkdirSync(fotosDir);
+  fs.mkdirSync(fotosDir);
 }
 
-// Servir archivos estáticos desde la carpeta 'fotos'
+app.use(backGestionTurnosRouter);
+
+
+app.use(backConsultaLaboratoriosRouter);
+
+app.use(backPacientesReporteRouter);
+app.use(backFallecidosReportesRouter);
 app.use('/fotos', express.static(fotosDir));
 // (Desmontado) Usar el router legacy para actualización masiva de pacientes
 // app.use(updateMasivoPacientesRouter);
@@ -97,25 +114,25 @@ app.use('/api/nutricion', backNutricionRouter);
 app.use('/api/nutricion', backConsultaNutricionRouter);
 // Usar router de registro de referencias
 app.use(backRegistroReferenciasRouter);
+// Usar router de Nuevo Ingreso Reportes (expone /api/nuevoingreso y /api/nuevoingreso/excel)
+app.use(backNuevoIngresoReportesRouter);
 // Usar router de consulta de referencias
 app.use(backConsultaReferenciasRouter);
 // Usar router de catálogos
 app.use(backCatalogosRouter);
-// Endpoint para subir/reemplazar foto de paciente
-
-
+// Otros routers existentes
 app.use(backActualizacionPacientes);
 app.use(backEgresoPacientes);
-
-//app.use('/api/pacientes', backRegistroPacientes); 
 app.use('/api/reingreso', backReingresoPacientesRouter);
 // Usar router de consulta de pacientes
 app.use(backConsultaPacientesRouter);
 // Usar router de registro/listado de laboratorios
 app.use('/laboratorios', backRegistroLaboratoriosRouter);
 
-app.use(backGestionTurnos);
 
+app.use(backReporteFaltistasRouter);
+
+app.use(backEgresoReportesRouter);
 
 app.post('/upload-foto/:noAfiliacion', async (req, res) => {
     const { noAfiliacion } = req.params;
@@ -147,6 +164,24 @@ app.post('/upload-foto/:noAfiliacion', async (req, res) => {
 });
 // Endpoints de auth/usuarios ahora están en BackLogin.js
 
+
+
+// Endpoint para verificar si existe una foto
+// Endpoint para actualizar el estado de un turno llamado a 6
+app.put('/turnoLlamado/:idturno', async (req, res) => {
+    const { idturno } = req.params;
+    const { idturnoestado } = req.body;
+    try {
+        // Si no se manda un estado, por defecto 6 (como antes)
+        const nuevoEstado = idturnoestado ? parseInt(idturnoestado, 10) : 6;
+        await pool.query('UPDATE tbl_turnos SET idturnoestado = $1 WHERE idturno = $2', [nuevoEstado, idturno]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error al actualizar el estado del turno:', error);
+        res.status(500).json({ error: 'Error al actualizar el estado del turno.' });
+    }
+});
+
 // Endpoint para obtener el turno llamado actual
 app.get('/turnoLlamado', async (req, res) => {
     try {
@@ -154,9 +189,9 @@ app.get('/turnoLlamado', async (req, res) => {
         const result = await pool.query(`
                 SELECT 
                     t.idturno,
-                    CONCAT(p.primernombre, ' ', COALESCE(p.segundonombre, ''), ' ', COALESCE(p.primerapellido, ''), ' ', COALESCE(p.segundoapellido, '')) AS nombrepaciente,
+                    CONCAT_WS(' ', p.primer_nombre, COALESCE(p.segundo_nombre, ''), COALESCE(p.primer_apellido, ''), COALESCE(p.segundo_apellido, '')) AS nombrepaciente,
                     c.descripcion AS nombreclinica,
-                    p.urlfoto
+                    p.url_foto AS urlfoto
                 FROM tbl_turnos t
                 INNER JOIN tbl_pacientes p ON t.noafiliacion = p.no_afiliacion
                 INNER JOIN tbl_clinica c ON t.idclinica = c.idsala
@@ -1344,59 +1379,7 @@ const definirCarnetPaciente = async (pacienteData, fotoPath, carnetPath) => {
 };
 
 
-// Endpoint para obtener faltistas
-app.get('/api/faltistas', async (req, res) => {
-    try {
-        const { fechainicio, fechafin } = req.query;
-        let query = `
-                SELECT 
-                    pac.noafiliacion,  
-                    pac.primernombre, 
-                    pac.segundonombre, 
-                    pac.otrosnombres, 
-                    pac.primerapellido, 
-                    pac.segundoapellido, 
-                    pac.apellidocasada,
-                    pac.sexo,
-                    cli.descripcion as clinica,
-                    to_char(fal.fechafalta, 'YYYY-MM-DD') as fechafalta,
-                    fal.motivofalta
-                FROM 
-                    tbl_faltistas fal
-                INNER JOIN 
-                    tbl_clinica cli ON fal.idclinica = cli.idsala
-                INNER JOIN 
-                    tbl_pacientes pac ON pac.noafiliacion = fal.noafiliacion
-                WHERE 1=1`;
-        const params = [];
-        let idx = 1;
-        if (fechainicio) {
-            query += ` AND fal.fechafalta >= $${idx}`;
-            params.push(fechainicio);
-            idx++;
-        }
-        if (fechafin) {
-            query += ` AND fal.fechafalta <= $${idx}`;
-            params.push(fechafin);
-            idx++;
-        }
-        query += " ORDER BY fal.fechafalta DESC";
-        const result = await pool.query(query, params);
-        const faltistas = result.rows.map(f => ({
-            noafiliacion: f.noafiliacion,
-            nombres: [f.primernombre, f.segundonombre, f.otrosnombres].filter(Boolean).join(' '),
-            apellidos: [f.primerapellido, f.segundoapellido, f.apellidocasada].filter(Boolean).join(' '),
-            sexo: f.sexo,
-            clinica: f.clinica,
-            fechafalta: f.fechafalta,
-            motivofalta: f.motivofalta
-        }));
-        res.json(faltistas);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ detail: 'Error al obtener los faltistas' });
-    }
-});
+
 
 // Endpoint para obtener paciente por número de afiliación con descripciones de llaves foráneas
 app.get('/pacientes/:noafiliacion', async (req, res) => {
@@ -2149,6 +2132,48 @@ app.get('/reporte-turnos', async (req, res) => {
     }
 });
 
+// Consultar todos los turnos con filtros
+app.get('/turnos', async (req, res) => {
+    try {
+        const { numeroafiliacion, fecha, clinica } = req.query;
+        let filtros = [];
+        let valores = [];
+        let idx = 1;
+        if (numeroafiliacion) {
+            filtros.push(`t.noAfiliacion = $${idx++}`);
+            valores.push(numeroafiliacion);
+        }
+        if (fecha) {
+            filtros.push(`DATE(t.FechaTurno) = $${idx++}`);
+            valores.push(fecha);
+        }
+        if (clinica) {
+            filtros.push(`c.descripcion ILIKE $${idx++}`);
+            valores.push(`%${clinica}%`);
+        }
+        const where = filtros.length > 0 ? 'WHERE ' + filtros.join(' AND ') : '';
+        const consulta = `
+                SELECT 
+                    t.idTurno,
+                    t.noAfiliacion AS numeroafiliacion,
+                    p.primernombre || ' ' || COALESCE(p.segundonombre,'') || ' ' || p.primerapellido || ' ' || COALESCE(p.segundoapellido,'') AS nombrepaciente,
+                    to_char(t.FechaTurno, 'YYYY-MM-DD') AS fecha,
+                    to_char(t.FechaTurno, 'HH24:MI') AS hora,
+                    c.descripcion AS nombreclinica,
+                    e.descripcion AS estado
+                FROM tbl_Turnos t
+                INNER JOIN tbl_pacientes p ON t.noAfiliacion = p.no_Afiliacion
+                INNER JOIN tbl_clinica c ON t.idclinica = c.idsala
+                INNER JOIN tbl_turnoestados e ON t.idturnoestado = e.idturnoestado
+                ${where}
+                ORDER BY t.FechaTurno DESC
+            `;
+        const result = await pool.query(consulta, valores);
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 // Obtener turno más antiguo por clínica
 app.get('/turno-mas-antiguo/:clinica', async (req, res) => {
@@ -2321,7 +2346,23 @@ app.put('/finalizar-turno/:turno_id', async (req, res) => {
     }
 });
 
+// Asignar turno (cambia a estado 1)
+app.put('/asignar-turno/:turno_id', async (req, res) => {
+    try {
+        const { turno_id } = req.params;
+        await pool.query(
+            'UPDATE tbl_Turnos SET idturnoestado = 1, fechaasignacion=now() WHERE idTurno = $1',
+            [turno_id]
+        );
 
+        res.json({
+            success: true,
+            message: "Turno asignado exitosamente"
+        });
+    } catch (err) {
+        res.status(500).json({ detail: err.message });
+    }
+});
 
 // Llamar turno (cambia a estado 3)
 app.put('/llamar-turno/:turno_id', async (req, res) => {
@@ -2983,4 +3024,3 @@ app.get('/jornadas', async (req, res) => {
         res.status(500).json({ error: 'Error al obtener jornadas' });
     }
 });
-

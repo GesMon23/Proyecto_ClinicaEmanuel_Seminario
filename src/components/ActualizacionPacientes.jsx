@@ -14,7 +14,7 @@ const formatearFechaInput = (fecha) => {
 };
 
 const ActualizacionPacientes = () => {
-  // ... (toda la lógica original permanece igual)
+  // ... (toda la lÃ³gica original permanece igual)
   const handleLimpiarTodo = () => {
     setPaciente(null);
     setFormData({});
@@ -102,7 +102,7 @@ const ActualizacionPacientes = () => {
           setModalType('error');
           return;
         }
-        console.log("📸 url_foto crudo desde backend:", pacienteData.url_foto);
+        console.log("ðŸ“¸ url_foto crudo desde backend:", pacienteData.url_foto);
         // Procesar foto si existe
         if (pacienteData.url_foto) {
           const filename = pacienteData.url_foto.replace(/^.*[\\\/]/, '');
@@ -110,7 +110,7 @@ const ActualizacionPacientes = () => {
         } else {
           pacienteData.url_foto = null;
         }
-        console.log("✅ url_foto procesado:", pacienteData.url_foto);
+        console.log("âœ… url_foto procesado:", pacienteData.url_foto);
         setPaciente(pacienteData);
         setFormData(pacienteData);
         setEditando(false);
@@ -142,9 +142,29 @@ const ActualizacionPacientes = () => {
   };
 
   const handleGuardar = async () => {
-    if (!formData.primer_nombre || formData.primer_nombre.trim() === '') {
+    // Validación de campos críticos obligatorios
+    const errores = [];
+    const clean = (v) => (v ?? '').toString().trim();
+    const isEmpty = (v) => clean(v) === '';
+
+    // DPI: exactamente 13 dígitos
+    const dpiStr = clean(formData.dpi);
+    if (!/^\d{13}$/.test(dpiStr)) {
+      errores.push('DPI debe contener exactamente 13 dígitos numéricos.');
+    }
+
+    if (isEmpty(formData.primer_nombre)) errores.push('Primer Nombre es obligatorio.');
+    if (isEmpty(formData.primer_apellido)) errores.push('Primer Apellido es obligatorio.');
+    if (isEmpty(formData.sexo)) errores.push('Sexo es obligatorio.');
+    if (isEmpty(formData.fecha_nacimiento)) errores.push('Fecha de Nacimiento es obligatoria.');
+    if (isEmpty(formData.direccion)) errores.push('Dirección es obligatoria.');
+    if (!formData.id_departamento) errores.push('Departamento es obligatorio.');
+    if (!formData.id_jornada) errores.push('Jornada es obligatoria.');
+    if (!formData.id_acceso) errores.push('Acceso Vascular es obligatorio.');
+
+    if (errores.length > 0) {
       setShowModal(true);
-      setModalMessage('El campo "Primer Nombre" es obligatorio.');
+      setModalMessage('Corrija los siguientes campos:\n\n- ' + errores.join('\n- '));
       setModalType('error');
       return;
     }
@@ -172,7 +192,7 @@ const ActualizacionPacientes = () => {
         sesiones_autorizadas_mes: formData.sesiones_autorizadas_mes || null
       };
 
-      // Si se tomó una nueva foto en base64, subirla primero
+      // Si se tomÃ³ una nueva foto en base64, subirla primero
       if (formData.urlfoto && formData.urlfoto.startsWith('data:image')) {
         const resFoto = await api.post(`/Aupload-foto/${formData.no_afiliacion}`, { imagenBase64: formData.urlfoto });
         if (resFoto.data && resFoto.data.success) {
@@ -224,10 +244,10 @@ const ActualizacionPacientes = () => {
         type={modalType}
       />
 
-      {/* Header con logo y formulario de búsqueda */}
+      {/* Header con logo y formulario de bÃºsqueda */}
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 overflow-hidden mb-8">
         <div className="p-6">
-          {/* Logo y título */}
+          {/* Logo y tÃ­tulo */}
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-6 flex-wrap mb-4">
               <img
@@ -242,7 +262,7 @@ const ActualizacionPacientes = () => {
             <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-slate-600 to-transparent"></div>
           </div>
 
-          {/* Formulario de búsqueda */}
+          {/* Formulario de bÃºsqueda */}
           <form onSubmit={buscarPaciente} className="max-w-md mx-auto">
             <div className="space-y-4">
               {/* numero de afiliacion */}
@@ -253,7 +273,7 @@ const ActualizacionPacientes = () => {
                   placeholder="Número de Afiliación"
                   value={busqueda.no_afiliacion}
                   onChange={handleBusquedaChange}
-                  className="w-full text-lg px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                  disabled={Boolean(busqueda.dpi)} className="w-full text-lg px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 disabled:opacity-60"
                 />
               </div>
               {/* dpi */}
@@ -263,8 +283,21 @@ const ActualizacionPacientes = () => {
                   name="dpi"
                   placeholder="DPI"
                   value={busqueda.dpi}
-                  onChange={handleBusquedaChange}
-                  className="w-full text-lg px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                  onChange={(e) => {
+                    const onlyDigits = (e.target.value || '').replace(/\D+/g, '').slice(0, 13);
+                    setBusqueda(prev => ({ ...prev, dpi: onlyDigits }));
+                  }}
+                  disabled={Boolean(busqueda.no_afiliacion)} className="w-full text-lg px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 disabled:opacity-60"
+                  inputMode="numeric"
+                  maxLength={13}
+                  pattern="\\d{13}"
+                  onKeyDown={(e) => {
+                    if (["e","E","+","-",".",","," "].includes(e.key)) e.preventDefault();
+                  }}
+                  onPaste={(e) => {
+                    const t = (e.clipboardData.getData('text') || '').trim();
+                    if (/[^0-9]/.test(t)) e.preventDefault();
+                  }}
                 />
               </div>
 
@@ -301,7 +334,7 @@ const ActualizacionPacientes = () => {
       {paciente && (
         <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
           <div className="p-6">
-            {/* Título del formulario */}
+            {/* TÃ­tulo del formulario */}
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                 Información del Paciente
@@ -313,7 +346,7 @@ const ActualizacionPacientes = () => {
                 </span>
               </div>
             </div>
-            {/* Botones de acción */}
+            {/* Botones de acciÃ³n */}
             <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md mt-0 mb-4">
               {!editando ? (
                 <>
@@ -513,16 +546,29 @@ const ActualizacionPacientes = () => {
                   type="text"
                   name="dpi"
                   value={formData.dpi || ''}
-                  onChange={handleInputChange}
+                  onChange={(e) => {
+                    const onlyDigits = (e.target.value || '').replace(/\D+/g, '').slice(0, 13);
+                    setFormData(prev => ({ ...prev, dpi: onlyDigits }));
+                  }}
                   disabled={!editando}
                   className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent ${!editando
                     ? 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-400'
                     : 'bg-white dark:bg-slate-700 border-gray-300 dark:border-slate-500 text-gray-900 dark:text-white'
                     }`}
+                  inputMode="numeric"
+                  maxLength={13}
+                  pattern="\\d{13}"
+                  onKeyDown={(e) => {
+                    if (["e","E","+","-",".",","," "].includes(e.key)) e.preventDefault();
+                  }}
+                  onPaste={(e) => {
+                    const t = (e.clipboardData.getData('text') || '').trim();
+                    if (/[^0-9]/.test(t)) e.preventDefault();
+                  }}
                 />
               </div>
 
-              {/* No. Afiliación */}
+              {/* No. AfiliaciÃ³n */}
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
                   No. Afiliación
@@ -537,7 +583,7 @@ const ActualizacionPacientes = () => {
                 />
               </div>
 
-              {/* Dirección */}
+              {/* DirecciÃ³n */}
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
                   Dirección
@@ -625,7 +671,7 @@ const ActualizacionPacientes = () => {
             {/* Separador */}
             <div className="border-t border-gray-200 dark:border-slate-700 my-8"></div>
 
-            {/* Sección de foto */}
+            {/* SecciÃ³n de foto */}
             <div className="flex flex-col items-center space-y-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                 Fotografía del Paciente
@@ -634,7 +680,7 @@ const ActualizacionPacientes = () => {
               {/* Contenedor de la foto */}
               <div className="relative">
                 <div className="w-48 h-48 sm:w-56 sm:h-56 lg:w-64 lg:h-64 rounded-2xl overflow-hidden border-4 border-green-600 dark:border-green-400 shadow-xl bg-gray-100 dark:bg-slate-800">
-                  {console.log("🖼️ URL usada para mostrar foto:", formData.urlfoto || formData.url_foto)}
+                  {console.log("ðŸ–¼ï¸ URL usada para mostrar foto:", formData.urlfoto || formData.url_foto)}
                   <img
                     alt="Foto del paciente"
                     src={
@@ -654,13 +700,13 @@ const ActualizacionPacientes = () => {
                 {editando && (
                   <div className="absolute -bottom-2 -right-2">
                     <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">✎</span>
+                      <span className="text-white text-xs font-bold"></span>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Botón para tomar nueva foto */}
+              {/* BotÃ³n para tomar nueva foto */}
               <button
                 onClick={() => setShowWebcam(true)}
                 disabled={!editando}
@@ -676,7 +722,7 @@ const ActualizacionPacientes = () => {
         </div>
       )}
 
-      {/* Modal para la cámara */}
+      {/* Modal para la cÃ¡mara */}
       {showWebcam && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 max-w-2xl w-full max-h-[90vh] overflow-auto">

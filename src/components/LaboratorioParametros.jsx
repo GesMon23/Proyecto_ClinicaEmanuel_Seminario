@@ -92,7 +92,7 @@ function LaboratorioParametros({ onSubmit }) {
   const [modalTitle, setModalTitle] = useState('');
   const [modalMessage, setModalMessage] = useState('');
   const [modalType, setModalType] = useState('info');
-  
+
   // Helpers de mapeo a booleanos
   const mapSiNoToBoolean = (v) => {
     if (v == null) return null;
@@ -335,181 +335,148 @@ function LaboratorioParametros({ onSubmit }) {
 
   return (
     <>
-    <CustomModal
-      show={showModal}
-      onClose={() => setShowModal(false)}
-      title={modalTitle}
-      message={modalMessage}
-      type={modalType}
-    />
-    <Form onSubmit={handleSubmit} className="space-y-6">
-      {/* Campo de afiliación y búsqueda de paciente */}
-      {paciente && (
-        <div className="bg-green-100 text-green-900 dark:bg-green-900 dark:text-green-200 border border-green-700 dark:border-green-400 rounded-xl py-3 mb-6 text-center text-lg font-semibold tracking-wide w-full" style={{ fontSize: 22, letterSpacing: 0.5 }}>
-          {paciente}
-        </div>
-      )}
-      <Row className="mb-3">
-        <Col md={12} xs={12}>
-          <Form.Group>
-            <Form.Label className="font-medium dark:text-gray-300">No. Afiliación *</Form.Label>
-            <>
-              <div className="flex items-center gap-2">
-                <Form.Control
-                  type="text"
-                  value={noafiliacion}
-                  onChange={e => setNoAfiliacion(e.target.value)}
-                  required
-                  placeholder="Ingrese número de afiliación"
-                  className="flex-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm dark:bg-gray-700 dark:text-gray-100"
-                  style={{ flex: 2 }}
-                  ref={noAfiRef}
-                />
-                <Button
-                  type="button"
-                  className="w-full sm:min-w-[100px] bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-4 rounded"
-                  onClick={async () => {
-                    setBusquedaError("");
-                    setPaciente(null);
-                    if (!noafiliacion) {
-                      setBusquedaError('Ingrese un número de afiliación.');
-                      return;
-                    }
-                    try {
-                      const response = await api.get(`/pacientes/${noafiliacion}`);
-                      const p = response.data;
-                      if (p && (p.primer_nombre || p.primer_apellido)) {
-                        // Si el estado indica egreso, bloquear (usamos descripcion si está disponible)
-                        if ((p.estado_descripcion || '').toString().toLowerCase() === 'egreso') {
-                          setBusquedaError('El paciente está egresado y no puede ser consultado.');
-                          setPaciente(null);
-                          return;
+      <CustomModal
+        show={showModal}
+        onClose={() => setShowModal(false)}
+        title={modalTitle}
+        message={modalMessage}
+        type={modalType}
+      />
+      <Form onSubmit={handleSubmit} className="space-y-6">
+        {/* Campo de afiliación y búsqueda de paciente */}
+        {paciente && (
+          <div className="bg-green-100 text-green-900 dark:bg-green-900 dark:text-green-200 border border-green-700 dark:border-green-400 rounded-xl py-3 mb-6 text-center text-lg font-semibold tracking-wide w-full" style={{ fontSize: 22, letterSpacing: 0.5 }}>
+            {paciente}
+          </div>
+        )}
+        <Row className="mb-3">
+          <Col md={12} xs={12}>
+            <Form.Group>
+              <Form.Label className="font-medium dark:text-gray-300">No. Afiliación *</Form.Label>
+              <>
+                <div className="flex items-center gap-2">
+                  <Form.Control
+                    type="text"
+                    value={noafiliacion}
+                    onChange={e => setNoAfiliacion(e.target.value)}
+                    required
+                    placeholder="Ingrese número de afiliación"
+                    className="flex-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm dark:bg-gray-700 dark:text-gray-100"
+                    style={{ flex: 2 }}
+                    ref={noAfiRef}
+                  />
+                  <Button
+                    type="button"
+                    className="w-full sm:min-w-[100px] bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-4 rounded"
+                    onClick={async () => {
+                      setBusquedaError("");
+                      setPaciente(null);
+                      if (!noafiliacion) {
+                        setBusquedaError('Ingrese un número de afiliación.');
+                        return;
+                      }
+                      try {
+                        const response = await api.get(`/pacientes/${noafiliacion}`);
+                        const p = response.data;
+                        if (p && (p.primer_nombre || p.primer_apellido)) {
+                          // Si el estado indica egreso, bloquear (usamos descripcion si está disponible)
+                          if ((p.estado_descripcion || '').toString().toLowerCase() === 'egreso') {
+                            setBusquedaError('El paciente está egresado y no puede ser consultado.');
+                            setPaciente(null);
+                            return;
+                          }
+                          const nombreCompleto = [
+                            p.primer_nombre,
+                            p.segundo_nombre,
+                            p.otros_nombres,
+                            p.primer_apellido,
+                            p.segundo_apellido,
+                            p.apellido_casada
+                          ].filter(Boolean).join(' ');
+                          setPaciente(nombreCompleto || p.no_afiliacion);
+                          // Al cambiar de paciente, restablecer parámetros al set base.
+                          // Los parámetros extras agregados manualmente solo aplican al paciente actual.
+                          setParametrosLab(PARAMETROS_LAB_BASE);
+                          // Cargar historial de laboratorios
+                          try {
+                            const { data } = await api.get(`/laboratorios/${noafiliacion}`);
+                            setRegistros(data?.data || []);
+                            // Cargar últimos parámetros del último laboratorio del paciente
+                            await cargarUltimosParametros(noafiliacion);
+                          } catch {
+                            setRegistros([]);
+                          }
+                        } else {
+                          setBusquedaError('No se encontró el paciente con ese número de afiliación.');
                         }
-                        const nombreCompleto = [
-                          p.primer_nombre,
-                          p.segundo_nombre,
-                          p.otros_nombres,
-                          p.primer_apellido,
-                          p.segundo_apellido,
-                          p.apellido_casada
-                        ].filter(Boolean).join(' ');
-                        setPaciente(nombreCompleto || p.no_afiliacion);
-                        // Al cambiar de paciente, restablecer parámetros al set base.
-                        // Los parámetros extras agregados manualmente solo aplican al paciente actual.
-                        setParametrosLab(PARAMETROS_LAB_BASE);
-                        // Cargar historial de laboratorios
-                        try {
-                          const { data } = await api.get(`/laboratorios/${noafiliacion}`);
-                          setRegistros(data?.data || []);
-                          // Cargar últimos parámetros del último laboratorio del paciente
-                          await cargarUltimosParametros(noafiliacion);
-                        } catch {
-                          setRegistros([]);
-                        }
-                      } else {
+                      } catch (e) {
                         setBusquedaError('No se encontró el paciente con ese número de afiliación.');
                       }
-                    } catch (e) {
-                      setBusquedaError('No se encontró el paciente con ese número de afiliación.');
-                    }
-                  }}
-                >
-                  Buscar
-                </Button>
-                <Button
-                  type="button"
-                  className="w-full sm:min-w-[100px] bg-red-700 hover:bg-red-800 text-white font-semibold py-2 px-4 rounded"
-                  onClick={() => {
-                    setNoAfiliacion("");
-                    setValores({});
-                    setPaciente(null);
-                    setBusquedaError("");
-                    setBloqueados({});
-                    setFechasParametro({});
-                    // Restablecer a los parámetros base al limpiar (los agregados solo son por paciente actual)
-                    setParametrosLab(PARAMETROS_LAB_BASE);
-                  }}
-                >
-                  Limpiar
-                </Button>
-                <div className="flex-grow" />
-                {paciente && (
-                  <>
-                    <Form.Group className="w-full sm:min-w-[200px] mr-4">
-                      <Form.Label className="block mb-1 dark:text-gray-300">Examen realizado</Form.Label>
-                      <Form.Select
-                        value={valores.examen_realizado || ''}
-                        onChange={e => handleChange('examen_realizado', e.target.value)}
-                        required
-                        className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded px-3 py-2 text-base"
-                      >
-                        <option value="">Seleccione</option>
-                        <option value="Sí">Sí</option>
-                        <option value="No">No</option>
-                      </Form.Select>
-                    </Form.Group>
-                    <Form.Group className="w-full sm:min-w-[200px]">
-                      <Form.Label className="dark:text-gray-300">Fecha de laboratorio *</Form.Label>
-                      <div className="flex items-center gap-2">
-                        <Form.Control
-                          type="date"
-                          value={valores.fecha_laboratorio || ''}
-                          onChange={e => handleChange('fecha_laboratorio', e.target.value)}
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200"
-                        />
-                      </div>
-                    </Form.Group>
-                  </>
+                    }}
+                  >
+                    Buscar
+                  </Button>
+                  <Button
+                    type="button"
+                    className="w-full sm:min-w-[100px] bg-red-700 hover:bg-red-800 text-white font-semibold py-2 px-4 rounded"
+                    onClick={() => {
+                      setNoAfiliacion("");
+                      setValores({});
+                      setPaciente(null);
+                      setBusquedaError("");
+                      setBloqueados({});
+                      setFechasParametro({});
+                      // Restablecer a los parámetros base al limpiar (los agregados solo son por paciente actual)
+                      setParametrosLab(PARAMETROS_LAB_BASE);
+                    }}
+                  >
+                    Limpiar
+                  </Button>
+                  <div className="flex-grow" />
+                  {paciente && (
+                    <>
+                      <Form.Group className="w-full sm:min-w-[200px] mr-4">
+                        <Form.Label className="block mb-1 dark:text-gray-300">Examen realizado</Form.Label>
+                        <Form.Select
+                          value={valores.examen_realizado || ''}
+                          onChange={e => handleChange('examen_realizado', e.target.value)}
+                          required
+                          className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded px-3 py-2 text-base"
+                        >
+                          <option value="">Seleccione</option>
+                          <option value="Sí">Sí</option>
+                          <option value="No">No</option>
+                        </Form.Select>
+                      </Form.Group>
+                      <Form.Group className="w-full sm:min-w-[200px]">
+                        <Form.Label className="dark:text-gray-300">Fecha de laboratorio *</Form.Label>
+                        <div className="flex items-center gap-2">
+                          <Form.Control
+                            type="date"
+                            value={valores.fecha_laboratorio || ''}
+                            onChange={e => handleChange('fecha_laboratorio', e.target.value)}
+                            className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200"
+                          />
+                        </div>
+                      </Form.Group>
+                    </>
+                  )}
+                </div>
+                {busquedaError && (
+                  <div className="text-red-600 dark:text-red-400 font-medium mt-2">{busquedaError}</div>
                 )}
-              </div>
-              {busquedaError && (
-                <div className="text-red-600 dark:text-red-400 font-medium mt-2">{busquedaError}</div>
-              )}
-            </>
-          </Form.Group>
-        </Col>
-      </Row>
-
-
-
-      {/* Renderizado condicional de campos */}
-      {/* Si elige "No" solo mostrar causa de no realizado */}
-      {paciente && valores.examen_realizado === 'No' && (
-        <Row className="mb-3">
-          <Col md={12} sm={12} xs={12}>
-            <Form.Group>
-            <Form.Label className="dark:text-gray-300">Periodicidad *</Form.Label>
-                <Form.Select
-                  value={valores.idPerLaboratorio || ''}
-                  onChange={e => handleChange('idPerLaboratorio', e.target.value)}
-                  className="w-full sm:min-w-[240px] md:min-w-[260px] bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded px-3 py-2 text-base"
-                >
-                  <option value="">Seleccione</option>
-                  <option value="1">Mensual</option>
-                  <option value="2">Trimestral</option>
-                  <option value="3">Semestral</option>
-                  {/* Agrega más opciones según tus datos reales */}
-                </Form.Select>
-              <Form.Label className="dark:text-gray-300">Causa de no realizado</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={6}
-                value={valores.causa_no_realizado || ''}
-                onChange={e => handleChange('causa_no_realizado', e.target.value)}
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200"
-                style={{ resize: 'vertical' }}
-              />
+              </>
             </Form.Group>
           </Col>
         </Row>
-      )}
 
-      {/* Si elige "Sí" mostrar todos los demás campos (excepto Fecha de laboratorio que ya está arriba) */}
-      {paciente && valores.examen_realizado === 'Sí' && (
-        <>
-          {/* Periodicidad */}
+
+
+        {/* Renderizado condicional de campos */}
+        {/* Si elige "No" solo mostrar causa de no realizado */}
+        {paciente && valores.examen_realizado === 'No' && (
           <Row className="mb-3">
-            <Col md={4} sm={6} xs={12}>
+            <Col md={12} sm={12} xs={12}>
               <Form.Group>
                 <Form.Label className="dark:text-gray-300">Periodicidad *</Form.Label>
                 <Form.Select
@@ -523,123 +490,214 @@ function LaboratorioParametros({ onSubmit }) {
                   <option value="3">Semestral</option>
                   {/* Agrega más opciones según tus datos reales */}
                 </Form.Select>
+                <Form.Label className="dark:text-gray-300">Causa de no realizado</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={6}
+                  value={valores.causa_no_realizado || ''}
+                  onChange={e => handleChange('causa_no_realizado', e.target.value)}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200"
+                  style={{ resize: 'vertical' }}
+                />
               </Form.Group>
             </Col>
           </Row>
+        )}
 
-          {/* Parámetros del laboratorio */}
-          {/* Mostrar solo 2 parámetros por fila */}
-          {Array.from({ length: Math.ceil((parametrosLab.length + 1) / 2) }).map((_, rowIdx) => {
-            const isLastRow = rowIdx === Math.floor((parametrosLab.length) / 2);
-            return (
-              <Row className="mb-3" key={rowIdx}>
-                {/* Parámetros normales (máx 2 por fila) */}
-                {parametrosLab.slice(rowIdx * 2, rowIdx * 2 + 2).map(({ label, param }, idx) => {
-                  const isParametroAgregado = !PARAMETROS_LAB_BASE.find(base => base.param === param);
-                  return (
-                    <Col md={6} sm={12} xs={12} key={param} className="mb-3">
-                      <Form.Group>
-                        <Form.Label className="dark:text-gray-300">{label}</Form.Label>
-                        <div className="flex items-center gap-3">
-                          <Form.Control
-                            type="text"
-                            value={valores[param] || ""}
-                            onChange={e => handleChange(param, e.target.value)}
-                            placeholder={`Ingrese ${label.toLowerCase()}`}
-                            className={`flex-1 border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 ${bloqueados[param] ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed opacity-90' : ''}`}
-                            readOnly={!!bloqueados[param]}
-                          />
-                          {fechasParametro[param] && (
-                            <div className="flex items-center">
-                              <span
-                                className="inline-flex items-center gap-2 py-1.5 px-3 rounded shadow-md bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200 border border-emerald-200/80 dark:border-emerald-700/60 font-semibold"
-                                title="Fecha del laboratorio de origen"
-                              >
-                                <span className="leading-none">📅</span>
-                                <span className="leading-none text-sm">{fechasParametro[param]}</span>
-                              </span>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2">
-                            {bloqueados[param] ? (
-                              <Button
-                                className="flex items-center justify-center bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2 px-4 rounded shadow-md"
-                                onClick={() => setBloqueados(prev => ({ ...prev, [param]: false }))}
-                                title="Actualizar este campo"
-                                style={{ boxShadow: '0 2px 8px rgba(25,118,210,0.15)' }}
-                              >
-                                Actualizar
-                              </Button>
-                            ) : (
-                              <>
-                                <Button
-                                  className="flex items-center justify-center bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2 px-4 rounded shadow-md"
-                                  onClick={() => setBloqueados(prev => ({ ...prev, [param]: true }))}
-                                  title="Finalizar edición de este campo"
-                                  style={{ boxShadow: '0 2px 8px rgba(56,142,60,0.15)' }}
+        {/* Si elige "Sí" mostrar todos los demás campos (excepto Fecha de laboratorio que ya está arriba) */}
+        {paciente && valores.examen_realizado === 'Sí' && (
+          <>
+            {/* Periodicidad */}
+            <Row className="mb-3">
+              <Col md={4} sm={6} xs={12}>
+                <Form.Group>
+                  <Form.Label className="dark:text-gray-300">Periodicidad *</Form.Label>
+                  <Form.Select
+                    value={valores.idPerLaboratorio || ''}
+                    onChange={e => handleChange('idPerLaboratorio', e.target.value)}
+                    className="w-full sm:min-w-[240px] md:min-w-[260px] bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded px-3 py-2 text-base"
+                  >
+                    <option value="">Seleccione</option>
+                    <option value="1">Mensual</option>
+                    <option value="2">Trimestral</option>
+                    <option value="3">Semestral</option>
+                    {/* Agrega más opciones según tus datos reales */}
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+            </Row>
+
+            {/* Parámetros del laboratorio */}
+            {/* Mostrar solo 2 parámetros por fila */}
+            {Array.from({ length: Math.ceil((parametrosLab.length + 1) / 2) }).map((_, rowIdx) => {
+              const isLastRow = rowIdx === Math.floor((parametrosLab.length) / 2);
+              return (
+                <Row className="mb-3" key={rowIdx}>
+                  {/* Parámetros normales (máx 2 por fila) */}
+                  {parametrosLab.slice(rowIdx * 2, rowIdx * 2 + 2).map(({ label, param }, idx) => {
+                    const isParametroAgregado = !PARAMETROS_LAB_BASE.find(base => base.param === param);
+                    return (
+                      <Col md={6} sm={12} xs={12} key={param} className="mb-3">
+                        <Form.Group>
+                          <Form.Label className="dark:text-gray-300">{label}</Form.Label>
+                          <div className="flex items-center gap-3">
+                            <Form.Control
+                              type="number"
+                              inputMode="decimal"
+                              step="0.01"
+                              min="0"
+                              value={valores[param] || ""}
+                              onChange={(e) => {
+                                const raw = (e.target.value ?? '').trim();
+                                // Permitir vacío para borrar
+                                if (raw === '') { handleChange(param, ''); return; }
+                                // Acepta hasta 6 enteros y 2 decimales (ajusta si necesitas más precisión)
+                                const regex = /^\d{1,6}(\.\d{0,2})?$/;
+                                if (!regex.test(raw)) return; // ignora cambios inválidos
+                                const num = parseFloat(raw);
+                                if (Number.isNaN(num)) return;
+                                handleChange(param, Math.max(0, num).toString());
+                              }}
+                              onKeyDown={(e) => {
+                                // Bloquear negativos, signos y notación científica
+                                if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') e.preventDefault();
+                              }}
+                              onPaste={(e) => {
+                                const t = (e.clipboardData.getData('text') || '').trim();
+                                // Evitar pegar negativos o con signo
+                                if (/^[-+]/.test(t)) e.preventDefault();
+                              }}
+                              placeholder={`Ingrese ${label.toLowerCase()}`}
+                              className={`flex-1 border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 ${bloqueados[param] ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed opacity-90' : ''}`}
+                              readOnly={!!bloqueados[param]}
+                            />
+                            {fechasParametro[param] && (
+                              <div className="flex items-center">
+                                <span
+                                  className="inline-flex items-center gap-2 py-1.5 px-3 rounded shadow-md bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200 border border-emerald-200/80 dark:border-emerald-700/60 font-semibold"
+                                  title="Fecha del laboratorio de origen"
                                 >
-                                  Listo
-                                </Button>
-                                <Button
-                                  className="flex items-center justify-center bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded shadow-md"
-                                  onClick={() => {
-                                    const original = (originalValores[param] ?? '').toString();
-                                    setValores(v => ({ ...v, [param]: original }));
-                                    setBloqueados(prev => ({ ...prev, [param]: true }));
-                                  }}
-                                  title="Cancelar edición y restaurar valor anterior"
-                                  style={{ boxShadow: '0 2px 8px rgba(100,116,139,0.15)' }}
-                                >
-                                  Cancelar
-                                </Button>
-                              </>
+                                  <span className="leading-none">📅</span>
+                                  <span className="leading-none text-sm">{fechasParametro[param]}</span>
+                                </span>
+                              </div>
                             )}
-
-                            {/* Controles extra solo para parámetros agregados por el usuario */}
-                            {!PARAMETROS_LAB_BASE.find(base => base.param === param) && (
-                              <>
+                            <div className="flex items-center gap-2">
+                              {bloqueados[param] ? (
                                 <Button
-                                  className="flex items-center justify-center bg-red-700 hover:bg-red-800 text-white font-semibold py-2 px-4 rounded shadow-md"
-                                  onClick={() => setParametrosLab(parametrosLab.filter(p => p.param !== param))}
-                                  title="Eliminar este parámetro"
-                                  style={{ boxShadow: '0 2px 8px rgba(167,29,42,0.12)' }}
+                                  className="flex items-center justify-center bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2 px-4 rounded shadow-md"
+                                  onClick={() => setBloqueados(prev => ({ ...prev, [param]: false }))}
+                                  title="Actualizar este campo"
+                                  style={{ boxShadow: '0 2px 8px rgba(25,118,210,0.15)' }}
                                 >
-                                  Eliminar
-                                  <span className="w-5 h-5 rounded-full bg-gray-800 flex items-center justify-center ml-2">
-                                    <i className="fas fa-times text-white text-xs font-bold" />
-                                  </span>
+                                  Actualizar
                                 </Button>
-                                {param === parametrosLab[parametrosLab.length - 1].param && (
+                              ) : (
+                                <>
                                   <Button
-                                    className="flex items-center justify-center bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-4 rounded shadow-md"
-                                    onClick={() => setShowAddParam(true)}
-                                    title="Agregar nuevo parámetro"
-                                    style={{ boxShadow: '0 2px 8px rgba(56,142,60,0.13)' }}
+                                    className="flex items-center justify-center bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2 px-4 rounded shadow-md"
+                                    onClick={() => setBloqueados(prev => ({ ...prev, [param]: true }))}
+                                    title="Finalizar edición de este campo"
+                                    style={{ boxShadow: '0 2px 8px rgba(56,142,60,0.15)' }}
                                   >
-                                    Agregar
+                                    Listo
+                                  </Button>
+                                  <Button
+                                    className="flex items-center justify-center bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded shadow-md"
+                                    onClick={() => {
+                                      const original = (originalValores[param] ?? '').toString();
+                                      setValores(v => ({ ...v, [param]: original }));
+                                      setBloqueados(prev => ({ ...prev, [param]: true }));
+                                    }}
+                                    title="Cancelar edición y restaurar valor anterior"
+                                    style={{ boxShadow: '0 2px 8px rgba(100,116,139,0.15)' }}
+                                  >
+                                    Cancelar
+                                  </Button>
+                                </>
+                              )}
+
+                              {/* Controles extra solo para parámetros agregados por el usuario */}
+                              {!PARAMETROS_LAB_BASE.find(base => base.param === param) && (
+                                <>
+                                  <Button
+                                    className="flex items-center justify-center bg-red-700 hover:bg-red-800 text-white font-semibold py-2 px-4 rounded shadow-md"
+                                    onClick={() => setParametrosLab(parametrosLab.filter(p => p.param !== param))}
+                                    title="Eliminar este parámetro"
+                                    style={{ boxShadow: '0 2px 8px rgba(167,29,42,0.12)' }}
+                                  >
+                                    Eliminar
                                     <span className="w-5 h-5 rounded-full bg-gray-800 flex items-center justify-center ml-2">
-                                      <i className="nc-icon nc-simple-add text-white text-xs" />
+                                      <i className="fas fa-times text-white text-xs font-bold" />
                                     </span>
                                   </Button>
-                                )}
-                              </>
-                            )}
+                                  {param === parametrosLab[parametrosLab.length - 1].param && (
+                                    <Button
+                                      className="flex items-center justify-center bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-4 rounded shadow-md"
+                                      onClick={() => setShowAddParam(true)}
+                                      title="Agregar nuevo parámetro"
+                                      style={{ boxShadow: '0 2px 8px rgba(56,142,60,0.13)' }}
+                                    >
+                                      Agregar
+                                      <span className="w-5 h-5 rounded-full bg-gray-800 flex items-center justify-center ml-2">
+                                        <i className="nc-icon nc-simple-add text-white text-xs" />
+                                      </span>
+                                    </Button>
+                                  )}
+                                </>
+                              )}
+                            </div>
                           </div>
+                        </Form.Group>
+                      </Col>
+                    );
+                  })}
+                  {/* Botones en la última columna de la última fila */}
+                  {isLastRow && parametrosLab.length === PARAMETROS_LAB_BASE.length && (
+                    <Col md={6} sm={12} xs={12} className="mb-3">
+                      <Form.Group>
+                        <Form.Label className="dark:text-gray-700">&nbsp;</Form.Label>
+                        <div>
+                          <Button
+                            className="flex items-center justify-center bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-4 rounded shadow-md"
+                            onClick={() => setShowAddParam(true)}
+                            title="Agregar nuevo parámetro"
+                            style={{ boxShadow: '0 2px 8px rgba(56,142,60,0.13)' }}
+                          >
+                            Agregar
+                            <span className="w-5 h-5 rounded-full bg-gray-800 flex items-center justify-center ml-2">
+                              <i className="nc-icon nc-simple-add text-white text-xs" />
+                            </span>
+                          </Button>
                         </div>
                       </Form.Group>
                     </Col>
-                  );
-                })}
-                {/* Botones en la última columna de la última fila */}
-                {isLastRow && parametrosLab.length === PARAMETROS_LAB_BASE.length && (
-                  <Col md={6} sm={12} xs={12} className="mb-3">
-                    <Form.Group>
-                      <Form.Label className="dark:text-gray-700">&nbsp;</Form.Label>
-                      <div>
+                  )}
+                </Row>
+
+              );
+            })}
+            {/* Input para agregar nuevo parámetro */}
+            {showAddParam && (
+              <Row className="mb-3">
+                <Col md={8} sm={12} xs={12} className="mb-3">
+                  <Form.Group>
+                    <Form.Label className="dark:text-gray-300">Nuevo parámetro de laboratorio</Form.Label>
+                    <div className="flex items-center gap-2">
+                      <Form.Control
+                        type="text"
+                        value={nuevoParametro}
+                        onChange={e => setNuevoParametro(e.target.value)}
+                        placeholder="Ingrese el nombre del nuevo parámetro"
+                        autoFocus
+                        className="flex-1 border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                      />
+                      <div className="flex flex-col gap-2 ml-2 items-center">
                         <Button
                           className="flex items-center justify-center bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-4 rounded shadow-md"
-                          onClick={() => setShowAddParam(true)}
-                          title="Agregar nuevo parámetro"
+                          onClick={handleAddParametro}
+                          title="Agregar parámetro"
+                          disabled={!nuevoParametro.trim()}
                           style={{ boxShadow: '0 2px 8px rgba(56,142,60,0.13)' }}
                         >
                           Agregar
@@ -647,179 +705,143 @@ function LaboratorioParametros({ onSubmit }) {
                             <i className="nc-icon nc-simple-add text-white text-xs" />
                           </span>
                         </Button>
+                        <Button
+                          className="flex items-center justify-center bg-red-700 hover:bg-red-800 text-white font-semibold py-2 px-4 rounded shadow-md"
+                          onClick={() => { setShowAddParam(false); setNuevoParametro(""); }}
+                          title="Cancelar"
+                          style={{ boxShadow: '0 2px 8px rgba(167,29,42,0.12)' }}
+                        >
+                          Cancelar
+                          <span className="w-5 h-5 rounded-full bg-gray-800 flex items-center justify-center ml-2">
+                            <i className="fas fa-times text-white text-xs font-bold" />
+                          </span>
+                        </Button>
                       </div>
-                    </Form.Group>
-                  </Col>
-                )}
+                    </div>
+                  </Form.Group>
+                </Col>
               </Row>
 
-            );
-          })}
-          {/* Input para agregar nuevo parámetro */}
-          {showAddParam && (
+            )}
+            {/* Infección de Acceso y Complicación de Acceso */}
             <Row className="mb-3">
-              <Col md={8} sm={12} xs={12} className="mb-3">
+              <Col md={4} sm={6} xs={12}>
                 <Form.Group>
-                  <Form.Label className="dark:text-gray-300">Nuevo parámetro de laboratorio</Form.Label>
-                  <div className="flex items-center gap-2">
-                    <Form.Control
-                      type="text"
-                      value={nuevoParametro}
-                      onChange={e => setNuevoParametro(e.target.value)}
-                      placeholder="Ingrese el nombre del nuevo parámetro"
-                      autoFocus
-                      className="flex-1 border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-                    />
-                    <div className="flex flex-col gap-2 ml-2 items-center">
-                      <Button
-                        className="flex items-center justify-center bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-4 rounded shadow-md"
-                        onClick={handleAddParametro}
-                        title="Agregar parámetro"
-                        disabled={!nuevoParametro.trim()}
-                        style={{ boxShadow: '0 2px 8px rgba(56,142,60,0.13)' }}
-                      >
-                        Agregar
-                        <span className="w-5 h-5 rounded-full bg-gray-800 flex items-center justify-center ml-2">
-                          <i className="nc-icon nc-simple-add text-white text-xs" />
-                        </span>
-                      </Button>
-                      <Button
-                        className="flex items-center justify-center bg-red-700 hover:bg-red-800 text-white font-semibold py-2 px-4 rounded shadow-md"
-                        onClick={() => { setShowAddParam(false); setNuevoParametro(""); }}
-                        title="Cancelar"
-                        style={{ boxShadow: '0 2px 8px rgba(167,29,42,0.12)' }}
-                      >
-                        Cancelar
-                        <span className="w-5 h-5 rounded-full bg-gray-800 flex items-center justify-center ml-2">
-                          <i className="fas fa-times text-white text-xs font-bold" />
-                        </span>
-                      </Button>
-                    </div>
-                  </div>
+                  <Form.Label className="dark:text-gray-300">Infección de acceso</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={valores.infeccion_acceso || ''}
+                    onChange={e => handleChange('infeccion_acceso', e.target.value)}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={4} sm={6} xs={12}>
+                <Form.Group>
+                  <Form.Label className="dark:text-gray-300">Complicación de acceso</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={valores.complicacion_acceso || ''}
+                    onChange={e => handleChange('complicacion_acceso', e.target.value)}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={4} sm={6} xs={12}>
+                <Form.Group>
+                  <Form.Label className="dark:text-gray-300">Virología</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={valores.virologia || ''}
+                    onChange={e => handleChange('virologia', e.target.value)}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                  />
                 </Form.Group>
               </Col>
             </Row>
 
-          )}
-          {/* Infección de Acceso y Complicación de Acceso */}
-          <Row className="mb-3">
-            <Col md={4} sm={6} xs={12}>
-              <Form.Group>
-                <Form.Label className="dark:text-gray-300">Infección de acceso</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={valores.infeccion_acceso || ''}
-                  onChange={e => handleChange('infeccion_acceso', e.target.value)}
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-                />
-              </Form.Group>
-            </Col>
-            <Col md={4} sm={6} xs={12}>
-              <Form.Group>
-                <Form.Label className="dark:text-gray-300">Complicación de acceso</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={valores.complicacion_acceso || ''}
-                  onChange={e => handleChange('complicacion_acceso', e.target.value)}
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-                />
-              </Form.Group>
-            </Col>
-            <Col md={4} sm={6} xs={12}>
-              <Form.Group>
-                <Form.Label className="dark:text-gray-300">Virología</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={valores.virologia || ''}
-                  onChange={e => handleChange('virologia', e.target.value)}
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-                />
-              </Form.Group>
-            </Col>
-          </Row>
+            {/* Virología y antígenos */}
+            <Row className="mb-3">
+              <Col md={4} sm={6} xs={12}>
+                <Form.Group>
+                  <Form.Label className="dark:text-gray-300">Antígeno Hepatitis C</Form.Label>
+                  <br />
+                  <Form.Select
+                    value={valores.antigeno_hepatitis_c || ''}
+                    onChange={e => handleChange('antigeno_hepatitis_c', e.target.value)}
+                    required
+                    className="w-full sm:min-w-[300px] md:min-w-[380px] bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 font-medium rounded px-3 py-2 text-base"
+                  >
+                    <option value="">Seleccione</option>
+                    <option value="Positivo">Positivo</option>
+                    <option value="Negativo">Negativo</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
 
-          {/* Virología y antígenos */}
-          <Row className="mb-3">
-            <Col md={4} sm={6} xs={12}>
-              <Form.Group>
-                <Form.Label className="dark:text-gray-300">Antígeno Hepatitis C</Form.Label>
-                <br />
-                <Form.Select
-                  value={valores.antigeno_hepatitis_c || ''}
-                  onChange={e => handleChange('antigeno_hepatitis_c', e.target.value)}
-                  required
-                  className="w-full sm:min-w-[300px] md:min-w-[380px] bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 font-medium rounded px-3 py-2 text-base"
-                >
-                  <option value="">Seleccione</option>
-                  <option value="Positivo">Positivo</option>
-                  <option value="Negativo">Negativo</option>
-                </Form.Select>
-              </Form.Group>
-            </Col>
+              <Col md={4} sm={6} xs={12}>
+                <Form.Group>
+                  <Form.Label className="dark:text-gray-300">Antígeno de superficie</Form.Label>
+                  <br />
+                  <Form.Select
+                    value={valores.antigeno_superficie || ''}
+                    onChange={e => handleChange('antigeno_superficie', e.target.value)}
+                    required
+                    className="w-full sm:min-w-[300px] md:min-w-[360px] bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 font-medium rounded px-3 py-2 text-base"                >
+                    <option value="">Seleccione</option>
+                    <option value="Positivo">Positivo</option>
+                    <option value="Negativo">Negativo</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
 
-            <Col md={4} sm={6} xs={12}>
-              <Form.Group>
-                <Form.Label className="dark:text-gray-300">Antígeno de superficie</Form.Label>
-                <br />
-                <Form.Select
-                  value={valores.antigeno_superficie || ''}
-                  onChange={e => handleChange('antigeno_superficie', e.target.value)}
-                  required
-                  className="w-full sm:min-w-[300px] md:min-w-[360px] bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 font-medium rounded px-3 py-2 text-base"                >
-                  <option value="">Seleccione</option>
-                  <option value="Positivo">Positivo</option>
-                  <option value="Negativo">Negativo</option>
-                </Form.Select>
-              </Form.Group>
-            </Col>
+              <Col md={4} sm={6} xs={12}>
+                <Form.Group>
+                  <Form.Label className="dark:text-gray-300">HIV</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={valores.hiv || ''}
+                    onChange={e => handleChange('hiv', e.target.value)}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
 
-            <Col md={4} sm={6} xs={12}>
-              <Form.Group>
-                <Form.Label className="dark:text-gray-300">HIV</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={valores.hiv || ''}
-                  onChange={e => handleChange('hiv', e.target.value)}
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-                />
-              </Form.Group>
-            </Col>
-          </Row>
+            {/* Observación */}
+            <Row className="mb-3">
+              <Col md={12} sm={12} xs={12}>
+                <Form.Group>
+                  <Form.Label className="dark:text-gray-300">Observación</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={3}
+                    value={valores.observacion || ''}
+                    onChange={e => handleChange('observacion', e.target.value)}
+                    placeholder="Ingrese aquí las observaciones del laboratorio"
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 resize-none"
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
 
-          {/* Observación */}
-          <Row className="mb-3">
-            <Col md={12} sm={12} xs={12}>
-              <Form.Group>
-                <Form.Label className="dark:text-gray-300">Observación</Form.Label>
-                <Form.Control
-                  as="textarea"
-                  rows={3}
-                  value={valores.observacion || ''}
-                  onChange={e => handleChange('observacion', e.target.value)}
-                  placeholder="Ingrese aquí las observaciones del laboratorio"
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 resize-none"
-                />
-              </Form.Group>
-            </Col>
-          </Row>
+          </>
+        )}
 
-        </>
-      )}
+        {paciente && (
+          <div className="flex mt-4">
+            <Button
+              type="submit"
+              className="bg-green-800 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded shadow-md transition-colors duration-200"
+              disabled={saving}
+            >
+              {saving ? 'Guardando...' : 'Guardar resultados'}
+            </Button>
+          </div>
+        )}
+      </Form>
 
-      {paciente && (
-        <div className="flex mt-4">
-          <Button
-            type="submit"
-            className="bg-green-800 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded shadow-md transition-colors duration-200"
-            disabled={saving}
-          >
-            {saving ? 'Guardando...' : 'Guardar resultados'}
-          </Button>
-        </div>
-      )}
-    </Form>
-
-    {/* Sin cuadro emergente: se limpia y enfoca el campo de No. Afiliación */}
+      {/* Sin cuadro emergente: se limpia y enfoca el campo de No. Afiliación */}
     </>
   );
 }

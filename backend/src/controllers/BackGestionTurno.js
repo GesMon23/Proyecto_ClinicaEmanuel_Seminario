@@ -29,22 +29,21 @@ router.get('/GestadosTurnoT', async (req, res) => {
 // Endpoint para obtener jornadas
 router.get('/jornadas', async (req, res) => {
     try {
-        const result = await pool.query('SELECT idjornada, descripcion, dias FROM tbl_jornadas where estado=true ORDER BY descripcion ASC');
-        res.json(result.rows);
+        // Intento 1: esquema con id_jornada
+        try {
+            const r1 = await pool.query('SELECT id_jornada, descripcion FROM tbl_jornadas WHERE estado = true ORDER BY descripcion ASC');
+            return res.json(r1.rows || []);
+        } catch (_) {}
+        // Intento 2: esquema con idjornada
+        const r2 = await pool.query('SELECT idjornada AS id_jornada, descripcion FROM tbl_jornadas WHERE estado = true ORDER BY descripcion ASC');
+        return res.json(r2.rows || []);
     } catch (error) {
+        console.error('Error en /jornadas (BackGestionTurno):', error);
         res.status(500).json({ error: 'Error al obtener jornadas.' });
     }
 });
 
-// Obtener clínicas
-router.get('/GclinicasT', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM tbl_clinica');
-        res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ detail: err.message });
-    }
-});
+        
 
 // Endpoint para obtener paciente por número de afiliación con descripciones de llaves foráneas
 router.get('/GpacientesT/:noafiliacion', async (req, res) => {

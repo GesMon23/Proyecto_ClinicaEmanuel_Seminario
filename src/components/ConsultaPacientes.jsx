@@ -1,4 +1,4 @@
-import Footer from "@/layouts/footer"
+﻿import Footer from "@/layouts/footer"
 import logoClinica from "@/assets/logoClinica2.png"
 import avatarDefault from "@/assets/default-avatar.png"
 import React, { useState } from 'react';
@@ -7,10 +7,7 @@ import {
     Container,
     Row,
     Col,
-    Card,
-    Form,
-    Button,
-    Table
+    Card
 } from 'react-bootstrap';
 
 const CustomModal = ({ show, onClose, title, message, type }) => {
@@ -45,9 +42,9 @@ const CustomModal = ({ show, onClose, title, message, type }) => {
                     <h4 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">
                         {title}
                     </h4>
-                    <p className="text-gray-700 dark:text-gray-300 mb-4">
+                    <pre className="text-gray-700 dark:text-gray-300 mb-4 whitespace-pre-wrap text-sm">
                         {message}
-                    </p>
+                    </pre>
                     <button
                         onClick={onClose}
                         className={`w-full py-2 px-4 rounded text-white font-medium transition-colors ${type === 'success'
@@ -143,6 +140,7 @@ const ConsultaPacientes = () => {
     const [showModal, setShowModal] = useState(false);
     const [modalMessage, setModalMessage] = useState('');
     const [modalType, setModalType] = useState('info');
+    const [modalTitle, setModalTitle] = useState('');
     const [fotoCargando, setFotoCargando] = useState(false);
     const [departamentos, setDepartamentos] = useState([]);
     const [estados, setEstados] = useState([]);
@@ -154,6 +152,15 @@ const ConsultaPacientes = () => {
     const [nutricion, setNutricion] = useState([]);
     const [psicologia, setPsicologia] = useState([]);
     const [formularios, setFormularios] = useState([]);
+    const [turnos, setTurnos] = useState([]);
+    const [faltistas, setFaltistas] = useState([]);
+    const [laboratorios, setLaboratorios] = useState([]);
+    const [labDetalle, setLabDetalle] = useState({ isOpen: false, item: null });
+    const [nutDetalle, setNutDetalle] = useState({ isOpen: false, item: null });
+    const [psiDetalle, setPsiDetalle] = useState({ isOpen: false, item: null });
+    const [formDetalle, setFormDetalle] = useState({ isOpen: false, item: null });
+    const [turnoDetalle, setTurnoDetalle] = useState({ isOpen: false, item: null });
+    const [faltaDetalle, setFaltaDetalle] = useState({ isOpen: false, item: null });
 
     // Estados de búsqueda y paginación por sección
     const [searchHistorial, setSearchHistorial] = useState('');
@@ -176,6 +183,16 @@ const ConsultaPacientes = () => {
     const [pageFormularios, setPageFormularios] = useState(1);
     const [pageSizeFormularios, setPageSizeFormularios] = useState(10);
 
+    const [searchTurnos, setSearchTurnos] = useState('');
+    const [pageTurnos, setPageTurnos] = useState(1);
+    const [pageSizeTurnos, setPageSizeTurnos] = useState(10);
+    const [searchFaltistas, setSearchFaltistas] = useState('');
+    const [pageFaltistas, setPageFaltistas] = useState(1);
+    const [pageSizeFaltistas, setPageSizeFaltistas] = useState(10);
+    const [searchLaboratorios, setSearchLaboratorios] = useState('');
+    const [pageLaboratorios, setPageLaboratorios] = useState(1);
+    const [pageSizeLaboratorios, setPageSizeLaboratorios] = useState(10);
+
     // Helpers de filtrado y paginación
     const normalize = (v) => (v ?? '').toString().toLowerCase();
     const filterItems = (items, search, keys) => {
@@ -190,6 +207,9 @@ const ConsultaPacientes = () => {
     React.useEffect(() => { setPageNutricion(1); }, [searchNutricion]);
     React.useEffect(() => { setPagePsicologia(1); }, [searchPsicologia]);
     React.useEffect(() => { setPageFormularios(1); }, [searchFormularios]);
+    React.useEffect(() => { setPageTurnos(1); }, [searchTurnos]);
+    React.useEffect(() => { setPageFaltistas(1); }, [searchFaltistas]);
+    React.useEffect(() => { setPageLaboratorios(1); }, [searchLaboratorios]);
 
     // Derivados: filtrados, paginados y total de páginas por sección
     const histFiltered = React.useMemo(() => filterItems(historial, searchHistorial, ['estado','no_formulario','descripcion','observaciones','causa_egreso','periodo']), [historial, searchHistorial]);
@@ -211,6 +231,26 @@ const ConsultaPacientes = () => {
     const formFiltered = React.useMemo(() => filterItems(formularios, searchFormularios, ['numero_formulario','sesiones_autorizadas_mes','sesiones_realizadas_mes','sesiones_no_realizadas_mes','inicio_prest_servicios','fin_prest_servicios','id_historial']), [formularios, searchFormularios]);
     const formTotalPages = Math.max(1, Math.ceil(formFiltered.length / pageSizeFormularios));
     const formPageItems = React.useMemo(() => formFiltered.slice((pageFormularios - 1) * pageSizeFormularios, pageFormularios * pageSizeFormularios), [formFiltered, pageFormularios, pageSizeFormularios]);
+
+    const turnosFiltered = React.useMemo(() => filterItems(turnos, searchTurnos, ['noafiliacion','nombrepaciente','id_turno_cod','id_turno','nombre_clinica','fecha_turno']), [turnos, searchTurnos]);
+    const turnosTotalPages = Math.max(1, Math.ceil(turnosFiltered.length / pageSizeTurnos));
+    const turnosPageItems = React.useMemo(() => turnosFiltered.slice((pageTurnos - 1) * pageSizeTurnos, pageTurnos * pageSizeTurnos), [turnosFiltered, pageTurnos, pageSizeTurnos]);
+
+    const faltistasFiltered = React.useMemo(() => filterItems(
+        faltistas,
+        searchFaltistas,
+        ['noafiliacion','nombres','apellidos','sexo','jornada','accesovascular','departamento','clinica','fechafalta']
+    ), [faltistas, searchFaltistas]);
+    const faltistasTotalPages = Math.max(1, Math.ceil(faltistasFiltered.length / pageSizeFaltistas));
+    const faltistasPageItems = React.useMemo(() => faltistasFiltered.slice((pageFaltistas - 1) * pageSizeFaltistas, pageFaltistas * pageSizeFaltistas), [faltistasFiltered, pageFaltistas, pageSizeFaltistas]);
+
+    const laboratoriosFiltered = React.useMemo(() => filterItems(
+        laboratorios,
+        searchLaboratorios,
+        ['no_afiliacion','id_laboratorio','periodicidad','virologia','hiv','sexo','primer_nombre','segundo_nombre','primer_apellido','segundo_apellido','primernombre','segundonombre','primerapellido','segundoapellido']
+    ), [laboratorios, searchLaboratorios]);
+    const laboratoriosTotalPages = Math.max(1, Math.ceil(laboratoriosFiltered.length / pageSizeLaboratorios));
+    const laboratoriosPageItems = React.useMemo(() => laboratoriosFiltered.slice((pageLaboratorios - 1) * pageSizeLaboratorios, pageLaboratorios * pageSizeLaboratorios), [laboratoriosFiltered, pageLaboratorios, pageSizeLaboratorios]);
 
     React.useEffect(() => {
         const cargarCatalogos = async () => {
@@ -340,6 +380,24 @@ const ConsultaPacientes = () => {
                 } catch (e) {
                     console.warn('No se pudo cargar el historial de formularios:', e);
                 }
+                // Cargar turnos del paciente
+                try {
+                    await fetchTurnos(response.data.no_afiliacion);
+                } catch (e) {
+                    console.warn('No se pudo cargar los turnos del paciente:', e);
+                }
+                // Cargar faltistas del paciente
+                try {
+                    await fetchFaltistas(response.data.no_afiliacion);
+                } catch (e) {
+                    console.warn('No se pudo cargar faltistas del paciente:', e);
+                }
+                // Cargar laboratorios del paciente
+                try {
+                    await fetchLaboratorios(response.data.no_afiliacion);
+                } catch (e) {
+                    console.warn('No se pudo cargar laboratorios del paciente:', e);
+                }
             } else {
                 setShowModal(true);
                 setModalMessage('Paciente no encontrado');
@@ -350,6 +408,9 @@ const ConsultaPacientes = () => {
                 setNutricion([]);
                 setPsicologia([]);
                 setFormularios([]);
+                setTurnos([]);
+                setFaltistas([]);
+                setLaboratorios([]);
             }
         } catch (error) {
             let errorMessage;
@@ -371,6 +432,9 @@ const ConsultaPacientes = () => {
             setNutricion([]);
             setPsicologia([]);
             setFormularios([]);
+            setTurnos([]);
+            setFaltistas([]);
+            setLaboratorios([]);
         } finally {
             setLoading(false);
             setFotoCargando(false);
@@ -391,12 +455,18 @@ const ConsultaPacientes = () => {
         setNutricion([]);
         setPsicologia([]);
         setFormularios([]);
+        setTurnos([]);
+        setFaltistas([]);
+        setLaboratorios([]);
         // Reset filtros y paginación
         setSearchHistorial(''); setPageHistorial(1); setPageSizeHistorial(10);
         setSearchReferencias(''); setPageReferencias(1); setPageSizeReferencias(10);
         setSearchNutricion(''); setPageNutricion(1); setPageSizeNutricion(10);
         setSearchPsicologia(''); setPagePsicologia(1); setPageSizePsicologia(10);
         setSearchFormularios(''); setPageFormularios(1); setPageSizeFormularios(10);
+        setSearchTurnos(''); setPageTurnos(1); setPageSizeTurnos(10);
+        setSearchFaltistas(''); setPageFaltistas(1); setPageSizeFaltistas(10);
+        setSearchLaboratorios(''); setPageLaboratorios(1); setPageSizeLaboratorios(10);
     };
 
     const fetchHistorial = async (noAfiliacion) => {
@@ -424,6 +494,22 @@ const ConsultaPacientes = () => {
         setFormularios(Array.isArray(res.data) ? res.data : []);
     };
 
+    const fetchTurnos = async (noAfiliacion) => {
+        const res = await api.get(`/turnos/${noAfiliacion}`);
+        setTurnos(Array.isArray(res.data) ? res.data : []);
+    };
+
+    const fetchFaltistas = async (noAfiliacion) => {
+        const res = await api.get(`/faltistas/${noAfiliacion}`);
+        setFaltistas(Array.isArray(res.data) ? res.data : []);
+    };
+
+    const fetchLaboratorios = async (noAfiliacion) => {
+        // Replicar exactamente la consulta usada en módulos de Laboratorios
+        const { data } = await api.get(`/api/laboratorios/historial/${noAfiliacion}`);
+        setLaboratorios(Array.isArray(data?.data) ? data.data : []);
+    };
+
     const verificarExistenciaFoto = async (filename) => {
         try {
             console.log('Verificando existencia de foto:', filename);
@@ -437,6 +523,373 @@ const ConsultaPacientes = () => {
     };
 
     const handleCloseModal = () => setShowModal(false);
+
+    // Mostrar detalle genérico en modal
+    const openDetail = (titulo, item) => {
+        setModalTitle(titulo || 'Detalle');
+        try {
+            setModalMessage(JSON.stringify(item || {}, null, 2));
+        } catch (_) {
+            setModalMessage(String(item || ''));
+        }
+        setModalType('info');
+        setShowModal(true);
+    };
+
+    // Abrir detalle de laboratorio (modal específico)
+    const openLabDetail = (item) => setLabDetalle({ isOpen: true, item });
+    const closeLabDetail = () => setLabDetalle({ isOpen: false, item: null });
+    const openNutDetail = (item) => setNutDetalle({ isOpen: true, item });
+    const closeNutDetail = () => setNutDetalle({ isOpen: false, item: null });
+    const openPsiDetail = (item) => setPsiDetalle({ isOpen: true, item });
+    const closePsiDetail = () => setPsiDetalle({ isOpen: false, item: null });
+    const openFormDetail = (item) => setFormDetalle({ isOpen: true, item });
+    const closeFormDetail = () => setFormDetalle({ isOpen: false, item: null });
+    const openTurnoDetail = (item) => setTurnoDetalle({ isOpen: true, item });
+    const closeTurnoDetail = () => setTurnoDetalle({ isOpen: false, item: null });
+    const openFaltaDetail = (item) => setFaltaDetalle({ isOpen: true, item });
+    const closeFaltaDetail = () => setFaltaDetalle({ isOpen: false, item: null });
+
+    // Descargar PDF de laboratorio (mismo formato de ConsultaLaboratorios)
+    const descargarPDFLaboratorio = (item) => {
+        const it = item || {};
+        const primerNombre = it.primer_nombre ?? it.primernombre ?? '';
+        const segundoNombre = it.segundo_nombre ?? it.segundonombre ?? '';
+        const primerApellido = it.primer_apellido ?? it.primerapellido ?? '';
+        const segundoApellido = it.segundo_apellido ?? it.segundoapellido ?? '';
+        const sexo = it.sexo ?? '';
+        const paciente = [primerNombre, segundoNombre, primerApellido, segundoApellido].filter(Boolean).join(' ');
+        const fecha = it.fecha_laboratorio ? new Date(it.fecha_laboratorio).toLocaleDateString() : (it.fecha ? new Date(it.fecha).toLocaleDateString() : '');
+
+        const excludeKeys = new Set([
+          'id_laboratorio','idlaboratorio','no_afiliacion','noafiliacion','primer_nombre','primernombre','segundo_nombre','segundonombre','primer_apellido','primerapellido','segundo_apellido','segundoapellido','sexo','fecha_laboratorio','fecha','periodicidad','examen_realizado','causa_no_realizado','infeccion_acceso','complicacion_acceso','virologia','antigeno_hepatitis_c','antigeno_superficie','hiv','observacion','usuario_creacion','fecha_registro','idperlaboratorio','parametros'
+        ]);
+        const entries = Object.entries(it || {}).filter(([k,v]) => !excludeKeys.has(k) && v !== null && v !== undefined && v !== '');
+        const pretty = (s) => String(s).replace(/_/g,' ').replace(/\b\w/g, m => m.toUpperCase());
+        let paramRows = '';
+        if (Array.isArray(it.parametros) && it.parametros.length > 0) {
+          paramRows = it.parametros.map((p) => `
+            <tr>
+              <td>${p.parametro ?? ''}</td>
+              <td>${p.valor ?? ''}</td>
+            </tr>
+          `).join('');
+        } else {
+          paramRows = entries.map(([k,v]) => `
+            <tr>
+              <td>${pretty(k)}</td>
+              <td>${typeof v === 'boolean' ? (v ? 'Sí' : 'No') : v}</td>
+            </tr>
+          `).join('');
+        }
+
+        const html = `
+          <html>
+          <head>
+            <meta charset="utf-8" />
+            <title>Informe de Laboratorio ${it.id_laboratorio || it.idlaboratorio || ''}</title>
+            <style>
+              body { font-family: Arial, sans-serif; color: #1f2937; padding: 24px; }
+              h1 { color: #166534; font-size: 20px; margin-bottom: 8px; }
+              h2 { color: #065f46; font-size: 16px; margin: 16px 0 8px; }
+              .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; }
+              .row { margin: 6px 0; }
+              .label { font-weight: bold; }
+              .box { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; }
+              table { width: 100%; border-collapse: collapse; font-size: 12px; }
+              th, td { border: 1px solid #e5e7eb; padding: 6px 8px; text-align: left; }
+              th { background: #f1f5f9; }
+              hr { border: none; border-top: 1px solid #e5e7eb; margin: 16px 0; }
+              .logo { display: block; margin: 0 auto 12px auto; height: 104px; }
+              .title { text-align: center; }
+              @page { size: A4 landscape; margin: 16mm; }
+            </style>
+          </head>
+          <body>
+            <img src="${logoClinica}" alt="Logo Clínica" class="logo" />
+            <h1 class="title">Detalle de Laboratorio</h1>
+            <div class="grid">
+              <div class="row"><span class="label">No. Afiliación:</span> ${it.no_afiliacion || ''}</div>
+              <div class="row"><span class="label">ID Laboratorio:</span> ${it.id_laboratorio || it.idlaboratorio || ''}</div>
+              <div class="row" style="grid-column: 1 / -1;"><span class="label">Paciente:</span> ${paciente}</div>
+              <div class="row"><span class="label">Sexo:</span> ${sexo}</div>
+              <div class="row"><span class="label">Fecha de Laboratorio:</span> ${fecha}</div>
+              <div class="row"><span class="label">Periodicidad:</span> ${it.periodicidad || ''}</div>
+            </div>
+            <hr />
+            <h2>Resultados/Estado</h2>
+            <div class="grid">
+              <div class="row"><span class="label">Examen Realizado:</span> ${it.examen_realizado ? 'Sí' : 'No'}</div>
+              <div class="row"><span class="label">Causa No Realizado:</span> ${it.causa_no_realizado || '—'}</div>
+              <div class="row"><span class="label">Infección de Acceso:</span> ${it.infeccion_acceso || '—'}</div>
+              <div class="row"><span class="label">Complicación de Acceso:</span> ${it.complicacion_acceso || '—'}</div>
+              <div class="row"><span class="label">Virología:</span> ${it.virologia || '—'}</div>
+              <div class="row"><span class="label">Ag. Hepatitis C:</span> ${it.antigeno_hepatitis_c ? 'Positivo' : 'Negativo'}</div>
+              <div class="row"><span class="label">Ag. Superficie:</span> ${it.antigeno_superficie ? 'Positivo' : 'Negativo'}</div>
+              <div class="row"><span class="label">HIV:</span> ${it.hiv || '—'}</div>
+            </div>
+            <h2>Observaciones</h2>
+            <div class="box">${(it.observacion || '—').toString().replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+            <h2>Parámetros</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Parámetro</th>
+                  <th>Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${paramRows || '<tr><td colspan="2">—</td></tr>'}
+              </tbody>
+            </table>
+          </body>
+          </html>
+        `;
+
+        const w = window.open('', '_blank');
+        if (!w) return;
+        w.document.open();
+        w.document.write(html);
+        w.document.close();
+        w.focus();
+        setTimeout(() => { w.print(); }, 300);
+    };
+
+    // Descargar PDF de Faltista
+    const descargarPDFFaltista = (item) => {
+        const it = item || {};
+        const nombre = [it.nombres || '', it.apellidos || ''].filter(Boolean).join(' ');
+        const html = `
+          <html>
+          <head>
+            <meta charset="utf-8" />
+            <title>Detalle de Faltista ${it.noafiliacion || ''}</title>
+            <style>
+              body { font-family: Arial, sans-serif; color: #1f2937; padding: 24px; }
+              h1 { color: #166534; font-size: 20px; margin-bottom: 8px; }
+              .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; }
+              .row { margin: 6px 0; }
+              .label { font-weight: bold; }
+              @page { size: A4 landscape; margin: 16mm; }
+              .logo { display: block; margin: 0 auto 12px auto; height: 104px; }
+              .title { text-align: center; }
+            </style>
+          </head>
+          <body>
+            <img src="${logoClinica}" alt="Logo Clínica" class="logo" />
+            <h1 class="title">Detalle de Faltista</h1>
+            <div class="grid">
+              <div class="row"><span class="label">No. Afiliación:</span> ${it.noafiliacion ?? ''}</div>
+              <div class="row" style="grid-column: 1 / -1"><span class="label">Nombre:</span> ${nombre}</div>
+              <div class="row"><span class="label">Sexo:</span> ${it.sexo ?? ''}</div>
+              <div class="row"><span class="label">Jornada:</span> ${it.jornada ?? ''}</div>
+              <div class="row"><span class="label">Acceso Vascular:</span> ${it.accesovascular ?? ''}</div>
+              <div class="row"><span class="label">Departamento:</span> ${it.departamento ?? ''}</div>
+              <div class="row"><span class="label">Clínica:</span> ${it.clinica ?? ''}</div>
+              <div class="row"><span class="label">Fecha Falta:</span> ${it.fechafalta ?? ''}</div>
+            </div>
+          </body>
+          </html>
+        `;
+
+        const w = window.open('', '_blank');
+        if (!w) return;
+        w.document.open();
+        w.document.write(html);
+        w.document.close();
+        w.focus();
+        setTimeout(() => { w.print(); }, 300);
+    };
+
+    // Descargar PDF de Turno
+    const descargarPDFTurno = (item) => {
+        const it = item || {};
+        const html = `
+          <html>
+          <head>
+            <meta charset="utf-8" />
+            <title>Detalle de Turno ${it.id_turno || it.id_turno_cod || ''}</title>
+            <style>
+              body { font-family: Arial, sans-serif; color: #1f2937; padding: 24px; }
+              h1 { color: #166534; font-size: 20px; margin-bottom: 8px; }
+              .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; }
+              .row { margin: 6px 0; }
+              .label { font-weight: bold; }
+              @page { size: A4 landscape; margin: 16mm; }
+              .logo { display: block; margin: 0 auto 12px auto; height: 104px; }
+              .title { text-align: center; }
+            </style>
+          </head>
+          <body>
+            <img src="${logoClinica}" alt="Logo Clínica" class="logo" />
+            <h1 class="title">Detalle de Turno</h1>
+            <div class="grid">
+              <div class="row"><span class="label">No. Afiliación:</span> ${it.noafiliacion ?? ''}</div>
+              <div class="row"><span class="label">Código Turno:</span> ${it.id_turno_cod || it.id_turno || ''}</div>
+              <div class="row" style="grid-column: 1 / -1"><span class="label">Paciente:</span> ${it.nombrepaciente || ''}</div>
+              <div class="row"><span class="label">Clínica:</span> ${it.nombre_clinica || ''}</div>
+              <div class="row"><span class="label">Fecha:</span> ${it.fecha_turno ? new Date(it.fecha_turno).toLocaleString() : ''}</div>
+            </div>
+          </body>
+          </html>
+        `;
+
+        const w = window.open('', '_blank');
+        if (!w) return;
+        w.document.open();
+        w.document.write(html);
+        w.document.close();
+        w.focus();
+        setTimeout(() => { w.print(); }, 300);
+    };
+
+    // Descargar PDF de Formulario
+    const descargarPDFFormulario = (item) => {
+        const it = item || {};
+        const html = `
+          <html>
+          <head>
+            <meta charset="utf-8" />
+            <title>Detalle de Formulario ${it.numero_formulario || ''}</title>
+            <style>
+              body { font-family: Arial, sans-serif; color: #1f2937; padding: 24px; }
+              h1 { color: #166534; font-size: 20px; margin-bottom: 8px; }
+              .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; }
+              .row { margin: 6px 0; }
+              .label { font-weight: bold; }
+              @page { size: A4 landscape; margin: 16mm; }
+              .logo { display: block; margin: 0 auto 12px auto; height: 104px; }
+              .title { text-align: center; }
+            </style>
+          </head>
+          <body>
+            <img src="${logoClinica}" alt="Logo Clínica" class="logo" />
+            <h1 class="title">Detalle de Formulario</h1>
+            <div class="grid">
+              <div class="row"><span class="label">Número Formulario:</span> ${it.numero_formulario ?? ''}</div>
+              <div class="row"><span class="label">ID Historial:</span> ${it.id_historial ?? ''}</div>
+              <div class="row"><span class="label">Sesiones Autorizadas:</span> ${it.sesiones_autorizadas_mes ?? ''}</div>
+              <div class="row"><span class="label">Sesiones Realizadas:</span> ${it.sesiones_realizadas_mes ?? ''}</div>
+              <div class="row"><span class="label">No Realizadas:</span> ${it.sesiones_no_realizadas_mes ?? ''}</div>
+              <div class="row"><span class="label">Inicio Prestaciones:</span> ${it.inicio_prest_servicios ?? ''}</div>
+              <div class="row"><span class="label">Fin Prestaciones:</span> ${it.fin_prest_servicios ?? ''}</div>
+            </div>
+          </body>
+          </html>
+        `;
+
+        const w = window.open('', '_blank');
+        if (!w) return;
+        w.document.open();
+        w.document.write(html);
+        w.document.close();
+        w.focus();
+        setTimeout(() => { w.print(); }, 300);
+    };
+
+    // Descargar PDF de Psicología
+    const descargarPDFPsicologia = (item) => {
+        const it = item || {};
+        const html = `
+          <html>
+          <head>
+            <meta charset="utf-8" />
+            <title>Informe de Psicología ${it.id_informe || ''}</title>
+            <style>
+              body { font-family: Arial, sans-serif; color: #1f2937; padding: 24px; }
+              h1 { color: #166534; font-size: 20px; margin-bottom: 8px; }
+              h2 { color: #065f46; font-size: 16px; margin: 16px 0 8px; }
+              .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; }
+              .row { margin: 6px 0; }
+              .label { font-weight: bold; }
+              .box { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; }
+              @page { size: A4 landscape; margin: 16mm; }
+              .logo { display: block; margin: 0 auto 12px auto; height: 104px; }
+              .title { text-align: center; }
+            </style>
+          </head>
+          <body>
+            <img src="${logoClinica}" alt="Logo Clínica" class="logo" />
+            <h1 class="title">Detalle de Psicología</h1>
+            <div class="grid">
+              <div class="row"><span class="label">No. Afiliación:</span> ${it.no_afiliacion || ''}</div>
+              <div class="row"><span class="label">ID Informe:</span> ${it.id_informe || ''}</div>
+              <div class="row"><span class="label">Tipo Atención:</span> ${it.tipo_atencion || ''}</div>
+              <div class="row"><span class="label">KDQOL:</span> ${(it.kdqol ? 'Sí' : 'No')}</div>
+            </div>
+            <h2>Motivo de Consulta</h2>
+            <div class="box">${(it.motivo_consulta || '—').toString().replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+            <h2>Tipo de Consulta</h2>
+            <div class="box">${(it.tipo_consulta || '—').toString().replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+            <h2>Pronóstico</h2>
+            <div class="box">${(it.pronostico || '—').toString().replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+            <h2>Observaciones</h2>
+            <div class="box">${(it.observaciones || '—').toString().replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+          </body>
+          </html>
+        `;
+
+        const w = window.open('', '_blank');
+        if (!w) return;
+        w.document.open();
+        w.document.write(html);
+        w.document.close();
+        w.focus();
+        setTimeout(() => { w.print(); }, 300);
+    };
+
+    // Descargar PDF de Nutrición (formato similar al de Laboratorios)
+    const descargarPDFNutricion = (item) => {
+        const it = item || {};
+        const html = `
+          <html>
+          <head>
+            <meta charset="utf-8" />
+            <title>Informe de Nutrición ${it.id_informe || ''}</title>
+            <style>
+              body { font-family: Arial, sans-serif; color: #1f2937; padding: 24px; }
+              h1 { color: #166534; font-size: 20px; margin-bottom: 8px; }
+              h2 { color: #065f46; font-size: 16px; margin: 16px 0 8px; }
+              .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; }
+              .row { margin: 6px 0; }
+              .label { font-weight: bold; }
+              .box { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; }
+              table { width: 100%; border-collapse: collapse; font-size: 12px; }
+              th, td { border: 1px solid #e5e7eb; padding: 6px 8px; text-align: left; }
+              th { background: #f1f5f9; }
+              hr { border: none; border-top: 1px solid #e5e7eb; margin: 16px 0; }
+              .logo { display: block; margin: 0 auto 12px auto; height: 104px; }
+              .title { text-align: center; }
+              @page { size: A4 landscape; margin: 16mm; }
+            </style>
+          </head>
+          <body>
+            <img src="${logoClinica}" alt="Logo Clínica" class="logo" />
+            <h1 class="title">Detalle de Nutrición</h1>
+            <div class="grid">
+              <div class="row"><span class="label">No. Afiliación:</span> ${it.no_afiliacion || ''}</div>
+              <div class="row"><span class="label">ID Informe:</span> ${it.id_informe || ''}</div>
+              <div class="row"><span class="label">Estado Nutricional:</span> ${it.estado_nutricional || ''}</div>
+              <div class="row"><span class="label">IMC:</span> ${it.imc ?? ''}</div>
+              <div class="row"><span class="label">Altura (cm):</span> ${it.altura_cm ?? ''}</div>
+              <div class="row"><span class="label">Peso (kg):</span> ${it.peso_kg ?? ''}</div>
+            </div>
+            <h2>Motivo</h2>
+            <div class="box">${(it.motivo_consulta || '—').toString().replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+            <h2>Observaciones</h2>
+            <div class="box">${(it.observaciones || '—').toString().replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+          </body>
+          </html>
+        `;
+
+        const w = window.open('', '_blank');
+        if (!w) return;
+        w.document.open();
+        w.document.write(html);
+        w.document.close();
+        w.focus();
+        setTimeout(() => { w.print(); }, 300);
+    };
 
     // Botón para generar reporte PDF
     const handleGenerarReporte = async () => {
@@ -468,38 +921,223 @@ const ConsultaPacientes = () => {
             doc.addImage(fotoPaciente, 'JPEG', fotoX, fotoY, 110, 110, undefined, 'FAST');
         }
         // Datos personales
-        doc.setFontSize(14);
+        doc.setFontSize(11);
         doc.setTextColor(verde);
         let y = fotoY;
         let x = fotoX + 130;
         doc.text(`Nombre:`, x, y);
         doc.setTextColor(0, 0, 0);
         doc.text(`${paciente.primer_nombre || ''} ${paciente.segundo_nombre || ''} ${paciente.otros_nombres || ''} ${paciente.primer_apellido || ''} ${paciente.segundo_apellido || ''} ${paciente.apellido_casada || ''}`.replace(/ +/g, ' ').trim(), x + 80, y);
-        y += 22;
+        y += 16;
         doc.setTextColor(verde); doc.text('No. Afiliación:', x, y); doc.setTextColor(0, 0, 0); doc.text(`${paciente.no_afiliacion || ''}`, x + 110, y);
-        y += 22;
+        y += 16;
         doc.setTextColor(verde); doc.text('DPI:', x, y); doc.setTextColor(0, 0, 0); doc.text(`${paciente.dpi || ''}`, x + 40, y);
-        y += 22;
+        y += 16;
         doc.setTextColor(verde); doc.text('Fecha Nacimiento:', x, y); doc.setTextColor(0, 0, 0); doc.text(`${formatearFecha(paciente.fecha_nacimiento) || ''}`, x + 120, y);
-        y += 22;
+        y += 16;
         doc.setTextColor(verde); doc.text('Edad:', x, y); doc.setTextColor(0, 0, 0); doc.text(`${calcularEdad(paciente.fecha_nacimiento)}`, x + 40, y);
-        y += 22;
+        y += 16;
         doc.setTextColor(verde); doc.text('Sexo:', x, y); doc.setTextColor(0, 0, 0); doc.text(`${paciente.sexo || ''}`, x + 40, y);
-        y += 22;
+        y += 16;
         doc.setTextColor(verde); doc.text('Dirección:', x, y); doc.setTextColor(0, 0, 0); doc.text(`${paciente.direccion || ''}`, x + 80, y);
-        y += 22;
+        y += 16;
         doc.setTextColor(verde); doc.text('Sesiones Autorizadas:', x, y); doc.setTextColor(0, 0, 0); doc.text(`${paciente.sesiones_autorizadas_mes || ''}`, x + 140, y);
-        y += 22;
+        y += 16;
         doc.setTextColor(verde); doc.text('Fecha Ingreso:', x, y); doc.setTextColor(0, 0, 0); doc.text(`${formatearFecha(paciente.fecha_ingreso) || ''}`, x + 110, y);
-        y += 22;
+        y += 16;
         doc.setTextColor(verde); doc.text('Estancia Programa:', x, y); doc.setTextColor(0, 0, 0); doc.text(`${calcularEstanciaPrograma(paciente.fecha_ingreso)}`, x + 140, y);
-        y += 22;
+        y += 16;
         doc.setTextColor(verde); doc.text('Jornada:', x, y); doc.setTextColor(0, 0, 0); doc.text(`${paciente.jornada_descripcion || ''}`, x + 70, y);
-        y += 22;
+        y += 16;
         doc.setTextColor(verde); doc.text('Observaciones:', x, y); doc.setTextColor(0, 0, 0); doc.text(`${paciente.observaciones || ''}`, x + 110, y);
 
-        // Pie de página
+        // Secciones compactas (últimos 3 registros por cada módulo)
         const pageHeight = doc.internal.pageSize.getHeight();
+        const leftX = 40;
+        const rightX = pageWidth - 40;
+        // colocar secciones inmediatamente después del último renglón personal
+        let yCursor = Math.max(y + 30, 320);
+
+        // Mantener en una sola hoja: si no hay espacio, omitir secciones restantes
+        const hasSpace = (needed) => (yCursor + needed <= pageHeight - 60);
+
+        const drawSectionTitle = (title) => {
+            if (!hasSpace(30)) return false;
+            // Badge verde
+            doc.setFontSize(11);
+            const padX = 8, padY = 5;
+            const tw = doc.getTextWidth(title) + padX * 2;
+            const th = 16;
+            doc.setFillColor(45, 106, 79); // verde
+            doc.setDrawColor(45, 106, 79);
+            doc.rect(leftX, yCursor - (th - 6), tw, th, 'F');
+            doc.setTextColor(255,255,255);
+            doc.text(title, leftX + padX, yCursor + 2);
+            // subrayado fino
+            doc.setDrawColor(209, 250, 229);
+            doc.setLineWidth(0.6);
+            doc.line(leftX, yCursor + 8, rightX, yCursor + 8);
+            yCursor += 12;
+            doc.setFontSize(8.5);
+            doc.setTextColor(0,0,0);
+            return true;
+        };
+
+        const drawHeader = (cols) => {
+            const headerText = cols.map(c => String(c ?? '')).join('  |  ');
+            if (!hasSpace(13)) return false;
+            doc.setFont(undefined, 'bold');
+            doc.text(headerText, leftX, yCursor);
+            doc.setFont(undefined, 'normal');
+            yCursor += 11;
+            return true;
+        };
+
+        const drawRow = (cols) => {
+            const line = cols.map(c => String(c ?? '')).join('  |  ');
+            if (!hasSpace(12)) return false;
+            doc.text(line, leftX, yCursor);
+            yCursor += 10;
+            return true;
+        };
+
+        const endSection = () => { if (hasSpace(26)) yCursor += 26; };
+
+        // Tabla con encabezado, cebra y bordes por celda
+        const drawTable = (title, headers, rows, aligns = []) => {
+            const tableWidth = rightX - leftX;
+            const colCount = headers.length;
+            const colWidth = tableWidth / colCount;
+            const headerH = 14;
+            const rowH = 12;
+            const needed = 30 /*title*/ + headerH + (rows.length * rowH) + 12;
+            if (!hasSpace(needed)) return false;
+
+            // Título
+            if (!drawSectionTitle(title)) return false;
+
+            // Encabezado
+            doc.setFillColor(241, 245, 249); // bg header
+            doc.setDrawColor(203, 213, 225);
+            doc.rect(leftX, yCursor, tableWidth, headerH, 'F');
+            doc.setFont(undefined, 'bold');
+            headers.forEach((h, i) => {
+                const cellX = leftX + (i * colWidth);
+                const textX = cellX + 4;
+                const textY = yCursor + headerH - 4;
+                doc.text(String(h), textX, textY);
+            });
+            // borde superior
+            doc.rect(leftX, yCursor, tableWidth, headerH);
+            doc.setFont(undefined, 'normal');
+            yCursor += headerH;
+
+            // Filas
+            doc.setFontSize(8);
+            rows.forEach((r, idx) => {
+                // zebra
+                const rowY = yCursor;
+                if (idx % 2 === 0) {
+                    doc.setFillColor(250, 250, 250);
+                    doc.rect(leftX, rowY, tableWidth, rowH, 'F');
+                }
+                // celdas y textos
+                r.forEach((cell, i) => {
+                    const cellX = leftX + (i * colWidth);
+                    const text = String(cell ?? '');
+                    const pad = 4;
+                    let textX = cellX + pad;
+                    if (aligns[i] === 'center') {
+                        const tw = doc.getTextWidth(text);
+                        textX = cellX + (colWidth - tw) / 2;
+                    } else if (aligns[i] === 'right') {
+                        const tw = doc.getTextWidth(text);
+                        textX = cellX + colWidth - tw - pad;
+                    }
+                    const textY = rowY + rowH - 4;
+                    doc.text(text, textX, textY);
+                    // borde de celda
+                    doc.setDrawColor(226, 232, 240);
+                    doc.rect(cellX, rowY, colWidth, rowH);
+                });
+                yCursor += rowH;
+            });
+
+            endSection();
+            return true;
+        };
+
+        // Turnos: Afiliación, Paciente, Clínica, Fecha, Código Turno
+        try {
+            const turnosRows = (turnos || []).slice(0, 3).map(t => [
+                t.noafiliacion || '',
+                t.nombrepaciente || '',
+                t.nombre_clinica || '',
+                t.fecha_turno ? new Date(t.fecha_turno).toLocaleDateString('es-ES') : '',
+                t.id_turno_cod || t.id_turno || ''
+            ]);
+            if (turnosRows.length) drawTable('Turnos', ['Afiliación','Paciente','Clínica','Fecha','Código'], turnosRows, ['left','left','left','center','center']);
+        } catch {}
+
+        // Faltistas: Afiliación, Nombre, Sexo, Fecha Falta, Clínica
+        try {
+            const faltasRows = (faltistas || []).slice(0, 3).map(f => [
+                f.noafiliacion || '',
+                [f.nombres||'', f.apellidos||''].filter(Boolean).join(' '),
+                f.sexo || '',
+                f.fechafalta || '',
+                f.clinica || ''
+            ]);
+            if (faltasRows.length) drawTable('Faltistas', ['Afiliación','Nombre','Sexo','Fecha Falta','Clínica'], faltasRows, ['left','left','center','center','left']);
+        } catch {}
+
+        // Laboratorios: Afiliación, Paciente, Fecha, Periodicidad, Examen
+        try {
+            const labRows = (laboratorios || []).slice(0, 3).map(it => {
+                const pn = it.primer_nombre ?? it.primernombre ?? '';
+                const sn = it.segundo_nombre ?? it.segundonombre ?? '';
+                const pa = it.primer_apellido ?? it.primerapellido ?? '';
+                const sa = it.segundo_apellido ?? it.segundoapellido ?? '';
+                const nombre = [pn,sn,pa,sa].filter(Boolean).join(' ');
+                const rawFecha = it.fecha_laboratorio ?? it.fecha ?? '';
+                const fecha = rawFecha ? new Date(rawFecha).toLocaleDateString('es-ES') : '';
+                return [it.no_afiliacion || '', nombre, fecha, it.periodicidad || '', it.examen_realizado ? 'Sí' : 'No']
+            });
+            if (labRows.length) drawTable('Laboratorios', ['Afiliación','Paciente','Fecha','Periodicidad','Examen'], labRows, ['left','left','center','left','center']);
+        } catch {}
+
+        // Formularios: Número, Sesiones (A/R/NR), Periodo
+        try {
+            const formRows = (formularios || []).slice(0, 3).map(fm => [
+                fm.numero_formulario || '',
+                `${fm.sesiones_autorizadas_mes ?? ''}/${fm.sesiones_realizadas_mes ?? ''}/${fm.sesiones_no_realizadas_mes ?? ''}`,
+                `${formatearFecha(fm.inicio_prest_servicios) || ''} - ${formatearFecha(fm.fin_prest_servicios) || ''}`
+            ]);
+            if (formRows.length) drawTable('Formularios', ['Número','A/R/NR','Periodo'], formRows, ['center','center','left']);
+        } catch {}
+
+        // Nutrición: ID, Motivo, Estado, (sin fecha en tabla), mostrar IMC
+        try {
+            const nutRows = (nutricion || []).slice(0, 3).map(n => [
+                n.id_informe || '',
+                n.motivo_consulta || '',
+                n.estado_nutricional || '',
+                n.imc ?? ''
+            ]);
+            if (nutRows.length) drawTable('Nutrición', ['ID','Motivo','Estado','IMC'], nutRows, ['center','left','left','center']);
+        } catch {}
+
+        // Psicología: ID, Motivo, Tipo, (sin fecha específica)
+        try {
+            const psiRows = (psicologia || []).slice(0, 3).map(p => [
+                p.id_informe || '',
+                p.motivo_consulta || '',
+                p.tipo_consulta || ''
+            ]);
+            if (psiRows.length) drawTable('Psicología', ['ID','Motivo','Tipo'], psiRows, ['center','left','left']);
+        } catch {}
+
+        // Pie de página
         doc.setDrawColor(rojo);
         doc.setLineWidth(1);
         doc.line(40, pageHeight - 60, pageWidth - 40, pageHeight - 60);
@@ -540,7 +1178,7 @@ const ConsultaPacientes = () => {
             <CustomModal
                 show={showModal}
                 onClose={handleCloseModal}
-                title={modalType === 'success' ? 'Éxito' : 'Error'}
+                title={modalTitle || (modalType === 'success' ? 'Éxito' : 'Error')}
                 message={modalMessage}
                 type={modalType}
             />
@@ -548,156 +1186,296 @@ const ConsultaPacientes = () => {
                 <Col md="12">
                     <Card className="bg-white dark:bg-slate-800">
                         <Card.Body className="dark:bg-slate-800 dark:text-gray-200">
-                            <div className="dark:bg-slate-800 dark:text-gray-200" style={{ maxWidth: 1000, margin: '0 auto', padding: '0 24px' }}>
-                                <Row className="align-items-center" style={{ marginTop: 32, marginBottom: 24 }}>
-                                    <div className="max-w-5xl mx-auto px-6 py-8">
-                                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
-
-                                            {/* DERECHA: Logo + texto (ahora primero para que se muestre a la izquierda en pantallas grandes) */}
-                                            <div className="flex flex-col items-center w-full md:w-1/2">
-                                                <img
-                                                    src={logoClinica}
-                                                    alt="Logo de la clínica"
-                                                    className="max-w-xs mb-2 max-w-md"
-                                                />
-                                                <h2 className="text-3xl font-bold text-center text-green-700 dark:text-white">
-                                                    Consulta de Pacientes
-                                                </h2>
-                                            </div>
-
-                                            {/* IZQUIERDA: Formulario (ahora segundo para que se muestre a la derecha en pantallas grandes) */}
-                                            <form
-                                                onSubmit={buscarPacientes}
-                                                className="w-full md:w-1/2"
-                                            >
-                                                <input
-                                                    placeholder="Número de Afiliación"
-                                                    type="text"
-                                                    name="noafiliacion"
-                                                    value={busqueda.noafiliacion}
-                                                    onChange={handleBusquedaChange}
-                                                    className="w-full rounded-md border border-gray-300 px-4 py-2 text-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-900 dark:text-white"
-                                                />
-
-                                                <input
-                                                    placeholder="DPI"
-                                                    type="text"
-                                                    name="dpi"
-                                                    value={busqueda.dpi}
-                                                    onChange={handleBusquedaChange}
-                                                    className="w-full rounded-md border border-gray-300 px-4 py-2 text-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-900 dark:text-white"
-                                                />
-
-                                                <div className="flex gap-4">
-                                                    <button
-                                                        className="w-1/2 bg-green-700 hover:bg-green-900 text-white py-2 px-4 rounded"
-                                                        type="submit"
-                                                        disabled={loading}
-                                                    >
-                                                        {loading ? 'Buscando...' : 'Buscar'}
-                                                    </button>
-                                                    <button
-                                                        className="w-1/2 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded"
-                                                        type="button"
-                                                        onClick={handleLimpiarBusqueda}
-                                                    >
-                                                        Limpiar
-                                                    </button>
-                                                </div>
-                                            </form>
+                            <div className="dark:bg-slate-800 dark:text-gray-200">
+                                <div className="flex flex-col items-center">
+                                    {/* Header al estilo AsignarTurno */}
+                                    <div className="w-full text-center mb-6">
+                                        <div className="flex items-center justify-center gap-6 flex-wrap">
+                                            <img
+                                                src={logoClinica}
+                                                alt="Logo de la clínica"
+                                                className="h-[180px] max-w-[320px] object-contain bg-white rounded-xl shadow-md p-2 dark:bg-slate-800"
+                                            />
+                                            <h1 className="text-3xl font-bold text-green-800 dark:text-white">
+                                                Consulta de Pacientes
+                                            </h1>
                                         </div>
                                     </div>
 
+                                    {/* Controles de búsqueda centrados */}
+                                    <form onSubmit={buscarPacientes} className="flex items-center gap-4 flex-wrap mb-6 w-full justify-center">
+                                    <input
+                                        placeholder="Número de Afiliación"
+                                        type="text"
+                                        name="noafiliacion"
+                                        value={busqueda.noafiliacion}
+                                        onChange={handleBusquedaChange}
+                                        disabled={Boolean(busqueda.dpi)}
+                                        className="text-lg px-4 py-2 w-56 rounded border border-gray-300 dark:border-gray-600 dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    />
 
-                                </Row>
+                                    <input
+                                        placeholder="DPI"
+                                        type="text"
+                                        name="dpi"
+                                        value={busqueda.dpi}
+                                        onChange={(e) => {
+                                        const onlyDigits = (e.target.value || '').replace(/\D+/g, '').slice(0, 13);
+                                        setBusqueda(prev => ({ ...prev, dpi: onlyDigits }));
+                                        }}
+                                        disabled={Boolean(busqueda.noafiliacion)}
+                                        inputMode="numeric"
+                                        pattern="\d{13}"
+                                        maxLength={13}
+                                        onKeyDown={(e) => {
+                                        if (["e", "E", "+", "-", ".", ",", " "].includes(e.key)) e.preventDefault();
+                                        }}
+                                        onPaste={(e) => {
+                                        const t = (e.clipboardData.getData('text') || '').trim();
+                                        if (/[^0-9]/.test(t)) e.preventDefault();
+                                        }}
+                                        className="text-lg px-4 py-2 w-56 rounded border border-gray-300 dark:border-gray-600 dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    />
+
+                                    <div className="flex gap-4">
+                                        <button
+                                        className="bg-green-700 hover:bg-green-800 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-base font-semibold py-2 px-5 rounded transition-colors dark:bg-green-600 dark:hover:bg-green-700 dark:disabled:bg-gray-600"
+                                        type="submit"
+                                        disabled={loading}
+                                        >
+                                        {loading ? 'Buscando...' : 'Buscar'}
+                                        </button>
+                                        <button
+                                        className="bg-red-600 hover:bg-red-700 text-white text-base font-semibold py-2 px-5 rounded transition-colors dark:bg-red-600 dark:hover:bg-red-700"
+                                        type="button"
+                                        onClick={handleLimpiarBusqueda}
+                                        >
+                                        Limpiar
+                                        </button>
+                                    </div>
+                                    </form>
+                                </div>
                             </div>
-                            <hr className="border-t border-green-300 dark:border-gray-600 my-4" />
+                            <hr className="w-full border-gray-300 dark:border-gray-600 mb-6" />
 
 
                             {/* BLOQUE DE FOTO Y DATOS CLAVE */}
                             {paciente && (
-                                <div
-                                    className="flex flex-col md:flex-row"
-                                    style={{
-                                        display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '2.5rem', margin: '2.5rem 0', border: '1px solid #eee', borderRadius: 20, padding: 32,
-                                        boxShadow: '0 8px 32px rgba(0,0,0,0.14)', background: 'var(--bs-body-bg)', width: '100%', maxWidth: 'none', minHeight: 300, color: 'var(--bs-body-color)'
-                                    }}
-                                >
-                                    {/* Foto a la izquierda */}
-                                    <div
-                                        className="w-48 h-48 sm:w-60 sm:h-60 md:w-72 md:h-72"
-                                        style={{
-                                            borderRadius: '24px', overflow: 'hidden',
-                                            border: '4px solid #2d6a4f', boxShadow: '0 8px 32px rgba(0,0,0,0.16)',
-                                            backgroundColor: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                                        }}
-                                    >
+                                <section className="w-full my-10">
+                                    <div className="w-full rounded-2xl border border-gray-200 dark:border-gray-700 bg-gradient-to-br from-white to-green-50/60 dark:from-slate-800 dark:to-slate-800/60 shadow-lg p-6 md:p-8">
+                                        <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
+                                            {/* Foto */}
+                                            <div className="w-48 h-48 sm:w-60 sm:h-60 md:w-72 md:h-72 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 border-4 border-green-700/70 shadow-xl flex items-center justify-center flex-shrink-0">
                                         {fotoCargando ? (
                                             <span>Cargando foto...</span>
                                         ) : (
                                             <img
                                                 alt="Foto del paciente"
                                                 src={paciente.url_foto ? `http://localhost:3001/fotos/${paciente.url_foto}?${Date.now()}` : avatarDefault}
-                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                className="w-full h-full object-cover"
                                                 onError={(e) => {
                                                     e.target.onerror = null;
                                                     e.target.src = avatarDefault;
                                                 }}
                                             />
                                         )}
-                                    </div>
-                                    {/* Columna de datos a la derecha */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 18, width: '100%' }}>
-                                        {/* Nombre completo */}
-                                        <h2 className="m-0 font-extrabold text-2xl sm:text-3xl md:text-4xl text-[#1b4332] uppercase tracking-wider text-left leading-tight">
-                                            {`${paciente.primer_nombre || ''} ${paciente.segundo_nombre || ''} ${paciente.otros_nombres || ''} ${paciente.primer_apellido || ''} ${paciente.segundo_apellido || ''} ${paciente.apellido_casada || ''}`.replace(/ +/g, ' ').trim()}
-                                        </h2>
-                                        {/* Datos clave debajo del nombre */}
-                                        <div className="flex flex-col gap-3 mt-3 w-full max-w-xs sm:max-w-md text-base sm:text-lg md:text-xl">
-                                            <div><b style={{ color: '#2d6a4f', fontSize: '1.15em' }}>No. Afiliación:</b> {paciente.no_afiliacion}</div>
-                                            <div><b style={{ color: '#2d6a4f', fontSize: '1.15em' }}>DPI:</b> {paciente.dpi}</div>
-                                            <div><b style={{ color: '#2d6a4f', fontSize: '1.15em' }}>No. Paciente Proveedor:</b> {paciente.no_paciente_proveedor || ''}</div>
-                                            <div><b style={{ color: '#2d6a4f', fontSize: '1.15em' }}>Acceso:</b> {paciente.acceso_descripcion || ''}</div>
-                                            <div><b style={{ color: '#2d6a4f', fontSize: '1.15em' }}>Número de Formulario:</b> {paciente.numero_formulario_activo || ''}</div>
-                                            <div><b style={{ color: '#2d6a4f', fontSize: '1.15em' }}>Sesiones Autorizadas Mes:</b> {paciente.sesiones_autorizadas_mes || ''}</div>
+                                            </div>
+                                            {/* Modal Detalle Nutrición */}
+                                            {nutDetalle.isOpen && (
+                                                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full mx-4">
+                                                        <div className="p-6">
+                                                            <div className="flex items-center justify-between mb-4">
+                                                                <h3 className="text-lg font-semibold text-green-700 dark:text-green-300">Detalle Nutrición</h3>
+                                                                <button onClick={closeNutDetail} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">×</button>
+                                                            </div>
+                                                            {(() => {
+                                                                const it = nutDetalle.item || {};
+                                                                return (
+                                                                    <div className="space-y-4 text-sm">
+                                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                            <div><span className="font-semibold">ID Informe:</span> {it.id_informe ?? ''}</div>
+                                                                            <div><span className="font-semibold">IMC:</span> {it.imc ?? ''}</div>
+                                                                            <div className="md:col-span-2"><span className="font-semibold">Motivo:</span> {it.motivo_consulta ?? ''}</div>
+                                                                            <div><span className="font-semibold">Estado Nutricional:</span> {it.estado_nutricional ?? ''}</div>
+                                                                            <div><span className="font-semibold">Altura (cm):</span> {it.altura_cm ?? ''}</div>
+                                                                            <div><span className="font-semibold">Peso (kg):</span> {it.peso_kg ?? ''}</div>
+                                                                        </div>
+                                                                        <div>
+                                                                            <span className="font-semibold">Observaciones:</span>
+                                                                            <div className="mt-1 p-2 rounded bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-200">{it.observaciones || '—'}</div>
+                                                                        </div>
+                                                                        <div className="flex justify-end gap-3">
+                                                                            <button onClick={() => descargarPDFNutricion(nutDetalle.item)} className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white">Descargar PDF</button>
+                                                                            <button onClick={closeNutDetail} className="px-4 py-2 rounded-md bg-green-700 hover:bg-green-800 text-white">Cerrar</button>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })()}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {/* Datos a la derecha */}
+                                            <div className="flex-1 flex flex-col gap-4 w-full">
+                                                {/* Nombre completo */}
+                                                <h2 className="m-0 font-extrabold text-2xl sm:text-3xl md:text-4xl text-green-800 dark:text-green-300 tracking-tight">
+                                                    {`${paciente.primer_nombre || ''} ${paciente.segundo_nombre || ''} ${paciente.otros_nombres || ''} ${paciente.primer_apellido || ''} ${paciente.segundo_apellido || ''} ${paciente.apellido_casada || ''}`.replace(/ +/g, ' ').trim()}
+                                                </h2>
+                                                {/* Datos clave como badges */}
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                    <span className="inline-flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-lg bg-white/80 dark:bg-slate-900/50 border border-green-200 dark:border-slate-700 text-green-700 dark:text-white">
+                                                        <strong className="text-green-700 dark:text-white">No. Afiliación:</strong> {paciente.no_afiliacion}
+                                                    </span>
+                                                    <span className="inline-flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-lg bg-white/80 dark:bg-slate-900/50 border border-green-200 dark:border-slate-700 text-green-700 dark:text-white">
+                                                        <strong className="text-green-700 dark:text-white">DPI:</strong> {paciente.dpi}
+                                                    </span>
+                                                    <span className="inline-flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-lg bg-white/80 dark:bg-slate-900/50 border border-green-200 dark:border-slate-700 text-green-700 dark:text-white">
+                                                        <strong className="text-green-700 dark:text-white">No. Proveedor:</strong> {paciente.no_paciente_proveedor || '-' }
+                                                    </span>
+                                                    <span className="inline-flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-lg bg-white/80 dark:bg-slate-900/50 border border-green-200 dark:border-slate-700 text-green-700 dark:text-white">
+                                                        <strong className="text-green-700 dark:text-white">Acceso:</strong> {paciente.acceso_descripcion || '-' }
+                                                    </span>
+                                                    <span className="inline-flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-lg bg-white/80 dark:bg-slate-900/50 border border-green-200 dark:border-slate-700 text-green-700 dark:text-white">
+                                                        <strong className="text-green-700 dark:text-white">Formulario:</strong> {paciente.numero_formulario_activo || '-' }
+                                                    </span>
+                                                    <span className="inline-flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-lg bg-white/80 dark:bg-slate-900/50 border border-green-200 dark:border-slate-700 text-green-700 dark:text-white">
+                                                        <strong className="text-green-700 dark:text-white">Sesiones/mes:</strong> {paciente.sesiones_autorizadas_mes || '-' }
+                                                    </span>
+                                                </div>
+                                                {/* Botones de acciones */}
+                                                <div className="flex gap-3 flex-wrap pt-2">
+                                                    <button
+                                                        onClick={handleGenerarReporte}
+                                                        className="bg-green-700 hover:bg-green-800 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-base font-semibold py-2 px-5 rounded transition-colors dark:bg-green-600 dark:hover:bg-green-700 dark:disabled:bg-gray-600"
+                                                        type="button"
+                                                    >
+                                                        Generar Reporte
+                                                    </button>
+                                                    <button
+                                                        onClick={handleDescargarCarnet}
+                                                        className="bg-green-700 hover:bg-green-800 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-base font-semibold py-2 px-5 rounded transition-colors dark:bg-green-600 dark:hover:bg-green-700 dark:disabled:bg-gray-600"
+                                                        type="button"
+                                                    >
+                                                        Descargar Carnet
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
-                                        {/* Botones de reporte y carné */}
-                                        <div className="flex gap-4 mt-6 flex-wrap">
-                                            <Button
-                                                onClick={handleGenerarReporte}
-                                                className="px-5 py-2.5 rounded-xl font-semibold text-white bg-green-700 hover:bg-green-800 border border-green-700 shadow-sm hover:shadow-md transition-all duration-200 text-lg"
-                                            >
-                                                Generar Reporte
-                                            </Button>
-                                            <Button
-                                                onClick={handleDescargarCarnet}
-                                                className="px-5 py-2.5 rounded-xl font-semibold text-white bg-green-700 hover:bg-green-800 border border-green-700 shadow-sm hover:shadow-md transition-all duration-200 text-lg"
-                                            >
-                                                Descargar Carnet
-                                            </Button>
-                                        </div>
                                     </div>
-                                </div>
+                                </section>
                             )}
 
-                            {/* PESTAÑAS / BOTONES HORIZONTALES */}
+                            {/* PESTAÑAS / BOTONES HORIZONTALES (estilo tabs) */}
                             {paciente && (
                                 <div className="w-full mt-4">
-                                    <div className="w-full flex justify-center mb-4">
-                                        <div className="flex flex-wrap gap-3">
-                                            {['Datos Personales', 'Historial', 'Referencias', 'Nutrición', 'Psicologia', 'Formularios'].map((tab) => (
-                                                <button
-                                                    key={tab}
-                                                    onClick={() => setSelectedTab(tab)}
-                                                    className={`${selectedTab === tab
-                                                        ? 'border-2 border-green-700 bg-green-50 text-green-800 ring-2 ring-green-100'
-                                                        : 'border border-gray-300 bg-white text-green-900 hover:border-green-600 hover:bg-green-50 hover:shadow-md'} px-4 py-2 rounded-xl font-semibold transition-all duration-200 shadow-sm`}
-                                                >
-                                                    {tab}
-                                                </button>
-                                            ))}
+                                    <nav className="w-full mb-4" role="tablist" aria-label="Secciones de paciente">
+                                        <div className="w-full bg-white dark:bg-slate-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 overflow-x-auto px-2">
+                                            <div className="flex items-center justify-center gap-0 flex-wrap">
+                                                {['Datos Personales', 'Historial', 'Referencias', 'Nutrición', 'Psicologia', 'Formularios', 'Turnos', 'Faltistas', 'Laboratorios'].map((tab, idx, arr) => {
+                                                    const active = selectedTab === tab;
+                                                    const panelId = `panel-${tab.replace(/\s+/g, '-')}`;
+                                                    const isFirst = idx === 0;
+                                                    const isLast = idx === arr.length - 1;
+                                                    // Iconos inline por pestaña
+                                                    const icon = (() => {
+                                                        const cls = `h-5 w-5 ${active ? 'text-green-700 dark:text-green-400' : 'text-gray-600 dark:text-gray-300'}`;
+                                                        switch (tab) {
+                                                            case 'Datos Personales':
+                                                                return (
+                                                                    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                                                        <circle cx="12" cy="7" r="4"/>
+                                                                    </svg>
+                                                                );
+                                                            case 'Historial':
+                                                                return (
+                                                                    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                                        <path d="M3 12a9 9 0 1 0 9-9"/>
+                                                                        <path d="M3 3v6h6"/>
+                                                                        <path d="M12 7v5l3 3"/>
+                                                                    </svg>
+                                                                );
+                                                            case 'Referencias':
+                                                                return (
+                                                                    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                                        <path d="M10 13a5 5 0 0 0 7.07 0l3.54-3.54a5 5 0 0 0-7.07-7.07L11 4"/>
+                                                                        <path d="M14 11a5 5 0 0 0-7.07 0L3.39 14.54a5 5 0 0 0 7.07 7.07L13 20"/>
+                                                                    </svg>
+                                                                );
+                                                            case 'Nutrición':
+                                                                return (
+                                                                    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                                        <path d="M12 2v20"/>
+                                                                        <path d="M7 7h10"/>
+                                                                        <path d="M5 12h14"/>
+                                                                        <path d="M7 17h10"/>
+                                                                    </svg>
+                                                                );
+                                                            case 'Psicologia':
+                                                                return (
+                                                                    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                                        <path d="M20 12a8 8 0 1 0-15.5 2H3v4h4v-2h3a8 8 0 0 0 10-4z"/>
+                                                                    </svg>
+                                                                );
+                                                            case 'Formularios':
+                                                                return (
+                                                                    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                                                        <path d="M14 2v6h6"/>
+                                                                        <path d="M16 13H8"/>
+                                                                        <path d="M16 17H8"/>
+                                                                        <path d="M10 9H8"/>
+                                                                    </svg>
+                                                                );
+                                                            case 'Turnos':
+                                                                return (
+                                                                    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                                        <circle cx="12" cy="12" r="10"/>
+                                                                        <path d="M12 6v6l4 2"/>
+                                                                    </svg>
+                                                                );
+                                                            case 'Faltistas':
+                                                                return (
+                                                                    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                                        <path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                                                        <circle cx="9" cy="7" r="4"/>
+                                                                        <path d="M22 11h-6"/>
+                                                                    </svg>
+                                                                );
+                                                            case 'Laboratorios':
+                                                                return (
+                                                                    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                                        <path d="M6 2v6l-3 7a4 4 0 0 0 4 5h10a4 4 0 0 0 4-5l-3-7V2"/>
+                                                                        <path d="M6 6h12"/>
+                                                                    </svg>
+                                                                );
+                                                            default:
+                                                                return null;
+                                                        }
+                                                    })();
+                                                    return (
+                                                        <button
+                                                            key={tab}
+                                                            type="button"
+                                                            role="tab"
+                                                            aria-selected={active}
+                                                            aria-controls={panelId}
+                                                            onClick={() => setSelectedTab(tab)}
+                                                            className={`${active
+                                                                ? 'text-green-700 dark:text-green-400 border-b-2 border-green-600 bg-green-50/40 dark:bg-slate-700/40'
+                                                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 border-b-2 border-transparent'} px-5 py-3 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer ${isFirst ? 'rounded-l-xl' : ''} ${isLast ? 'rounded-r-xl' : ''}`}
+                                                        >
+                                                            <span className="inline-flex items-center gap-2">
+                                                                <span>{tab}</span>
+                                                                {icon}
+                                                            </span>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
-                                    </div>
+                                    </nav>
 
                                     {/* Contenido de pestañas */}
                                     {selectedTab === 'Datos Personales' && (() => {
@@ -735,28 +1513,32 @@ const ConsultaPacientes = () => {
                                         const izquierda = campos.slice(0, mitad);
                                         const derecha = campos.slice(mitad);
                                         return (
-                                            <div style={{ display: 'flex', gap: 32, fontSize: 20, width: '100%', justifyContent: 'center', margin: '0 0 2.5rem 0', border: '1px solid var(--bs-border-color)', borderRadius: 16, padding: 32, boxShadow: '0 4px 16px rgba(0,0,0,0.07)', background: 'var(--bs-body-bg)', maxWidth: 'none', color: 'var(--bs-body-color)' }}>
-                                                <div style={{ flex: 1 }}>
-                                                    {izquierda.map((campo, idx) => (
-                                                        <div key={idx} style={{ marginBottom: 10 }}>
-                                                            <b style={{ color: 'var(--bs-green)' }}>{campo.label}:</b> <span className="dark:text-gray-300">{campo.value}</span>
-                                                        </div>
-                                                    ))}
+                                            <section id="panel-Datos-Personales" role="tabpanel" className="w-full mb-10">
+                                                <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gradient-to-br from-white to-green-50/60 dark:from-slate-800 dark:to-slate-800/60 shadow-sm p-6 md:p-8">
+                                                    <h4 className="text-xl font-bold text-green-800 dark:text-green-300 mb-4">
+                                                        Datos Personales
+                                                    </h4>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        {izquierda.map((campo, idx) => (
+                                                            <div key={`izq-${idx}`} className="rounded-lg bg-white/70 dark:bg-slate-900/50 border border-gray-200 dark:border-gray-700 p-3">
+                                                                <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{campo.label}</div>
+                                                                <div className="mt-1 text-base font-semibold text-gray-900 dark:text-gray-100">{campo.value || '-'}</div>
+                                                            </div>
+                                                        ))}
+                                                        {derecha.map((campo, idx) => (
+                                                            <div key={`der-${idx}`} className="rounded-lg bg-white/70 dark:bg-slate-900/50 border border-gray-200 dark:border-gray-700 p-3">
+                                                                <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{campo.label}</div>
+                                                                <div className="mt-1 text-base font-semibold text-gray-900 dark:text-gray-100">{campo.value || '-'}</div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 </div>
-                                                <div style={{ flex: 1 }}>
-                                                    {derecha.map((campo, idx) => (
-                                                        <div key={idx} style={{ marginBottom: 10 }}>
-                                                            <b style={{ color: 'var(--bs-green)' }}>{campo.label}:</b> <span className="dark:text-gray-300">{campo.value}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
+                                            </section>
                                         );
                                     })()}
 
                                     {selectedTab === 'Historial' && (
-                                        <div className="w-full mb-8">
-                                            <h3 className="text-2xl font-bold text-green-800 mb-4 text-center">Historial del Paciente</h3>
+                                        <div id="panel-Historial" role="tabpanel" className="w-full mb-8">
                                             {/* Controles de búsqueda y página */}
                                             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between mb-3">
                                                 <input
@@ -780,31 +1562,31 @@ const ConsultaPacientes = () => {
                                                 </div>
                                             </div>
                                             <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 shadow-sm overflow-x-auto md:overflow-hidden" style={{ maxHeight: 420, overflowY: 'auto' }}>
-                                                <Table responsive bordered hover striped size="sm" className="mb-0">
-                                                    <thead className="bg-green-50 dark:bg-slate-700" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                                                <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
+                                                    <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                                                         <tr>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Numero de Gestión</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Estado</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">No. Formulario</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Fecha</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Observaciones</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Periodo</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Causa Egreso</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Descripcion</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Numero de Gestión</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Estado</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">No. Formulario</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Fecha</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Observaciones</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Periodo</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Causa Egreso</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Descripcion</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody className="dark:bg-slate-800 dark:text-gray-200">
+                                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
                                                         {histPageItems && histPageItems.length > 0 ? (
                                                             histPageItems.map((h, idx) => (
-                                                                <tr key={idx}>
-                                                                    <td className="text-center">{(pageHistorial - 1) * pageSizeHistorial + idx + 1}</td>
-                                                                    <td className="text-center">{h.estado || ''}</td>
-                                                                    <td className="text-center">{h.no_formulario || ''}</td>
-                                                                    <td className="text-center">{formatearFecha(h.fecha) || ''}</td>
-                                                                    <td className="text-center">{h.observaciones || ''}</td>
-                                                                    <td className="text-center">{h.periodo || ''}</td>
-                                                                    <td className="text-center">{h.causa_egreso || ''}</td>
-                                                                    <td className="text-center">{h.descripcion || ''}</td>
+                                                                <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{(pageHistorial - 1) * pageSizeHistorial + idx + 1}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{h.estado || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{h.no_formulario || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{formatearFecha(h.fecha) || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{h.observaciones || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{h.periodo || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{h.causa_egreso || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{h.descripcion || ''}</td>
                                                                 </tr>
                                                             ))
                                                         ) : (
@@ -813,7 +1595,7 @@ const ConsultaPacientes = () => {
                                                             </tr>
                                                         )}
                                                     </tbody>
-                                                </Table>
+                                                </table>
                                             </div>
                                             {/* Paginación */}
                         	                <div className="flex items-center justify-between mt-3">
@@ -826,8 +1608,7 @@ const ConsultaPacientes = () => {
                                         </div>
                                     )}
                                     {selectedTab === 'Referencias' && (
-                                        <div className="w-full mb-8">
-                                            <h3 className="text-2xl font-bold text-green-800 mb-4 text-center">Referencias</h3>
+                                        <div id="panel-Referencias" role="tabpanel" className="w-full mb-8">
                                             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between mb-3">
                                                 <input
                                                     className="border border-gray-300 rounded px-3 py-1 text-sm dark:bg-slate-900 dark:text-gray-200"
@@ -850,25 +1631,25 @@ const ConsultaPacientes = () => {
                                                 </div>
                                             </div>
                                             <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 shadow-sm overflow-x-auto md:overflow-hidden" style={{ maxHeight: 420, overflowY: 'auto' }}>
-                                                <Table responsive bordered hover striped size="sm" className="mb-0">
-                                                    <thead className="bg-green-50 dark:bg-slate-700" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                                                <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
+                                                    <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                                                         <tr>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">ID Referencia</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Fecha Referencia</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Motivo Traslado</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">ID Médico</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Especialidad Referencia</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">ID Referencia</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Fecha Referencia</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Motivo Traslado</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">ID Médico</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Especialidad Referencia</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody className="dark:bg-slate-800 dark:text-gray-200">
+                                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
                                                         {refPageItems && refPageItems.length > 0 ? (
                                                             refPageItems.map((r, idx) => (
-                                                                <tr key={r.id_referencia || idx}>
-                                                                    <td className="text-center">{r.id_referencia || ''}</td>
-                                                                    <td className="text-center">{formatearFecha(r.fecha_referencia) || ''}</td>
-                                                                    <td className="text-center">{r.motivo_traslado || ''}</td>
-                                                                    <td className="text-center">{r.id_medico || ''}</td>
-                                                                    <td className="text-center">{r.especialidad_referencia || ''}</td>
+                                                                <tr key={r.id_referencia || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{r.id_referencia || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{formatearFecha(r.fecha_referencia) || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{r.motivo_traslado || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{r.id_medico || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{r.especialidad_referencia || ''}</td>
                                                                 </tr>
                                                             ))
                                                         ) : (
@@ -877,7 +1658,7 @@ const ConsultaPacientes = () => {
                                                             </tr>
                                                         )}
                                                     </tbody>
-                                                </Table>
+                                                </table>
                                             </div>
                                             <div className="flex items-center justify-between mt-3">
                                                 <span className="text-sm dark:text-gray-300">Página {pageReferencias} de {refTotalPages}</span>
@@ -889,8 +1670,7 @@ const ConsultaPacientes = () => {
                                         </div>
                                     )}
                                     {selectedTab === 'Nutrición' && (
-                                        <div className="w-full mb-8">
-                                            <h3 className="text-2xl font-bold text-green-800 mb-4 text-center">Informes de Nutrición</h3>
+                                        <div id="panel-Nutrición" role="tabpanel" className="w-full mb-8">
                                             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between mb-3">
                                                 <input
                                                     className="border border-gray-300 rounded px-3 py-1 text-sm dark:bg-slate-900 dark:text-gray-200"
@@ -913,38 +1693,42 @@ const ConsultaPacientes = () => {
                                                 </div>
                                             </div>
                                             <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 shadow-sm overflow-x-auto md:overflow-hidden" style={{ maxHeight: 420, overflowY: 'auto' }}>
-                                                <Table responsive bordered hover striped size="sm" className="mb-0">
-                                                    <thead className="bg-green-50 dark:bg-slate-700" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                                                <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
+                                                    <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                                                         <tr>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">ID Informe</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Motivo Consulta</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Estado Nutricional</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Observaciones</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Altura (Cm)</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Peso (kg)</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">IMC</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">ID Informe</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Motivo Consulta</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Estado Nutricional</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Observaciones</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Altura (Cm)</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Peso (kg)</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">IMC</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Acciones</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody className="dark:bg-slate-800 dark:text-gray-200">
+                                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
                                                         {nutPageItems && nutPageItems.length > 0 ? (
                                                             nutPageItems.map((n, idx) => (
-                                                                <tr key={n.id_informe || idx}>
-                                                                    <td className="text-center">{n.id_informe || ''}</td>
-                                                                    <td className="text-center">{n.motivo_consulta || ''}</td>
-                                                                    <td className="text-center">{n.estado_nutricional || ''}</td>
-                                                                    <td className="text-center">{n.observaciones || ''}</td>
-                                                                    <td className="text-center">{n.altura_cm ?? ''}</td>
-                                                                    <td className="text-center">{n.peso_kg ?? ''}</td>
-                                                                    <td className="text-center">{n.imc ?? ''}</td>
+                                                                <tr key={n.id_informe || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{n.id_informe || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{n.motivo_consulta || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{n.estado_nutricional || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{n.observaciones || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{n.altura_cm ?? ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{n.peso_kg ?? ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{n.imc ?? ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600">
+                                                                        <button className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white" onClick={() => openNutDetail(n)}>Ver detalle</button>
+                                                                    </td>
                                                                 </tr>
                                                             ))
                                                         ) : (
                                                             <tr>
-                                                                <td colSpan={7} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
+                                                                <td colSpan={8} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
                                                             </tr>
                                                         )}
                                                     </tbody>
-                                                </Table>
+                                                </table>
                                             </div>
                                             <div className="flex items-center justify-between mt-3">
                                                 <span className="text-sm dark:text-gray-300">Página {pageNutricion} de {nutTotalPages}</span>
@@ -956,8 +1740,7 @@ const ConsultaPacientes = () => {
                                         </div>
                                     )}
                                     {selectedTab === 'Psicologia' && (
-                                        <div className="w-full mb-8">
-                                            <h3 className="text-2xl font-bold text-green-800 mb-4 text-center">Informes de Psicología</h3>
+                                        <div id="panel-Psicologia" role="tabpanel" className="w-full mb-8">
                                             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between mb-3">
                                                 <input
                                                     className="border border-gray-300 rounded px-3 py-1 text-sm dark:bg-slate-900 dark:text-gray-200"
@@ -980,38 +1763,42 @@ const ConsultaPacientes = () => {
                                                 </div>
                                             </div>
                                             <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 shadow-sm overflow-x-auto md:overflow-hidden" style={{ maxHeight: 420, overflowY: 'auto' }}>
-                                                <Table responsive bordered hover striped size="sm" className="mb-0">
-                                                    <thead className="bg-green-50 dark:bg-slate-700" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                                                <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
+                                                    <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                                                         <tr>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">ID Informe</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Motivo Consulta</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Tipo Consulta</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Observaciones</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Tipo Atención</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Pronóstico</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">KDQOL</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">ID Informe</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Motivo Consulta</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Tipo Consulta</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Observaciones</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Tipo Atención</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Pronóstico</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">KDQOL</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Acciones</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody className="dark:bg-slate-800 dark:text-gray-200">
+                                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
                                                         {psiPageItems && psiPageItems.length > 0 ? (
                                                             psiPageItems.map((p, idx) => (
-                                                                <tr key={p.id_informe || idx}>
-                                                                    <td className="text-center">{p.id_informe || ''}</td>
-                                                                    <td className="text-center">{p.motivo_consulta || ''}</td>
-                                                                    <td className="text-center">{p.tipo_consulta || ''}</td>
-                                                                    <td className="text-center">{p.observaciones || ''}</td>
-                                                                    <td className="text-center">{p.tipo_atencion || ''}</td>
-                                                                    <td className="text-center">{p.pronostico || ''}</td>
-                                                                    <td className="text-center">{p.kdqol ? 'Sí' : 'No'}</td>
+                                                                <tr key={p.id_informe || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{p.id_informe || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{p.motivo_consulta || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{p.tipo_consulta || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{p.observaciones || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{p.tipo_atencion || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{p.pronostico || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{p.kdqol ? 'Sí' : 'No'}</td>
+                                                                    <td className="p-3 border dark:border-gray-600">
+                                                                        <button className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white" onClick={() => openPsiDetail(p)}>Ver detalle</button>
+                                                                    </td>
                                                                 </tr>
                                                             ))
                                                         ) : (
                                                             <tr>
-                                                                <td colSpan={7} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
+                                                                <td colSpan={8} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
                                                             </tr>
                                                         )}
                                                     </tbody>
-                                                </Table>
+                                                </table>
                                             </div>
                                             <div className="flex items-center justify-between mt-3">
                                                 <span className="text-sm dark:text-gray-300">Página {pagePsicologia} de {psiTotalPages}</span>
@@ -1020,11 +1807,46 @@ const ConsultaPacientes = () => {
                                                     <button className="px-3 py-1 rounded border text-sm disabled:opacity-50" onClick={() => setPagePsicologia(Math.min(psiTotalPages, pagePsicologia + 1))} disabled={pagePsicologia >= psiTotalPages}>Siguiente</button>
                                                 </div>
                                             </div>
+                                            {/* Modal Detalle Psicología */}
+                                            {psiDetalle.isOpen && (
+                                                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full mx-4">
+                                                        <div className="p-6">
+                                                            <div className="flex items-center justify-between mb-4">
+                                                                <h3 className="text-lg font-semibold text-green-700 dark:text-green-300">Detalle Psicología</h3>
+                                                                <button onClick={closePsiDetail} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">×</button>
+                                                            </div>
+                                                            {(() => {
+                                                                const it = psiDetalle.item || {};
+                                                                return (
+                                                                    <div className="space-y-4 text-sm">
+                                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                            <div><span className="font-semibold">ID Informe:</span> {it.id_informe ?? ''}</div>
+                                                                            <div><span className="font-semibold">Tipo Atención:</span> {it.tipo_atencion ?? ''}</div>
+                                                                            <div className="md:col-span-2"><span className="font-semibold">Motivo:</span> {it.motivo_consulta ?? ''}</div>
+                                                                            <div><span className="font-semibold">Tipo Consulta:</span> {it.tipo_consulta ?? ''}</div>
+                                                                            <div><span className="font-semibold">Pronóstico:</span> {it.pronostico ?? ''}</div>
+                                                                            <div><span className="font-semibold">KDQOL:</span> {it.kdqol ? 'Sí' : 'No'}</div>
+                                                                        </div>
+                                                                        <div>
+                                                                            <span className="font-semibold">Observaciones:</span>
+                                                                            <div className="mt-1 p-2 rounded bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-200">{it.observaciones || '—'}</div>
+                                                                        </div>
+                                                                        <div className="flex justify-end gap-3">
+                                                                            <button onClick={() => descargarPDFPsicologia(psiDetalle.item)} className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white">Descargar PDF</button>
+                                                                            <button onClick={closePsiDetail} className="px-4 py-2 rounded-md bg-green-700 hover:bg-green-800 text-white">Cerrar</button>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })()}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                     {selectedTab === 'Formularios' && (
-                                        <div className="w-full mb-8">
-                                            <h3 className="text-2xl font-bold text-green-800 mb-4 text-center">Historial de Formularios</h3>
+                                        <div id="panel-Formularios" role="tabpanel" className="w-full mb-8">
                                             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between mb-3">
                                                 <input
                                                     className="border border-gray-300 rounded px-3 py-1 text-sm dark:bg-slate-900 dark:text-gray-200"
@@ -1047,38 +1869,42 @@ const ConsultaPacientes = () => {
                                                 </div>
                                             </div>
                                             <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 shadow-sm overflow-x-auto md:overflow-hidden" style={{ maxHeight: 420, overflowY: 'auto' }}>
-                                                <Table responsive bordered hover striped size="sm" className="mb-0">
-                                                    <thead className="bg-green-50 dark:bg-slate-700" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                                                <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
+                                                    <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                                                         <tr>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Número Formulario</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Sesiones Autorizadas (Mensuales)</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Sesiones Realizadas (Mensuales)</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Sesiones No Realizadas (Mensuales)</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Inicio Prestaciones Servicios</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">Fin Prestaciones Servicios</th>
-                                                            <th className="text-green-800 dark:text-white font-semibold uppercase text-sm tracking-wide text-center py-3">ID Historial</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Número Formulario</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Sesiones Autorizadas (Mensuales)</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Sesiones Realizadas (Mensuales)</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Sesiones No Realizadas (Mensuales)</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Inicio Prestaciones Servicios</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Fin Prestaciones Servicios</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">ID Historial</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Acciones</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody className="dark:bg-slate-800 dark:text-gray-200">
+                                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
                                                         {formPageItems && formPageItems.length > 0 ? (
                                                             formPageItems.map((f, idx) => (
-                                                                <tr key={f.id_historial || idx}>
-                                                                    <td className="text-center">{f.numero_formulario || ''}</td>
-                                                                    <td className="text-center">{f.sesiones_autorizadas_mes ?? ''}</td>
-                                                                    <td className="text-center">{f.sesiones_realizadas_mes ?? ''}</td>
-                                                                    <td className="text-center">{f.sesiones_no_realizadas_mes ?? ''}</td>
-                                                                    <td className="text-center">{formatearFecha(f.inicio_prest_servicios) || ''}</td>
-                                                                    <td className="text-center">{formatearFecha(f.fin_prest_servicios) || ''}</td>
-                                                                    <td className="text-center">{f.id_historial ?? ''}</td>
+                                                                <tr key={f.id_historial || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.numero_formulario || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.sesiones_autorizadas_mes ?? ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.sesiones_realizadas_mes ?? ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.sesiones_no_realizadas_mes ?? ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{formatearFecha(f.inicio_prest_servicios) || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{formatearFecha(f.fin_prest_servicios) || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.id_historial ?? ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600">
+                                                                        <button className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white" onClick={() => openFormDetail(f)}>Ver detalle</button>
+                                                                    </td>
                                                                 </tr>
                                                             ))
                                                         ) : (
                                                             <tr>
-                                                                <td colSpan={7} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
+                                                                <td colSpan={8} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
                                                             </tr>
                                                         )}
                                                     </tbody>
-                                                </Table>
+                                                </table>
                                             </div>
                                             <div className="flex items-center justify-between mt-3">
                                                 <span className="text-sm dark:text-gray-300">Página {pageFormularios} de {formTotalPages}</span>
@@ -1087,6 +1913,415 @@ const ConsultaPacientes = () => {
                                                     <button className="px-3 py-1 rounded border text-sm disabled:opacity-50" onClick={() => setPageFormularios(Math.min(formTotalPages, pageFormularios + 1))} disabled={pageFormularios >= formTotalPages}>Siguiente</button>
                                                 </div>
                                             </div>
+                                            {/* Modal Detalle Formulario */}
+                                            {formDetalle.isOpen && (
+                                                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full mx-4">
+                                                        <div className="p-6">
+                                                            <div className="flex items-center justify-between mb-4">
+                                                                <h3 className="text-lg font-semibold text-green-700 dark:text-green-300">Detalle Formulario</h3>
+                                                                <button onClick={closeFormDetail} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">×</button>
+                                                            </div>
+                                                            {(() => {
+                                                                const it = formDetalle.item || {};
+                                                                return (
+                                                                    <div className="space-y-4 text-sm">
+                                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                            <div><span className="font-semibold">No. Formulario:</span> {it.numero_formulario ?? ''}</div>
+                                                                            <div><span className="font-semibold">ID Historial:</span> {it.id_historial ?? ''}</div>
+                                                                            <div><span className="font-semibold">Sesiones Autorizadas:</span> {it.sesiones_autorizadas_mes ?? ''}</div>
+                                                                            <div><span className="font-semibold">Sesiones Realizadas:</span> {it.sesiones_realizadas_mes ?? ''}</div>
+                                                                            <div><span className="font-semibold">No Realizadas:</span> {it.sesiones_no_realizadas_mes ?? ''}</div>
+                                                                            <div><span className="font-semibold">Inicio Prest.:</span> {formatearFecha(it.inicio_prest_servicios) || ''}</div>
+                                                                            <div><span className="font-semibold">Fin Prest.:</span> {formatearFecha(it.fin_prest_servicios) || ''}</div>
+                                                                        </div>
+                                                                        <div className="flex justify-end gap-3">
+                                                                            <button onClick={() => descargarPDFFormulario(formDetalle.item)} className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white">Descargar PDF</button>
+                                                                            <button onClick={closeFormDetail} className="px-4 py-2 rounded-md bg-green-700 hover:bg-green-800 text-white">Cerrar</button>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })()}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    {selectedTab === 'Turnos' && (
+                                        <div id="panel-Turnos" role="tabpanel" className="w-full mb-8">
+                                            {/* Controles de búsqueda y página */}
+                                            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between mb-3">
+                                                <input
+                                                    className="border border-gray-300 rounded px-3 py-1 text-sm dark:bg-slate-900 dark:text-gray-200"
+                                                    placeholder="Buscar en turnos..."
+                                                    value={searchTurnos}
+                                                    onChange={(e) => setSearchTurnos(e.target.value)}
+                                                />
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm dark:text-gray-300">Filas por página:</span>
+                                                    <select
+                                                        className="border border-gray-300 rounded px-2 py-1 text-sm dark:bg-slate-900 dark:text-gray-200"
+                                                        value={pageSizeTurnos}
+                                                        onChange={(e) => { setPageSizeTurnos(parseInt(e.target.value) || 10); setPageTurnos(1); }}
+                                                    >
+                                                        <option value={3}>3</option>
+                                                        <option value={5}>5</option>
+                                                        <option value={10}>10</option>
+                                                        <option value={15}>15</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 shadow-sm overflow-x-auto md:overflow-hidden">
+                                                <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
+                                                    <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">
+                                                        <tr>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">No. Afiliación</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Nombre</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Código Turno</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Clínica</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Fecha</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Acciones</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                                                        {turnosPageItems && turnosPageItems.length > 0 ? (
+                                                            turnosPageItems.map((t, idx) => (
+                                                                <tr key={t.id_turno || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.noafiliacion}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.nombrepaciente}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.id_turno_cod || t.id_turno}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.nombre_clinica}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.fecha_turno ? new Date(t.fecha_turno).toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' }) : ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600">
+                                                                        <button className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white" onClick={() => openTurnoDetail(t)}>Ver detalle</button>
+                                                                    </td>
+                                                                </tr>
+                                                            ))
+                                                        ) : (
+                                                            <tr>
+                                                                <td colSpan={6} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
+                                                            </tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            {/* Paginación */}
+                                            <div className="flex items-center justify-between mt-3">
+                                                <span className="text-sm dark:text-gray-300">Página {pageTurnos} de {turnosTotalPages}</span>
+                                                <div className="flex gap-2">
+                                                    <button className="px-3 py-1 rounded border text-sm disabled:opacity-50" onClick={() => setPageTurnos(Math.max(1, pageTurnos - 1))} disabled={pageTurnos <= 1}>Anterior</button>
+                                                    <button className="px-3 py-1 rounded border text-sm disabled:opacity-50" onClick={() => setPageTurnos(Math.min(turnosTotalPages, pageTurnos + 1))} disabled={pageTurnos >= turnosTotalPages}>Siguiente</button>
+                                                </div>
+                                            </div>
+                                            {/* Modal Detalle Turno */}
+                                            {turnoDetalle.isOpen && (
+                                                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full mx-4">
+                                                        <div className="p-6">
+                                                            <div className="flex items-center justify-between mb-4">
+                                                                <h3 className="text-lg font-semibold text-green-700 dark:text-green-300">Detalle Turno</h3>
+                                                                <button onClick={closeTurnoDetail} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">×</button>
+                                                            </div>
+                                                            {(() => {
+                                                                const it = turnoDetalle.item || {};
+                                                                return (
+                                                                    <div className="space-y-4 text-sm">
+                                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                            <div><span className="font-semibold">No. Afiliación:</span> {it.noafiliacion ?? ''}</div>
+                                                                            <div><span className="font-semibold">Código Turno:</span> {it.id_turno_cod || it.id_turno || ''}</div>
+                                                                            <div className="md:col-span-2"><span className="font-semibold">Paciente:</span> {it.nombrepaciente || ''}</div>
+                                                                            <div><span className="font-semibold">Clínica:</span> {it.nombre_clinica || ''}</div>
+                                                                            <div><span className="font-semibold">Fecha:</span> {it.fecha_turno ? new Date(it.fecha_turno).toLocaleString() : ''}</div>
+                                                                        </div>
+                                                                        <div className="flex justify-end gap-3">
+                                                                            <button onClick={() => descargarPDFTurno(turnoDetalle.item)} className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white">Descargar PDF</button>
+                                                                            <button onClick={closeTurnoDetail} className="px-4 py-2 rounded-md bg-green-700 hover:bg-green-800 text-white">Cerrar</button>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })()}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    {selectedTab === 'Faltistas' && (
+                                        <div id="panel-Faltistas" role="tabpanel" className="w-full mb-8">
+                                            {/* Controles de búsqueda y página */}
+                                            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between mb-3">
+                                                <input
+                                                    className="border border-gray-300 rounded px-3 py-1 text-sm dark:bg-slate-900 dark:text-gray-200"
+                                                    placeholder="Buscar en faltistas..."
+                                                    value={searchFaltistas}
+                                                    onChange={(e) => setSearchFaltistas(e.target.value)}
+                                                />
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm dark:text-gray-300">Filas por página:</span>
+                                                    <select
+                                                        className="border border-gray-300 rounded px-2 py-1 text-sm dark:bg-slate-900 dark:text-gray-200"
+                                                        value={pageSizeFaltistas}
+                                                        onChange={(e) => { setPageSizeFaltistas(parseInt(e.target.value) || 10); setPageFaltistas(1); }}
+                                                    >
+                                                        <option value={5}>5</option>
+                                                        <option value={10}>10</option>
+                                                        <option value={20}>20</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 shadow-sm overflow-x-auto md:overflow-hidden">
+                                                <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
+                                                    <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">
+                                                        <tr>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">No. Afiliación</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Nombre</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Sexo</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Jornada</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Acceso Vascular</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Departamento</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Clínica</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Fecha Falta</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Acciones</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                                                        {faltistasPageItems && faltistasPageItems.length > 0 ? (
+                                                            faltistasPageItems.map((f, idx) => (
+                                                                <tr key={(f.noafiliacion || '') + (f.fechafalta || '') + idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.noafiliacion || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{[(f.nombres||''),(f.apellidos||'')].filter(Boolean).join(' ')}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.sexo || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.jornada || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.accesovascular || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.departamento || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.clinica || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.fechafalta || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600">
+                                                                        <button className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white" onClick={() => openFaltaDetail(f)}>Ver detalle</button>
+                                                                    </td>
+                                                                </tr>
+                                                            ))
+                                                        ) : (
+                                                            <tr>
+                                                                <td colSpan={10} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
+                                                            </tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            {/* Paginación */}
+                                            <div className="flex items-center justify-between mt-3">
+                                                <span className="text-sm dark:text-gray-300">Página {pageFaltistas} de {faltistasTotalPages}</span>
+                                                <div className="flex gap-2">
+                                                    <button className="px-3 py-1 rounded border text-sm disabled:opacity-50" onClick={() => setPageFaltistas(Math.max(1, pageFaltistas - 1))} disabled={pageFaltistas <= 1}>Anterior</button>
+                                                    <button className="px-3 py-1 rounded border text-sm disabled:opacity-50" onClick={() => setPageFaltistas(Math.min(faltistasTotalPages, pageFaltistas + 1))} disabled={pageFaltistas >= faltistasTotalPages}>Siguiente</button>
+                                                </div>
+                                            </div>
+                                            {/* Modal Detalle Faltista */}
+                                            {faltaDetalle.isOpen && (
+                                                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full mx-4">
+                                                        <div className="p-6">
+                                                            <div className="flex items-center justify-between mb-4">
+                                                                <h3 className="text-lg font-semibold text-green-700 dark:text-green-300">Detalle Faltista</h3>
+                                                                <button onClick={closeFaltaDetail} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">×</button>
+                                                            </div>
+                                                            {(() => {
+                                                                const it = faltaDetalle.item || {};
+                                                                const nombre = [it.nombres || '', it.apellidos || ''].filter(Boolean).join(' ');
+                                                                return (
+                                                                    <div className="space-y-4 text-sm">
+                                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                            <div><span className="font-semibold">No. Afiliación:</span> {it.noafiliacion ?? ''}</div>
+                                                                            <div><span className="font-semibold">Sexo:</span> {it.sexo ?? ''}</div>
+                                                                            <div className="md:col-span-2"><span className="font-semibold">Nombre:</span> {nombre}</div>
+                                                                            <div><span className="font-semibold">Jornada:</span> {it.jornada ?? ''}</div>
+                                                                            <div><span className="font-semibold">Acceso Vascular:</span> {it.accesovascular ?? ''}</div>
+                                                                            <div><span className="font-semibold">Departamento:</span> {it.departamento ?? ''}</div>
+                                                                            <div><span className="font-semibold">Clínica:</span> {it.clinica ?? ''}</div>
+                                                                            <div><span className="font-semibold">Fecha Falta:</span> {it.fechafalta ?? ''}</div>
+                                                                        </div>
+                                                                        <div className="flex justify-end gap-3">
+                                                                            <button onClick={() => descargarPDFFaltista(faltaDetalle.item)} className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white">Descargar PDF</button>
+                                                                            <button onClick={closeFaltaDetail} className="px-4 py-2 rounded-md bg-green-700 hover:bg-green-800 text-white">Cerrar</button>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })()}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    {selectedTab === 'Laboratorios' && (
+                                        <div id="panel-Laboratorios" role="tabpanel" className="w-full mb-8">
+                                            {/* Controles de búsqueda y página */}
+                                            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between mb-3">
+                                                <input
+                                                    className="border border-gray-300 rounded px-3 py-1 text-sm dark:bg-slate-900 dark:text-gray-200"
+                                                    placeholder="Buscar en laboratorios..."
+                                                    value={searchLaboratorios}
+                                                    onChange={(e) => setSearchLaboratorios(e.target.value)}
+                                                />
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm dark:text-gray-300">Filas por página:</span>
+                                                    <select
+                                                        className="border border-gray-300 rounded px-2 py-1 text-sm dark:bg-slate-900 dark:text-gray-200"
+                                                        value={pageSizeLaboratorios}
+                                                        onChange={(e) => { setPageSizeLaboratorios(parseInt(e.target.value) || 10); setPageLaboratorios(1); }}
+                                                    >
+                                                        <option value={5}>5</option>
+                                                        <option value={10}>10</option>
+                                                        <option value={20}>20</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 shadow-sm overflow-x-auto md:overflow-hidden">
+                                                <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
+                                                    <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">
+                                                        <tr>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold text-center">No. Afiliación</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold text-center">Paciente</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold text-center">Sexo</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold text-center">ID Lab</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold text-center">Fecha</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold text-center">Periodicidad</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold text-center">Examen</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold text-center">Virología</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold text-center">HIV</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold text-center">Acciones</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                                                        {laboratoriosPageItems && laboratoriosPageItems.length > 0 ? (
+                                                            laboratoriosPageItems.map((it, idx) => {
+                                                                const pn = it.primer_nombre ?? it.primernombre ?? '';
+                                                                const sn = it.segundo_nombre ?? it.segundonombre ?? '';
+                                                                const pa = it.primer_apellido ?? it.primerapellido ?? '';
+                                                                const sa = it.segundo_apellido ?? it.segundoapellido ?? '';
+                                                                const nombre = [pn,sn,pa,sa].filter(Boolean).join(' ');
+                                                                const rawFecha = it.fecha_laboratorio ?? it.fecha ?? '';
+                                                                const fecha = rawFecha ? new Date(rawFecha).toLocaleDateString() : '';
+                                                                return (
+                                                                    <tr key={(it.id_laboratorio || '') + '-' + idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                                                                        <td className="p-3 border dark:border-gray-600 text-center">{it.no_afiliacion || ''}</td>
+                                                                        <td className="p-3 border dark:border-gray-600 text-center">{nombre}</td>
+                                                                        <td className="p-3 border dark:border-gray-600 text-center">{it.sexo || ''}</td>
+                                                                        <td className="p-3 border dark:border-gray-600 text-center">{it.id_laboratorio ?? it.idlaboratorio ?? ''}</td>
+                                                                        <td className="p-3 border dark:border-gray-600 text-center">{fecha}</td>
+                                                                        <td className="p-3 border dark:border-gray-600 text-center">{it.periodicidad || ''}</td>
+                                                                        <td className="p-3 border dark:border-gray-600 text-center">{it.examen_realizado ? 'Sí' : 'No'}</td>
+                                                                        <td className="p-3 border dark:border-gray-600 text-center">{it.virologia || ''}</td>
+                                                                        <td className="p-3 border dark:border-gray-600 text-center">{it.hiv || ''}</td>
+                                                                        <td className="p-3 border dark:border-gray-600 text-center">
+                                                                            <button type="button" className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white" onClick={() => openLabDetail(it)}>Ver detalle</button>
+                                                                        </td>
+                                                                    </tr>
+                                                                );
+                                                            })
+                                                        ) : (
+                                                            <tr>
+                                                                <td colSpan={10} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
+                                                            </tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            {/* Paginación */}
+                                            <div className="flex items-center justify-between mt-3">
+                                                <span className="text-sm dark:text-gray-300">Página {pageLaboratorios} de {laboratoriosTotalPages}</span>
+                                                <div className="flex gap-2">
+                                                    <button className="px-3 py-1 rounded border text-sm disabled:opacity-50" onClick={() => setPageLaboratorios(Math.max(1, pageLaboratorios - 1))} disabled={pageLaboratorios <= 1}>Anterior</button>
+                                                    <button className="px-3 py-1 rounded border text-sm disabled:opacity-50" onClick={() => setPageLaboratorios(Math.min(laboratoriosTotalPages, pageLaboratorios + 1))} disabled={pageLaboratorios >= laboratoriosTotalPages}>Siguiente</button>
+                                                </div>
+                                            </div>
+                                            {/* Modal Detalle Laboratorio */}
+                                            {labDetalle.isOpen && (
+                                                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full mx-4">
+                                                        <div className="p-6">
+                                                            <div className="flex items-center justify-between mb-4">
+                                                                <h3 className="text-lg font-semibold text-green-700 dark:text-green-300">Detalle de Laboratorio</h3>
+                                                                <button onClick={closeLabDetail} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">×</button>
+                                                            </div>
+                                                            {(() => {
+                                                                const it = labDetalle.item || {};
+                                                                const primerNombre = it.primer_nombre ?? it.primernombre ?? '';
+                                                                const segundoNombre = it.segundo_nombre ?? it.segundonombre ?? '';
+                                                                const primerApellido = it.primer_apellido ?? it.primerapellido ?? '';
+                                                                const segundoApellido = it.segundo_apellido ?? it.segundoapellido ?? '';
+                                                                const sexo = it.sexo ?? '';
+                                                                const entries = Object.entries(it || {}).filter(([k,v]) => v !== null && v !== undefined && v !== '');
+                                                                const pretty = (s) => String(s).replace(/_/g,' ').replace(/\b\w/g, m => m.toUpperCase());
+                                                                const parametros = Array.isArray(it.parametros) ? it.parametros : [];
+                                                                return (
+                                                                    <div className="space-y-4 text-sm">
+                                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                            <div><span className="font-semibold">No. Afiliación:</span> {it.no_afiliacion || ''}</div>
+                                                                            <div><span className="font-semibold">ID Laboratorio:</span> {it.id_laboratorio || it.idlaboratorio || ''}</div>
+                                                                            <div className="md:col-span-2"><span className="font-semibold">Paciente:</span> {[primerNombre, segundoNombre, primerApellido, segundoApellido].filter(Boolean).join(' ')}</div>
+                                                                            <div><span className="font-semibold">Sexo:</span> {sexo}</div>
+                                                                            <div><span className="font-semibold">Fecha:</span> {it.fecha_laboratorio ? new Date(it.fecha_laboratorio).toLocaleString() : (it.fecha ? new Date(it.fecha).toLocaleString() : '')}</div>
+                                                                        </div>
+                                                                        <hr className="border-slate-200 dark:border-slate-700" />
+                                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                            <div><span className="font-semibold">Periodicidad:</span> {it.periodicidad}</div>
+                                                                            <div><span className="font-semibold">Examen Realizado:</span> {it.examen_realizado ? 'Sí' : 'No'}</div>
+                                                                            <div><span className="font-semibold">Causa No Realizado:</span> {it.causa_no_realizado || '—'}</div>
+                                                                            <div><span className="font-semibold">Virología:</span> {it.virologia || '—'}</div>
+                                                                            <div><span className="font-semibold">Ag. Hepatitis C:</span> {it.antigeno_hepatitis_c ? 'Positivo' : 'Negativo'}</div>
+                                                                            <div><span className="font-semibold">Ag. Superficie:</span> {it.antigeno_superficie ? 'Positivo' : 'Negativo'}</div>
+                                                                            <div><span className="font-semibold">HIV:</span> {it.hiv || '—'}</div>
+                                                                        </div>
+                                                                        <div>
+                                                                            <span className="font-semibold">Observaciones:</span>
+                                                                            <div className="mt-1 p-2 rounded bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-200">{it.observacion || '—'}</div>
+                                                                        </div>
+                                                                        <div>
+                                                                            <span className="font-semibold">Parámetros:</span>
+                                                                            <div className="mt-2 overflow-x-auto">
+                                                                                <table className="min-w-full border border-slate-200 dark:border-slate-700 text-xs">
+                                                                                    <thead>
+                                                                                        <tr className="bg-slate-100 dark:bg-slate-700">
+                                                                                            <th className="px-2 py-1 text-left">Parámetro</th>
+                                                                                            <th className="px-2 py-1 text-left">Valor</th>
+                                                                                        </tr>
+                                                                                    </thead>
+                                                                                    <tbody>
+                                                                                        {(parametros.length > 0) ? (
+                                                                                            parametros.map((p, i) => (
+                                                                                                <tr key={`${p.idparametro || i}-${p.parametro}`} className="border-t border-slate-200 dark:border-slate-700">
+                                                                                                    <td className="px-2 py-1">{p.parametro ?? ''}</td>
+                                                                                                    <td className="px-2 py-1">{p.valor ?? ''}</td>
+                                                                                                </tr>
+                                                                                            ))
+                                                                                        ) : entries.length === 0 ? (
+                                                                                            <tr>
+                                                                                                <td className="px-2 py-1" colSpan={2}>—</td>
+                                                                                            </tr>
+                                                                                        ) : entries.map(([k,v]) => (
+                                                                                            <tr key={k} className="border-t border-slate-200 dark:border-slate-700">
+                                                                                                <td className="px-2 py-1">{pretty(k)}</td>
+                                                                                                <td className="px-2 py-1">{typeof v === 'boolean' ? (v ? 'Sí' : 'No') : String(v)}</td>
+                                                                                            </tr>
+                                                                                        ))}
+                                                                                    </tbody>
+                                                                                </table>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="flex justify-end gap-3">
+                                                                            <button onClick={() => descargarPDFLaboratorio(labDetalle.item)} className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white">Descargar PDF</button>
+                                                                            <button onClick={closeLabDetail} className="px-4 py-2 rounded-md bg-green-700 hover:bg-green-800 text-white">Cerrar</button>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })()}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>

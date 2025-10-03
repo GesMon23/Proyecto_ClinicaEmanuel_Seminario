@@ -303,15 +303,30 @@ const EgresoPacientes = () => {
                       name="noafiliacion"
                       value={busqueda.noafiliacion}
                       onChange={handleBusquedaChange}
-                      className="w-full text-lg px-4 py-2 mb-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-700 dark:bg-slate-800 dark:text-white"
+                      disabled={Boolean(busqueda.dpi)}
+                      className="w-full text-lg px-4 py-2 mb-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-700 dark:bg-slate-800 dark:text-white disabled:opacity-60"
                     />
                     <input
                       placeholder="DPI"
                       type="text"
                       name="dpi"
                       value={busqueda.dpi}
-                      onChange={handleBusquedaChange}
-                      className="w-full text-lg px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-700 dark:bg-slate-800 dark:text-white"
+                      onChange={(e) => {
+                        const onlyDigits = (e.target.value || '').replace(/\D+/g, '').slice(0, 13);
+                        setBusqueda({ ...busqueda, dpi: onlyDigits });
+                      }}
+                      disabled={Boolean(busqueda.noafiliacion)}
+                      className="w-full text-lg px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-700 dark:bg-slate-800 dark:text-white disabled:opacity-60"
+                      inputMode="numeric"
+                      maxLength={13}
+                      pattern="\\d{13}"
+                      onKeyDown={(e) => {
+                        if (["e","E","+","-",".",","," "].includes(e.key)) e.preventDefault();
+                      }}
+                      onPaste={(e) => {
+                        const t = (e.clipboardData.getData('text') || '').trim();
+                        if (/[^0-9]/.test(t)) e.preventDefault();
+                      }}
                     />
                   </div>
                 </div>

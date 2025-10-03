@@ -3,6 +3,8 @@ const router = express.Router();
 const pool = require('../../db/pool');
 const fs = require('fs');
 const path = require('path');
+const PDFDocument = require('pdfkit');
+const QRCode = require('qrcode');
 
 router.get('/departamentos', async (req, res) => {
     try {
@@ -10,6 +12,114 @@ router.get('/departamentos', async (req, res) => {
         res.json(result.rows);
     } catch (error) {
         res.status(500).json({ error: 'Error al obtener departamentos.' });
+
+// Laboratorios por número de afiliación (historial completo) - normalizado
+router.get('/laboratorios/:noafiliacion', async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const noafiliacion = req.params.noafiliacion;
+        await client.query('BEGIN');
+        const cursorName = 'cur_lab_historial_afiliacion_consulta_pac';
+        await client.query('CALL public.sp_laboratorios_historial_por_afiliacion($1,$2)', [
+            noafiliacion,
+            cursorName,
+        ]);
+        const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+        await client.query('COMMIT');
+        const rows = (fetchRes.rows || []).map(r => ({
+            no_afiliacion: r.no_afiliacion ?? r.noafiliacion ?? null,
+            primer_nombre: r.primer_nombre ?? r.primernombre ?? null,
+            segundo_nombre: r.segundo_nombre ?? r.segundonombre ?? null,
+            primer_apellido: r.primer_apellido ?? r.primerapellido ?? null,
+            segundo_apellido: r.segundo_apellido ?? r.segundoapellido ?? null,
+            sexo: r.sexo ?? null,
+            id_laboratorio: r.id_laboratorio ?? r.idlaboratorio ?? null,
+            fecha_laboratorio: r.fecha_laboratorio ?? r.fecha ?? null,
+            periodicidad: r.periodicidad ?? null,
+            examen_realizado: r.examen_realizado ?? r.examen ?? null,
+            virologia: r.virologia ?? null,
+            hiv: r.hiv ?? null,
+            usuario_creacion: r.usuario_creacion ?? null,
+            parametros: r.parametros ?? null,
+        }));
+        return res.json(rows);
+    } catch (error) {
+        try { await client.query('ROLLBACK'); } catch (_) {}
+        console.error('Error al obtener laboratorios por afiliación:', error);
+        return res.status(500).json({ error: 'Error al obtener laboratorios por afiliación' });
+    } finally {
+        client.release();
+    }
+});
+
+// Laboratorios por DPI (resuelve no_afiliacion y reutiliza SP) - normalizado
+router.get('/laboratorios/dpi/:dpi', async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const dpi = req.params.dpi;
+        const p = await pool.query('SELECT no_afiliacion FROM tbl_pacientes WHERE dpi = $1', [dpi]);
+        if (!p.rows.length) return res.json([]);
+        const noafiliacion = p.rows[0].no_afiliacion;
+        await client.query('BEGIN');
+        const cursorName = 'cur_lab_historial_dpi_consulta_pac';
+        await client.query('CALL public.sp_laboratorios_historial_por_afiliacion($1,$2)', [
+            noafiliacion,
+            cursorName,
+        ]);
+        const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+        await client.query('COMMIT');
+        const rows = (fetchRes.rows || []).map(r => ({
+            no_afiliacion: r.no_afiliacion ?? r.noafiliacion ?? null,
+            primer_nombre: r.primer_nombre ?? r.primernombre ?? null,
+            segundo_nombre: r.segundo_nombre ?? r.segundonombre ?? null,
+            primer_apellido: r.primer_apellido ?? r.primerapellido ?? null,
+            segundo_apellido: r.segundo_apellido ?? r.segundoapellido ?? null,
+            sexo: r.sexo ?? null,
+            id_laboratorio: r.id_laboratorio ?? r.idlaboratorio ?? null,
+            fecha_laboratorio: r.fecha_laboratorio ?? r.fecha ?? null,
+            periodicidad: r.periodicidad ?? null,
+            examen_realizado: r.examen_realizado ?? r.examen ?? null,
+            virologia: r.virologia ?? null,
+            hiv: r.hiv ?? null,
+            usuario_creacion: r.usuario_creacion ?? null,
+            parametros: r.parametros ?? null,
+        }));
+        return res.json(rows);
+    } catch (error) {
+        try { await client.query('ROLLBACK'); } catch (_) {}
+        console.error('Error al obtener laboratorios por DPI:', error);
+        return res.status(500).json({ error: 'Error al obtener laboratorios por DPI' });
+    } finally {
+        client.release();
+    }
+});
+    }
+});
+
+// Listar turnos por número de afiliación (solo los del paciente indicado, del día actual)
+router.get('/turnos/:noafiliacion', async (req, res) => {
+    try {
+        const noafiliacion = req.params.noafiliacion;
+        const query = `
+            SELECT 
+                pac.no_afiliacion as noafiliacion,
+                pac.primer_nombre || ' ' || COALESCE(pac.segundo_nombre, '') || ' ' || 
+                pac.primer_apellido || ' ' || COALESCE(pac.segundo_apellido, '') AS nombrepaciente,
+                tur.id_turno,
+                cli.descripcion AS nombre_clinica,
+                tur.fecha_turno,
+                tur.id_turno_cod
+            FROM tbl_turnos tur
+            INNER JOIN tbl_pacientes pac ON tur.no_afiliacion = pac.no_afiliacion
+            INNER JOIN tbl_clinica cli ON tur.id_clinica = cli.id_clinica
+            WHERE pac.no_afiliacion = $1
+            ORDER BY tur.fecha_turno DESC
+        `;
+        const result = await pool.query(query, [noafiliacion]);
+        return res.json(result.rows || []);
+    } catch (error) {
+        console.error('Error al obtener turnos del paciente:', error);
+        return res.status(500).json({ error: 'Error al obtener turnos del paciente', detalle: error.message });
     }
 });
 
@@ -381,9 +491,95 @@ router.get('/formularios/:noafiliacion', async (req, res) => {
     }
 });
 
+// Faltistas por número de afiliación (todos los registros)
+router.get('/faltistas/:noafiliacion', async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const noafiliacion = req.params.noafiliacion;
+        await client.query('BEGIN');
+        const cursorName = 'cur_faltistas_paciente';
+        await client.query('CALL public.sp_faltistas_filtrado($1,$2,$3,$4,$5,$6,$7,$8,$9)', [
+            null, // fechainicio
+            null, // fechafin
+            noafiliacion || null,
+            null, // sexo
+            null, // clinica
+            null, // jornada
+            null, // accesovascular
+            null, // departamento
+            cursorName,
+        ]);
+        const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+        await client.query('COMMIT');
+        const rows = (fetchRes.rows || []).map(r => ({
+            noafiliacion: r.noafiliacion,
+            nombres: [r.primer_nombre, r.segundo_nombre, r.otros_nombres].filter(Boolean).join(' '),
+            apellidos: [r.primer_apellido, r.segundo_apellido, r.apellido_casada].filter(Boolean).join(' '),
+            sexo: r.sexo,
+            clinica: r.clinica,
+            jornada: r.jornada,
+            accesovascular: r.accesovascular,
+            departamento: r.departamento,
+            fechafalta: r.fechafalta,
+        }));
+        res.json(rows);
+    } catch (error) {
+        try { await client.query('ROLLBACK'); } catch (_) {}
+        console.error('Error al obtener faltistas del paciente:', error);
+        res.status(500).json({ error: 'Error al obtener faltistas del paciente' });
+    } finally {
+        client.release();
+    }
+});
+
+// Faltistas por DPI (resuelve no_afiliacion y reutiliza SP)
+router.get('/faltistas/dpi/:dpi', async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const dpi = req.params.dpi;
+        const p = await pool.query('SELECT no_afiliacion FROM tbl_pacientes WHERE dpi = $1', [dpi]);
+        if (!p.rows.length) return res.json([]);
+        const noafiliacion = p.rows[0].no_afiliacion;
+        await client.query('BEGIN');
+        const cursorName = 'cur_faltistas_paciente_dpi';
+        await client.query('CALL public.sp_faltistas_filtrado($1,$2,$3,$4,$5,$6,$7,$8,$9)', [
+            null, // fechainicio
+            null, // fechafin
+            noafiliacion || null,
+            null, // sexo
+            null, // clinica
+            null, // jornada
+            null, // accesovascular
+            null, // departamento
+            cursorName,
+        ]);
+        const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
+        await client.query('COMMIT');
+        const rows = (fetchRes.rows || []).map(r => ({
+            noafiliacion: r.noafiliacion,
+            nombres: [r.primer_nombre, r.segundo_nombre, r.otros_nombres].filter(Boolean).join(' '),
+            apellidos: [r.primer_apellido, r.segundo_apellido, r.apellido_casada].filter(Boolean).join(' '),
+            sexo: r.sexo,
+            clinica: r.clinica,
+            jornada: r.jornada,
+            accesovascular: r.accesovascular,
+            departamento: r.departamento,
+            fechafalta: r.fechafalta,
+        }));
+        res.json(rows);
+    } catch (error) {
+        try { await client.query('ROLLBACK'); } catch (_) {}
+        console.error('Error al obtener faltistas por DPI:', error);
+        res.status(500).json({ error: 'Error al obtener faltistas por DPI' });
+    } finally {
+        client.release();
+    }
+});
+
 // Endpoint para verificar si existe una foto
 // Directorio compartido de fotos (raíz del backend)
 const FOTOS_DIR = path.join(__dirname, '../../fotos');
+const LOGO_PATH = path.join(__dirname, '../../assets/img/logoClinica.png');
 
 router.get('/check-photo/:filename', (req, res) => {
     const filename = req.params.filename;
@@ -395,6 +591,139 @@ router.get('/check-photo/:filename', (req, res) => {
         res.json({ exists: false });
     }
 });
+
+// Helper para generar el carné en A4 vertical con logo, foto, QR, datos y tabla de firmas
+async function definirCarnetPaciente(paciente, fotoPath, outputPath) {
+    // Helper para obtener campos compatibles (con o sin guion bajo)
+    const firstNonEmpty = (...vals) => vals.find(v => v !== undefined && v !== null && String(v).trim() !== '') || '';
+    const primernombre = firstNonEmpty(paciente.primernombre, paciente.primer_nombre);
+    const segundonombre = firstNonEmpty(paciente.segundonombre, paciente.segundo_nombre);
+    const otrosnombres = firstNonEmpty(paciente.otrosnombres, paciente.otros_nombres);
+    const primerapellido = firstNonEmpty(paciente.primerapellido, paciente.primer_apellido);
+    const segundoapellido = firstNonEmpty(paciente.segundoapellido, paciente.segundo_apellido);
+    const apellidocasada = firstNonEmpty(paciente.apellidocasada, paciente.apellido_casada);
+    const direccion = firstNonEmpty(paciente.direccion);
+    const fechanacimiento = firstNonEmpty(paciente.fechanacimiento, paciente.fecha_nacimiento);
+    const fechaingreso = firstNonEmpty(paciente.fechaingreso, paciente.fecha_ingreso);
+    const noafiliacion = firstNonEmpty(paciente.noafiliacion, paciente.no_afiliacion);
+    const dpi = firstNonEmpty(paciente.dpi);
+    const sexo = firstNonEmpty(paciente.sexo);
+
+    const baseFrontend = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const qrUrl = `${baseFrontend}/consulta-pacientes?noafiliacion=${encodeURIComponent(noafiliacion)}`;
+
+    // Generar QR como dataURL
+    let qrDataUrl = null;
+    try {
+        qrDataUrl = await QRCode.toDataURL(qrUrl, { margin: 1, width: 70 });
+    } catch (_) {}
+
+    const doc = new PDFDocument({ size: 'A4', layout: 'portrait', margin: 40 });
+    const writeStream = fs.createWriteStream(outputPath);
+    doc.pipe(writeStream);
+
+    // Logo en la esquina superior izquierda
+    const logoPath = LOGO_PATH; // ../../assets/img/logoClinica.png
+    if (fs.existsSync(logoPath)) {
+        try { doc.image(logoPath, 30, 25, { width: 60 }); } catch (_) {}
+    }
+    // Título alineado a la izquierda
+    doc.font('Helvetica-Bold').fontSize(22).fillColor('black').text('Carné de Paciente', 110, 35, { align: 'left' });
+
+    // Foto del paciente en la esquina superior derecha
+    try {
+        if (fotoPath && fs.existsSync(fotoPath)) {
+            // Marco
+            doc.rect(430, 25, 90, 70).fillAndStroke('white', '#bbb');
+            doc.image(fotoPath, 432, 27, { width: 86, height: 66, fit: [86, 66] });
+        } else {
+            doc.rect(430, 25, 90, 70).fillAndStroke('white', '#bbb');
+            doc.font('Helvetica').fontSize(12).fillColor('#888').text('Sin Foto', 450, 60);
+        }
+    } catch (_) {
+        // Si falla la imagen, seguir sin romper el PDF
+    }
+
+    // QR debajo de la foto
+    if (qrDataUrl) {
+        try {
+            const buf = Buffer.from(qrDataUrl.split(',')[1], 'base64');
+            doc.image(buf, 450, 105, { width: 50, height: 50 });
+            doc.font('Helvetica').fontSize(8).fillColor('black').text('Escanee para ver\ninformación', 445, 158, { width: 65, align: 'center' });
+        } catch (_) {}
+    }
+
+    // Bloque izquierdo: datos personales
+    let datosY = 100;
+    const nombreCompleto = `${[primernombre, segundonombre, otrosnombres].filter(Boolean).join(' ')}`.replace(/ +/g, ' ').trim();
+    const apellidoCompleto = `${[primerapellido, segundoapellido, apellidocasada].filter(Boolean).join(' ')}`.replace(/ +/g, ' ').trim();
+    const formatFecha = (fecha) => {
+        if (!fecha) return '';
+        const d = new Date(fecha);
+        if (isNaN(d)) return String(fecha);
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}/${month}/${year}`;
+    };
+
+    doc.font('Helvetica').fontSize(11).fillColor('black');
+    doc.text('Nombres:', 30, datosY, { continued: true });
+    doc.font('Helvetica-Bold').text(nombreCompleto, { continued: false });
+    datosY += 15;
+    doc.font('Helvetica').text('Apellidos:', 30, datosY, { continued: true });
+    doc.font('Helvetica-Bold').text(apellidoCompleto, { continued: false });
+    datosY += 15;
+    doc.font('Helvetica').text('Dirección:', 30, datosY, { continued: true });
+    doc.font('Helvetica-Bold').text(direccion || '', { continued: false });
+    datosY += 15;
+    doc.font('Helvetica').text('Fecha Nacimiento:', 30, datosY, { continued: true });
+    doc.font('Helvetica-Bold').text(formatFecha(fechanacimiento), { continued: false });
+    datosY += 15;
+    doc.font('Helvetica').text('Fecha Ingreso:', 30, datosY, { continued: true });
+    doc.font('Helvetica-Bold').text(formatFecha(fechaingreso), { continued: false });
+    datosY += 15;
+    doc.font('Helvetica').text('No. Afiliación:', 30, datosY, { continued: true });
+    doc.font('Helvetica-Bold').text(noafiliacion || '', { continued: false });
+    datosY += 15;
+    doc.font('Helvetica').text('DPI:', 30, datosY, { continued: true });
+    doc.font('Helvetica-Bold').text(dpi || '', { continued: false });
+    datosY += 15;
+    doc.font('Helvetica').text('Sexo:', 30, datosY, { continued: true });
+    doc.font('Helvetica-Bold').text(sexo || '', { continued: false });
+    datosY += 20;
+
+    // Línea divisoria
+    doc.moveTo(30, datosY + 18).lineTo(540, datosY + 18).lineWidth(1).strokeColor('black').stroke();
+
+    // Tabla de firmas
+    const tableTop = datosY + 35;
+    const colX = [30, 105, 210, 390, 540];
+    const rowHeight = 24;
+    const numRows = 16;
+    doc.font('Helvetica-Bold').fontSize(11).fillColor('black');
+    doc.text('Fecha', colX[0] + 2, tableTop + 7, { width: colX[1] - colX[0] - 4, align: 'center' });
+    doc.text('Hora', colX[1] + 2, tableTop + 7, { width: colX[2] - colX[1] - 4, align: 'center' });
+    doc.text('Observaciones', colX[2] + 2, tableTop + 7, { width: colX[3] - colX[2] - 4, align: 'center' });
+    doc.text('Firma', colX[3] + 2, tableTop + 7, { width: colX[4] - colX[3] - 4, align: 'center' });
+    doc.font('Helvetica').fillColor('black');
+    // Líneas horizontales
+    for (let i = 0; i <= numRows + 1; i++) {
+        const y = tableTop + i * rowHeight;
+        doc.moveTo(colX[0], y).lineTo(colX[4], y).strokeColor('black').stroke();
+    }
+    // Líneas verticales
+    for (let i = 0; i < colX.length; i++) {
+        doc.moveTo(colX[i], tableTop).lineTo(colX[i], tableTop + (numRows + 1) * rowHeight).strokeColor('black').stroke();
+    }
+
+    doc.end();
+
+    return new Promise((resolve, reject) => {
+        writeStream.on('finish', resolve);
+        writeStream.on('error', reject);
+    });
+}
 
 // Endpoint para descargar carné PDF por número de afiliación (forzar regeneración)
 router.get('/carnet/forzar/:noafiliacion', async (req, res) => {
