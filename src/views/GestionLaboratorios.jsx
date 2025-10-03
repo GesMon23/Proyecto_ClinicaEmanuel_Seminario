@@ -3,6 +3,7 @@ import "./GestionReferenciasNavButtons.css";
 import { Container, Card } from "react-bootstrap";
 
 import RegistroLaboratorios from "./RegistroLaboratorios.jsx";
+import ConsultaLaboratorios from "../components/ConsultaLaboratorios.jsx";
 
 function GestionLaboratorios() {
   const [tab, setTab] = useState("registro");
@@ -42,11 +43,7 @@ function GestionLaboratorios() {
     {/* Contenido dinámico */}
     <div>
       {tab === 'registro' && <RegistroLaboratorios />}
-      {tab === 'consulta' && (
-        <div className="text-center text-gray-500 dark:text-gray-300 py-8 px-4">
-          Aquí irá la consulta de laboratorios.
-        </div>
-      )}
+      {tab === 'consulta' && <ConsultaLaboratorios />}
     </div>
   </div>
 </div>

@@ -217,6 +217,46 @@ const RegistroPacientes = () => {
         throw new Error("La fecha 'Hasta' del período no puede ser anterior a 'Del'.");
       }
 
+      // Verificación previa de unicidad: DPI
+      try {
+        await api.get(`/pacientes/dpi/${dpiTrim}`);
+        // Si no lanzó error, el DPI ya existe
+        setModalType("error");
+        setModalMessage("El DPI ya está registrado para otro paciente.");
+        setShowErrorModal(true);
+        setLoading(false);
+        return;
+      } catch (chkErr) {
+        if (!(chkErr?.response?.status === 404)) {
+          // Si no es 404 (no encontrado), es un error real del servidor
+          setModalType("error");
+          setModalMessage("No se pudo validar el DPI. Inténtelo de nuevo.");
+          setShowErrorModal(true);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Verificación previa de unicidad: No. Afiliación
+      try {
+        const noAfTrim = String(formData.noAfiliacion || '').trim();
+        await api.get(`/pacientes/${encodeURIComponent(noAfTrim)}`);
+        // Si no lanzó error, el No. Afiliación ya existe
+        setModalType("error");
+        setModalMessage("El Número de Afiliación ya está registrado.");
+        setShowErrorModal(true);
+        setLoading(false);
+        return;
+      } catch (chkErr) {
+        if (!(chkErr?.response?.status === 404)) {
+          setModalType("error");
+          setModalMessage("No se pudo validar el Número de Afiliación. Inténtelo de nuevo.");
+          setShowErrorModal(true);
+          setLoading(false);
+          return;
+        }
+      }
+
       // Periodo de prestación de servicios (texto), sin usar Date()
       const periodoPrestServicios = `Del ${formatFechaYMDToDMY(formData.periodoInicio)} al ${formatFechaYMDToDMY(
         formData.periodoFin
@@ -403,13 +443,24 @@ const RegistroPacientes = () => {
                       id="dpi"
                       name="dpi"
                       value={formData.dpi}
-                      onChange={handleInputChange}
+                      onChange={(e) => {
+                        const onlyDigits = (e.target.value || '').replace(/\D+/g, '').slice(0, 13);
+                        setFormData(prev => ({ ...prev, dpi: onlyDigits }));
+                      }}
                       inputMode="numeric"
                       pattern="\d{13}"
+                      maxLength={13}
                       required
                       placeholder="Ingrese el DPI (13 dígitos)"
                       className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-gray-600 dark:bg-slate-800 dark:text-white"
                       title="Debe contener 13 dígitos"
+                      onKeyDown={(e) => {
+                        if (["e","E","+","-",".",","," "].includes(e.key)) e.preventDefault();
+                      }}
+                      onPaste={(e) => {
+                        const t = (e.clipboardData.getData('text') || '').trim();
+                        if (/[^0-9]/.test(t)) e.preventDefault();
+                      }}
                     />
                   </div>
 

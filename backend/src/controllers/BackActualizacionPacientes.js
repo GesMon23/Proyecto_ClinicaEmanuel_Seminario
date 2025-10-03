@@ -42,17 +42,16 @@ router.get('/Ajornada', async (req, res) => {
 
 // Endpoint para verificar si existe una foto
 router.get('/Acheck-photo/:filename', (req, res) => {
-    const filename = req.params.filename;
-    const filePath = path.join(__dirname, 'fotos', filename);
-
-    if (fs.existsSync(filePath)) {
-        res.json({ exists: true });
-    } else {
-        res.json({ exists: false });
-    }
+  const filename = req.params.filename;
+  const filePath = path.join(fotosDir, filename);
+  if (fs.existsSync(filePath)) {
+    res.json({ exists: true });
+  } else {
+    res.json({ exists: false });
+  }
 });
 
-// Actualizar paciente por No. Afiliación
+// Actualizar paciente por No. Afiliación con validación de DPI
 router.put('/Apacientes/:no_afiliacion', async (req, res) => {
   const { no_afiliacion } = req.params;
   const {
@@ -77,6 +76,23 @@ router.put('/Apacientes/:no_afiliacion', async (req, res) => {
   } = req.body;
 
   try {
+    // Validación de formato de DPI (exactamente 13 dígitos)
+    if (dpi != null) {
+      const dpiStr = String(dpi).trim();
+      if (!/^\d{13}$/.test(dpiStr)) {
+        return res.status(400).json({ success: false, detail: 'DPI inválido: debe contener exactamente 13 dígitos numéricos.' });
+      }
+
+      // Validación de unicidad: el DPI no debe pertenecer a otro paciente
+      const dupCheck = await pool.query(
+        'SELECT 1 FROM tbl_pacientes WHERE dpi = $1 AND no_afiliacion <> $2 LIMIT 1',
+        [dpiStr, no_afiliacion]
+      );
+      if (dupCheck.rowCount > 0) {
+        return res.status(409).json({ success: false, detail: 'El DPI ya está registrado para otro paciente.' });
+      }
+    }
+
     const query = `
       UPDATE tbl_pacientes
       SET 

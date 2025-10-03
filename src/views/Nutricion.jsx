@@ -253,7 +253,13 @@ const Nutricion = () => {
                         step="0.1"
                         min="0"
                         value={alturaCm}
-                        onChange={e => setAlturaCm(e.target.value)}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (v === '') { setAlturaCm(''); return; }
+                          const num = parseFloat(v);
+                          setAlturaCm(Number.isNaN(num) ? '' : Math.max(0, num).toString());
+                        }}
+                        onKeyDown={(e) => { if (e.key === '-') e.preventDefault(); }}
                         placeholder="Ingrese la altura en centímetros"
                         required
                         className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100"
@@ -266,7 +272,13 @@ const Nutricion = () => {
                         step="0.1"
                         min="0"
                         value={pesoKg}
-                        onChange={e => setPesoKg(e.target.value)}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (v === '') { setPesoKg(''); return; }
+                          const num = parseFloat(v);
+                          setPesoKg(Number.isNaN(num) ? '' : Math.max(0, num).toString());
+                        }}
+                        onKeyDown={(e) => { if (e.key === '-') e.preventDefault(); }}
                         placeholder="Ingrese el peso en kilogramos"
                         required
                         className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100"

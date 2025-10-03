@@ -187,6 +187,12 @@ router.post('/egresos', async (req, res) => {
           fecha_creacion
         )
         VALUES ($1, $2, $3, $4::date, $5, $6, NOW())
+        ON CONFLICT ON CONSTRAINT tbl_egresos_pkey
+        DO UPDATE SET
+          id_causa_egreso = EXCLUDED.id_causa_egreso,
+          descripcion = EXCLUDED.descripcion,
+          fecha_egreso = EXCLUDED.fecha_egreso,
+          observaciones = EXCLUDED.observaciones
         RETURNING *;
       `;
       const insertValues = [
