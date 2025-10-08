@@ -1,6 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const pool = require('../../db/pool');
+const { runWithUser } = require('../db');
 
 const router = express.Router();
 router.use(express.json());
@@ -89,29 +90,22 @@ router.put('/empleados/:dpi', verifyJWT, requireRole(['RolGestionUsuarios']), as
     return res.status(400).json({ error: 'No hay campos válidos para actualizar' });
   }
 
-  // Auditoría (actor): resolver con función de BD
-  const nombreJWT = (req.user && (req.user.nombre_usuario || req.user.usuario)) || null;
-  const idJWT = Number(req.user && (req.user.id_usuario || req.user.id || req.user.sub)) || null;
-  const rActor = await pool.query('SELECT public.fn_resolver_actor($1, $2) AS actor_nombre', [nombreJWT, idJWT]);
-  const actorNombre = rActor.rows?.[0]?.actor_nombre || null;
-
-  // Usar SP con cursor: sp_actualizar_empleado
+  // Usar runWithUser para propagar app.current_user
+  const userName = String(req.user?.nombre_usuario || req.user?.usuario || req.user?.sub || 'sistema');
   try {
-    const client = await pool.connect();
     let ok = false;
-    try {
-      await client.query('BEGIN');
+    await runWithUser(userName, async (client) => {
+      // Auditoría (actor): resolver con función de BD en la misma transacción
+      const nombreJWT = (req.user && (req.user.nombre_usuario || req.user.usuario)) || null;
+      const idJWT = Number(req.user && (req.user.id_usuario || req.user.id || req.user.sub)) || null;
+      const rActor = await client.query('SELECT public.fn_resolver_actor($1, $2) AS actor_nombre', [nombreJWT, idJWT]);
+      const actorNombre = rActor.rows?.[0]?.actor_nombre || null;
+
       const cursorName = 'cur_actualizar_empleado';
       await client.query('CALL public.sp_actualizar_empleado($1, $2, $3, $4)', [dpi, JSON.stringify(datos), actorNombre, cursorName]);
       const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
       ok = fetchRes.rows?.[0]?.success === true;
-      await client.query('COMMIT');
-    } catch (e) {
-      try { await client.query('ROLLBACK'); } catch (_) {}
-      throw e;
-    } finally {
-      client.release();
-    }
+    });
     if (!ok) {
       return res.status(404).json({ error: 'Empleado no encontrado' });
     }
@@ -135,29 +129,21 @@ router.patch('/empleados/:dpi/estado', verifyJWT, requireRole(['RolGestionUsuari
   if (!dpi || typeof activo === 'undefined') {
     return res.status(400).json({ error: 'dpi y activo son requeridos' });
   }
-  // Resolver actor con función de BD
-  const nombreJWT2 = (req.user && (req.user.nombre_usuario || req.user.usuario)) || null;
-  const idJWT2 = Number(req.user && (req.user.id_usuario || req.user.id || req.user.sub)) || null;
-  const rActor2 = await pool.query('SELECT public.fn_resolver_actor($1, $2) AS actor_nombre', [nombreJWT2, idJWT2]);
-  const actorNombre = rActor2.rows?.[0]?.actor_nombre || null;
-
-  // Usar SP con cursor: sp_cambiar_estado_empleado
+  const userName = String(req.user?.nombre_usuario || req.user?.usuario || req.user?.sub || 'sistema');
   try {
-    const client = await pool.connect();
     let ok = false;
-    try {
-      await client.query('BEGIN');
+    await runWithUser(userName, async (client) => {
+      // Resolver actor con función de BD en la misma transacción
+      const nombreJWT2 = (req.user && (req.user.nombre_usuario || req.user.usuario)) || null;
+      const idJWT2 = Number(req.user && (req.user.id_usuario || req.user.id || req.user.sub)) || null;
+      const rActor2 = await client.query('SELECT public.fn_resolver_actor($1, $2) AS actor_nombre', [nombreJWT2, idJWT2]);
+      const actorNombre = rActor2.rows?.[0]?.actor_nombre || null;
+
       const cursorName = 'cur_cambiar_estado_empleado';
       await client.query('CALL public.sp_cambiar_estado_empleado($1, $2, $3, $4)', [dpi, Boolean(activo), actorNombre, cursorName]);
       const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
       ok = fetchRes.rows?.[0]?.success === true;
-      await client.query('COMMIT');
-    } catch (e) {
-      try { await client.query('ROLLBACK'); } catch (_) {}
-      throw e;
-    } finally {
-      client.release();
-    }
+    });
     if (!ok) {
       return res.status(404).json({ error: 'Empleado no encontrado' });
     }
