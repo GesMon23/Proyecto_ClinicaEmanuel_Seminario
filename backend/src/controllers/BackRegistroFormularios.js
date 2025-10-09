@@ -1,5 +1,7 @@
 const express = require('express');
 const pool = require('../../db/pool');
+const jwt = require('jsonwebtoken');
+const { runWithUser } = require('../db');
 const router = express.Router();
 router.use(express.json());
 
@@ -34,23 +36,32 @@ router.get('/jornadas', async (req, res) => {
 
 // PUT /api/pacientes/masivo
 router.put('/api/pacientes/masivo', async (req, res) => {
-    const { pacientes, usuario } = req.body;
+    const { pacientes } = req.body;
 
     // Validaciones iniciales
     if (!Array.isArray(pacientes) || pacientes.length === 0) {
         return res.status(400).json({ error: 'Debe enviar un arreglo de pacientes.' });
     }
 
-    if (!usuario) {
-        return res.status(400).json({ error: 'Debe especificar el usuario que realiza la actualización.' });
-    }
+    // Derivar usuario desde JWT; si no hay token, usar 'web'
+    let userName = 'web';
+    try {
+        const auth = req.headers.authorization || '';
+        if (auth.startsWith('Bearer ')) {
+            const token = auth.slice(7);
+            const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret_change_me');
+            userName = payload?.nombre_usuario || String(payload?.sub || 'web');
+        }
+    } catch (_) {}
 
     try {
-        // Llamar al Stored Procedure
-        await pool.query('CALL sp_registro_formularios($1, $2)', [
-            JSON.stringify(pacientes),
-            usuario
-        ]);
+        // Ejecutar dentro de runWithUser para que triggers usen app.current_user
+        await runWithUser(String(userName), async (client) => {
+            await client.query('CALL sp_registro_formularios($1, $2)', [
+                JSON.stringify(pacientes),
+                userName
+            ]);
+        });
 
         res.json({ success: true, mensaje: 'Pacientes actualizados e historial registrado correctamente.' });
     } catch (error) {

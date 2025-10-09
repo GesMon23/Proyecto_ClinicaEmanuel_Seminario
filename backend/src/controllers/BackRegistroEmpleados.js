@@ -1,7 +1,6 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const pool = require('../../db/pool');
-const { runWithUser } = require('../db');
 const router = express.Router();
 router.use(express.json());
 
@@ -26,21 +25,18 @@ router.put('/registro-empleados', verifyJWT, async (req, res) => {
     return res.status(400).json({ error: 'Body inválido. Se requiere empleados[]' });
   }
 
-  const userName = String(req.user?.nombre_usuario || req.user?.usuario || req.user?.sub || 'sistema');
-  try {
-    await runWithUser(userName, async (client) => {
-      // Resolver actor (nombre de usuario) usando función en BD dentro de la misma transacción
-      const nombreJWT = (req.user && (req.user.nombre_usuario || req.user.usuario)) || null;
-      const idJWT = Number(req.user && (req.user.id_usuario || req.user.id || req.user.sub)) || null;
-      const rActor = await client.query('SELECT public.fn_resolver_actor($1, $2) AS actor_nombre', [nombreJWT, idJWT]);
-      const actorNombre = rActor.rows?.[0]?.actor_nombre || null;
+  // Resolver actor (nombre de usuario) usando función en BD
+  const nombreJWT = (req.user && (req.user.nombre_usuario || req.user.usuario)) || null;
+  const idJWT = Number(req.user && (req.user.id_usuario || req.user.id || req.user.sub)) || null;
+  const rActor = await pool.query('SELECT public.fn_resolver_actor($1, $2) AS actor_nombre', [nombreJWT, idJWT]);
+  const actorNombre = rActor.rows?.[0]?.actor_nombre || null;
 
-      // Llamar al Stored Procedure
-      await client.query('CALL sp_registro_empleados($1, $2)', [
-        JSON.stringify(empleados),
-        actorNombre
-      ]);
-    });
+  try {
+    // Llamar al Stored Procedure
+    await pool.query('CALL sp_registro_empleados($1, $2)', [
+      JSON.stringify(empleados),
+      actorNombre
+    ]);
 
     res.json({ success: true, mensaje: 'Empleados actualizados correctamente.' });
   } catch (error) {
@@ -96,35 +92,32 @@ router.post('/empleados', verifyJWT, async (req, res) => {
   }
 
   try {
-    const userName = String(req.user?.nombre_usuario || req.user?.usuario || req.user?.sub || 'sistema');
-    await runWithUser(userName, async (client) => {
-      // Resolver actor (nombre de usuario) usando función en BD
-      const nombreJWT = (req.user && (req.user.nombre_usuario || req.user.usuario)) || null;
-      const idJWT = Number(req.user && (req.user.id_usuario || req.user.id || req.user.sub)) || null;
-      const rActor = await client.query('SELECT public.fn_resolver_actor($1, $2) AS actor_nombre', [nombreJWT, idJWT]);
-      const actorNombre = rActor.rows?.[0]?.actor_nombre || null;
+    // Resolver actor (nombre de usuario) usando función en BD
+    const nombreJWT = (req.user && (req.user.nombre_usuario || req.user.usuario)) || null;
+    const idJWT = Number(req.user && (req.user.id_usuario || req.user.id || req.user.sub)) || null;
+    const rActor = await pool.query('SELECT public.fn_resolver_actor($1, $2) AS actor_nombre', [nombreJWT, idJWT]);
+    const actorNombre = rActor.rows?.[0]?.actor_nombre || null;
 
-      await client.query(
-        'CALL sp_insertar_empleado($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)',
-        [
-          dpi,
-          primer_nombre,
-          segundo_nombre || null,
-          otros_nombres || null,
-          primer_apellido,
-          segundo_apellido || null,
-          apellido_casada || null,
-          fecha_nacimiento || null, // YYYY-MM-DD
-          sexo,
-          direccion,
-          telefono || null,
-          email || null,
-          fecha_ingreso, // YYYY-MM-DD
-          typeof activo === 'boolean' ? activo : true, // mapea a estado
-          actorNombre
-        ]
-      );
-    });
+    await pool.query(
+      'CALL sp_insertar_empleado($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)',
+      [
+        dpi,
+        primer_nombre,
+        segundo_nombre || null,
+        otros_nombres || null,
+        primer_apellido,
+        segundo_apellido || null,
+        apellido_casada || null,
+        fecha_nacimiento || null, // YYYY-MM-DD
+        sexo,
+        direccion,
+        telefono || null,
+        email || null,
+        fecha_ingreso, // YYYY-MM-DD
+        typeof activo === 'boolean' ? activo : true, // mapea a estado
+        actorNombre
+      ]
+    );
 
     return res.status(201).json({ success: true, mensaje: 'Empleado registrado correctamente.' });
   } catch (error) {
