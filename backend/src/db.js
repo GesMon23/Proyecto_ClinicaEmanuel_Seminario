@@ -14,7 +14,7 @@ async function runWithUser(userName, fn) {
   try {
     await client.query('BEGIN');
     // Establecemos el usuario actual de la app sólo para esta transacción
-    // Usamos set_config para evitar problemas de parser con nombres de GUC
+    // Establecer GUC por transacción usando set_config (seguro para variables custom)
     await client.query('SELECT set_config($1, $2, true)', ['app.current_user', String(userName || 'anon')]);
     const result = await fn(client);
     await client.query('COMMIT');

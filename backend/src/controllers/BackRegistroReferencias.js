@@ -3,6 +3,7 @@ const pool = require('../../db/pool');
 const router = express.Router();
 router.use(express.json());
 const jwt = require('jsonwebtoken');
+const { runWithUser } = require('../db');
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
 
 async function resolveActorNombre(req) {
@@ -27,6 +28,17 @@ router.post('/api/referencias', async (req, res) => {
     return res.status(400).json({ detail: 'Todos los campos son obligatorios.' });
   }
   try {
+    // Derivar usuario autenticado para GUC app.current_user
+    let userName = 'web';
+    try {
+      const auth = req.headers?.authorization || '';
+      if (auth.startsWith('Bearer ')) {
+        const token = auth.slice(7);
+        const payloadJwt = jwt.verify(token, JWT_SECRET);
+        userName = payloadJwt?.nombre_usuario || String(payloadJwt?.sub || 'web');
+      }
+    } catch (_) {}
+
     const usuarioNombre = await resolveActorNombre(req);
     const params = [
       String(noafiliacion).trim(),
@@ -37,22 +49,13 @@ router.post('/api/referencias', async (req, res) => {
       usuarioNombre || 'sistema'
     ];
 
-    // Llamar SP con transacción y cursor
-    const client = await pool.connect();
-    let refRows = [];
-    try {
-      await client.query('BEGIN');
+    // Ejecutar SP dentro de runWithUser para que los triggers vean app.current_user
+    const refRows = await runWithUser(String(userName), async (client) => {
       const cursorName = 'cur_registrar_referencia';
       await client.query('CALL public.sp_registrar_referencia($1, $2, $3, $4, $5, $6, $7)', [...params, cursorName]);
       const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
-      refRows = fetchRes.rows || [];
-      await client.query('COMMIT');
-    } catch (e) {
-      try { await client.query('ROLLBACK'); } catch (_) {}
-      throw e;
-    } finally {
-      client.release();
-    }
+      return fetchRes.rows || [];
+    });
     res.status(201).json({ success: true, referencia: refRows?.[0] || null });
   } catch (err) {
     console.error('Error al registrar referencia:', err);
