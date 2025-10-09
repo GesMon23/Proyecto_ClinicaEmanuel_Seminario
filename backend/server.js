@@ -1301,7 +1301,7 @@ const definirCarnetPaciente = async (pacienteData, fotoPath, carnetPath) => {
     }
 
     // QR debajo de la foto
-    const qrUrl = `http://localhost:3000/consulta-pacientes?noafiliacion=${encodeURIComponent(pacienteData.noafiliacion)}`;
+    const qrUrl = `http://localhost:3000/layout/consulta-pacientes?noafiliacion=${encodeURIComponent(pacienteData.noafiliacion)}`;
     const qrDataUrl = await QRCode.toDataURL(qrUrl, { margin: 1, width: 70 });
     doc.image(Buffer.from(qrDataUrl.split(",")[1], 'base64'), 450, 105, { width: 50, height: 50 });
     doc.font('Helvetica').fontSize(8).fillColor('black').text('Escanee para ver\ninformación', 445, 158, { width: 65, align: 'center' });

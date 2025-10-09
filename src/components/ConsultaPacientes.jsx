@@ -1,7 +1,7 @@
-﻿import Footer from "@/layouts/footer"
+import Footer from "@/layouts/footer"
 import logoClinica from "@/assets/logoClinica2.png"
 import avatarDefault from "@/assets/default-avatar.png"
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../config/api';
 import {
     Container,
@@ -143,6 +143,20 @@ const ConsultaPacientes = () => {
     const [modalTitle, setModalTitle] = useState('');
     const [fotoCargando, setFotoCargando] = useState(false);
     const [departamentos, setDepartamentos] = useState([]);
+
+    // Autocompletar noafiliacion desde la URL y ejecutar la búsqueda al cargar
+    useEffect(() => {
+        try {
+            const query = typeof window !== 'undefined' ? window.location.search : '';
+            const params = new URLSearchParams(query);
+            const n = params.get('noafiliacion') || params.get('no_afiliacion');
+            if (n && n.trim() !== '') {
+                setBusqueda(prev => ({ ...prev, noafiliacion: n.trim(), dpi: '' }));
+                // Ejecutar búsqueda con override directo (sin depender del timing del estado)
+                setTimeout(() => { if (typeof buscarPacientes === 'function') buscarPacientes(null, { noafiliacion: n.trim(), dpi: '' }); }, 0);
+            }
+        } catch {}
+    }, []);
     const [estados, setEstados] = useState([]);
     const [accesosVasculares, setAccesosVasculares] = useState([]);
     const [jornadas, setJornadas] = useState([]);
@@ -290,18 +304,22 @@ const ConsultaPacientes = () => {
         return jornada ? jornada.descripcion : '';
     };
 
-    const buscarPacientes = async (e) => {
+    const buscarPacientes = async (e, override) => {
         if (e) e.preventDefault();
         setLoading(true);
         setError(null);
         setFotoCargando(true);
 
+        // Permitir override desde URL o llamadas directas
+        const noaf = (override?.noafiliacion ?? busqueda.noafiliacion ?? '').trim();
+        const dpiVal = (override?.dpi ?? busqueda.dpi ?? '').trim();
+
         try {
             let response;
-            if (busqueda.noafiliacion.trim() !== '') {
-                response = await api.get(`/pacientes/${busqueda.noafiliacion}`);
-            } else if (busqueda.dpi.trim() !== '') {
-                response = await api.get(`/pacientes/dpi/${busqueda.dpi}`);
+            if (noaf !== '') {
+                response = await api.get(`/pacientes/${noaf}`);
+            } else if (dpiVal !== '') {
+                response = await api.get(`/pacientes/dpi/${dpiVal}`);
             } else {
                 setShowModal(true);
                 setModalMessage('Debe ingresar el número de afiliación o el DPI');
@@ -438,7 +456,10 @@ const ConsultaPacientes = () => {
         } finally {
             setLoading(false);
             setFotoCargando(false);
-            setBusqueda({ noafiliacion: '', dpi: '' });
+            // Solo limpiar si fue una búsqueda manual (sin override)
+            if (!override) {
+                setBusqueda({ noafiliacion: '', dpi: '' });
+            }
         }
     };
 
@@ -898,19 +919,70 @@ const ConsultaPacientes = () => {
         const pageWidth = doc.internal.pageSize.getWidth();
         const verde = '#2d6a4f';
         const rojo = '#dc3545';
+        // Tipografía base más limpia
+        doc.setFont('helvetica', 'normal');
 
-        // Encabezado con logo y título
+        // Helper para obtener un PNG de QR en base64 (con múltiples fallbacks)
+        const getQRBase64 = async (text) => {
+            const toBase64 = async (resp) => {
+                const blob = await resp.blob();
+                return await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+            };
+            const size = 180;
+            // Primario: qrserver.com (menos restricciones CORS en general)
+            try {
+                const url1 = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(text)}`;
+                const resp1 = await fetch(url1, { cache: 'no-store' });
+                if (resp1.ok) return await toBase64(resp1);
+            } catch {}
+            // Fallback: Google Charts
+            try {
+                const url2 = `https://chart.googleapis.com/chart?cht=qr&chs=${size}x${size}&chl=${encodeURIComponent(text)}`;
+                const resp2 = await fetch(url2, { cache: 'no-store' });
+                if (resp2.ok) return await toBase64(resp2);
+            } catch {}
+            // Fallback adicional: quickchart.io
+            try {
+                const url3 = `https://quickchart.io/qr?size=${size}&text=${encodeURIComponent(text)}`;
+                const resp3 = await fetch(url3, { cache: 'no-store' });
+                if (resp3.ok) return await toBase64(resp3);
+            } catch {}
+            return null;
+        };
+
+        // Encabezado con logo, título y QR
         // Logo (asegúrate de tener el logo en base64 o usa una imagen pública accesible)
         const logoImg = await getLogoBase64(); // función auxiliar para obtener el logo en base64
+        // URL fija para abrir directamente la consulta del paciente por no_afiliacion
+        const qrTarget = `http://localhost:3000/layout/consulta-pacientes?noafiliacion=${encodeURIComponent(paciente.no_afiliacion || '')}`;
+        const qrImgData = await getQRBase64(qrTarget);
         if (logoImg) {
-            doc.addImage(logoImg, 'PNG', 40, 30, 60, 60);
+            // Logo ligeramente más largo
+            const logoW = 90, logoH = 60;
+            const logoX = 40;
+            const logoY = 30;
+            doc.addImage(logoImg, 'PNG', logoX, logoY, logoW, logoH, undefined, 'FAST');
         }
-        doc.setFontSize(26);
+        // Título principal centrado
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(24);
         doc.setTextColor(verde);
-        doc.text('Reporte de Paciente', pageWidth / 2, 60, { align: 'center' });
+        doc.text('Reporte de Paciente', pageWidth / 2, 70, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
         doc.setDrawColor(verde);
-        doc.setLineWidth(2);
-        doc.line(40, 100, pageWidth - 40, 100);
+        doc.setLineWidth(1.6);
+        doc.line(40, 95, pageWidth - 40, 95);
+        // QR en la esquina superior derecha del encabezado (primera página)
+        if (qrImgData) {
+            const qrSize = 60;
+            const qrX = pageWidth - 40 - qrSize; // margen derecho 40
+            const qrY = 25; // cerca del borde superior
+            doc.addImage(qrImgData, 'PNG', qrX, qrY, qrSize, qrSize, undefined, 'FAST');
+        }
 
         // Foto del paciente
         let fotoY = 120;
@@ -918,59 +990,108 @@ const ConsultaPacientes = () => {
         let yStart = fotoY;
         let fotoPaciente = await getFotoPacienteBase64(paciente);
         if (fotoPaciente) {
-            doc.addImage(fotoPaciente, 'JPEG', fotoX, fotoY, 110, 110, undefined, 'FAST');
+            // Foto menos alta para evitar apariencia estirada
+            doc.addImage(fotoPaciente, 'JPEG', fotoX, fotoY, 100, 100, undefined, 'FAST');
         }
-        // Datos personales
-        doc.setFontSize(11);
+        // Datos personales en una sola columna (vertical), letra más pequeña y tabulado
+        doc.setFontSize(8);
         doc.setTextColor(verde);
         let y = fotoY;
-        let x = fotoX + 130;
-        doc.text(`Nombre:`, x, y);
-        doc.setTextColor(0, 0, 0);
-        doc.text(`${paciente.primer_nombre || ''} ${paciente.segundo_nombre || ''} ${paciente.otros_nombres || ''} ${paciente.primer_apellido || ''} ${paciente.segundo_apellido || ''} ${paciente.apellido_casada || ''}`.replace(/ +/g, ' ').trim(), x + 80, y);
-        y += 16;
-        doc.setTextColor(verde); doc.text('No. Afiliación:', x, y); doc.setTextColor(0, 0, 0); doc.text(`${paciente.no_afiliacion || ''}`, x + 110, y);
-        y += 16;
-        doc.setTextColor(verde); doc.text('DPI:', x, y); doc.setTextColor(0, 0, 0); doc.text(`${paciente.dpi || ''}`, x + 40, y);
-        y += 16;
-        doc.setTextColor(verde); doc.text('Fecha Nacimiento:', x, y); doc.setTextColor(0, 0, 0); doc.text(`${formatearFecha(paciente.fecha_nacimiento) || ''}`, x + 120, y);
-        y += 16;
-        doc.setTextColor(verde); doc.text('Edad:', x, y); doc.setTextColor(0, 0, 0); doc.text(`${calcularEdad(paciente.fecha_nacimiento)}`, x + 40, y);
-        y += 16;
-        doc.setTextColor(verde); doc.text('Sexo:', x, y); doc.setTextColor(0, 0, 0); doc.text(`${paciente.sexo || ''}`, x + 40, y);
-        y += 16;
-        doc.setTextColor(verde); doc.text('Dirección:', x, y); doc.setTextColor(0, 0, 0); doc.text(`${paciente.direccion || ''}`, x + 80, y);
-        y += 16;
-        doc.setTextColor(verde); doc.text('Sesiones Autorizadas:', x, y); doc.setTextColor(0, 0, 0); doc.text(`${paciente.sesiones_autorizadas_mes || ''}`, x + 140, y);
-        y += 16;
-        doc.setTextColor(verde); doc.text('Fecha Ingreso:', x, y); doc.setTextColor(0, 0, 0); doc.text(`${formatearFecha(paciente.fecha_ingreso) || ''}`, x + 110, y);
-        y += 16;
-        doc.setTextColor(verde); doc.text('Estancia Programa:', x, y); doc.setTextColor(0, 0, 0); doc.text(`${calcularEstanciaPrograma(paciente.fecha_ingreso)}`, x + 140, y);
-        y += 16;
-        doc.setTextColor(verde); doc.text('Jornada:', x, y); doc.setTextColor(0, 0, 0); doc.text(`${paciente.jornada_descripcion || ''}`, x + 70, y);
-        y += 16;
-        doc.setTextColor(verde); doc.text('Observaciones:', x, y); doc.setTextColor(0, 0, 0); doc.text(`${paciente.observaciones || ''}`, x + 110, y);
+        const colX = fotoX + 120; // a la derecha de la foto
+        const labelPad = 120; // separación etiqueta -> valor
+        const lineH = 12; // altura de línea compacta
 
-        // Secciones compactas (últimos 3 registros por cada módulo)
+        const nombreCompleto = `${paciente.primer_nombre || ''} ${paciente.segundo_nombre || ''} ${paciente.otros_nombres || ''} ${paciente.primer_apellido || ''} ${paciente.segundo_apellido || ''} ${paciente.apellido_casada || ''}`.replace(/ +/g, ' ').trim();
+
+        const printPair = (label, value) => {
+            doc.setTextColor(verde);
+            doc.text(label, colX, y);
+            doc.setTextColor(0,0,0);
+            doc.text(String(value ?? ''), colX + labelPad, y);
+            y += lineH;
+        };
+
+        printPair('Nombre:', nombreCompleto);
+        printPair('No. Afiliación:', `${paciente.no_afiliacion || ''}`);
+        printPair('DPI:', `${paciente.dpi || ''}`);
+        printPair('Fecha Nacimiento:', `${formatearFecha(paciente.fecha_nacimiento) || ''}`);
+        printPair('Edad:', `${calcularEdad(paciente.fecha_nacimiento)}`);
+        printPair('Sexo:', `${paciente.sexo || ''}`);
+        printPair('Fecha Ingreso:', `${formatearFecha(paciente.fecha_ingreso) || ''}`);
+        printPair('Estancia Programa:', `${calcularEstanciaPrograma(paciente.fecha_ingreso)}`);
+        printPair('Jornada:', `${paciente.jornada_descripcion || ''}`);
+        printPair('Sesiones Autorizadas:', `${paciente.sesiones_autorizadas_mes || ''}`);
+        printPair('Dirección:', `${paciente.direccion || ''}`);
+
+        // Observaciones bajo la lista
+        const afterColsY = y + 2;
+        doc.setTextColor(verde); doc.text('Observaciones:', colX, afterColsY);
+        doc.setTextColor(0,0,0);
+        doc.text(`${paciente.observaciones || ''}`, colX + labelPad, afterColsY, { maxWidth: (pageWidth - 40) - (colX + labelPad) });
+
+        // Secciones con soporte multi-página
         const pageHeight = doc.internal.pageSize.getHeight();
         const leftX = 40;
         const rightX = pageWidth - 40;
-        // colocar secciones inmediatamente después del último renglón personal
-        let yCursor = Math.max(y + 30, 320);
+        let yCursor = Math.max(afterColsY + 30, 280);
 
-        // Mantener en una sola hoja: si no hay espacio, omitir secciones restantes
-        const hasSpace = (needed) => (yCursor + needed <= pageHeight - 60);
+        // Encabezado/pie para páginas adicionales
+        const drawPageHeader = () => {
+            if (logoImg) {
+                const logoW = 90, logoH = 70; // respeta el ajuste actual
+                const logoX = 40, logoY = 30;
+                doc.addImage(logoImg, 'PNG', logoX, logoY, logoW, logoH, undefined, 'FAST');
+            }
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(24);
+            doc.setTextColor(verde);
+            doc.text('Reporte de Paciente', pageWidth / 2, 70, { align: 'center' });
+            // QR en la esquina superior derecha del encabezado (todas las páginas)
+            if (qrImgData) {
+                const qrSize = 60;
+                const qrX = pageWidth - 40 - qrSize; // margen derecho 40
+                const qrY = 25; // cerca del borde superior
+                doc.addImage(qrImgData, 'PNG', qrX, qrY, qrSize, qrSize, undefined, 'FAST');
+            }
+            doc.setFont('helvetica', 'normal');
+            doc.setDrawColor(verde);
+            doc.setLineWidth(1.6);
+            doc.line(40, 95, pageWidth - 40, 95);
+        };
+        const drawPageFooter = () => {
+            doc.setDrawColor(rojo);
+            doc.setLineWidth(1);
+            doc.line(40, pageHeight - 60, pageWidth - 40, pageHeight - 60);
+            doc.setFontSize(10);
+            doc.setTextColor(rojo);
+            doc.text('Sistema de Gestión de Pacientes', pageWidth / 2, pageHeight - 40, { align: 'center' });
+            doc.setTextColor(100);
+        };
+        const addPage = () => {
+            // cerrar la página actual con pie
+            drawPageFooter();
+            doc.addPage();
+            drawPageHeader();
+            yCursor = 110;
+        };
+
+        // Utilidad para asegurar espacio, si no cabe, nueva página
+        const ensureSpace = (needed) => {
+            if (yCursor + needed <= pageHeight - 60) return true;
+            addPage();
+            return true;
+        };
 
         const drawSectionTitle = (title) => {
-            if (!hasSpace(30)) return false;
-            // Badge verde
+            ensureSpace(30);
+            // Barra verde del ancho de la tabla
             doc.setFontSize(11);
-            const padX = 8, padY = 5;
-            const tw = doc.getTextWidth(title) + padX * 2;
+            const padX = 8;
             const th = 16;
+            const tableWidth = rightX - leftX;
             doc.setFillColor(45, 106, 79); // verde
             doc.setDrawColor(45, 106, 79);
-            doc.rect(leftX, yCursor - (th - 6), tw, th, 'F');
+            doc.rect(leftX, yCursor - (th - 6), tableWidth, th, 'F');
             doc.setTextColor(255,255,255);
             doc.text(title, leftX + padX, yCursor + 2);
             // subrayado fino
@@ -1001,7 +1122,7 @@ const ConsultaPacientes = () => {
             return true;
         };
 
-        const endSection = () => { if (hasSpace(26)) yCursor += 26; };
+        const endSection = () => { ensureSpace(44); yCursor += 44; };
 
         // Tabla con encabezado, cebra y bordes por celda
         const drawTable = (title, headers, rows, aligns = []) => {
@@ -1010,8 +1131,8 @@ const ConsultaPacientes = () => {
             const colWidth = tableWidth / colCount;
             const headerH = 14;
             const rowH = 12;
-            const needed = 30 /*title*/ + headerH + (rows.length * rowH) + 12;
-            if (!hasSpace(needed)) return false;
+            const needed = 30 /*title*/ + headerH + 12;
+            ensureSpace(needed);
 
             // Título
             if (!drawSectionTitle(title)) return false;
@@ -1036,6 +1157,26 @@ const ConsultaPacientes = () => {
             doc.setFontSize(8);
             rows.forEach((r, idx) => {
                 // zebra
+                if (yCursor + rowH > pageHeight - 60) {
+                    addPage();
+                    // repetir encabezado de sección como continuación
+                    drawSectionTitle(`${title} (cont.)`);
+                    // repetir encabezado de tabla
+                    doc.setFillColor(241, 245, 249);
+                    doc.setDrawColor(203, 213, 225);
+                    doc.rect(leftX, yCursor, tableWidth, headerH, 'F');
+                    doc.setFont(undefined, 'bold');
+                    headers.forEach((h, i) => {
+                        const cellX = leftX + (i * colWidth);
+                        const textX = cellX + 4;
+                        const textY = yCursor + headerH - 4;
+                        doc.text(String(h), textX, textY);
+                    });
+                    doc.rect(leftX, yCursor, tableWidth, headerH);
+                    doc.setFont(undefined, 'normal');
+                    yCursor += headerH;
+                    doc.setFontSize(8);
+                }
                 const rowY = yCursor;
                 if (idx % 2 === 0) {
                     doc.setFillColor(250, 250, 250);
@@ -1127,15 +1268,60 @@ const ConsultaPacientes = () => {
             if (nutRows.length) drawTable('Nutrición', ['ID','Motivo','Estado','IMC'], nutRows, ['center','left','left','center']);
         } catch {}
 
-        // Psicología: ID, Motivo, Tipo, (sin fecha específica)
+        // Psicología: Últimos 3 (por fecha), con salto de página si es necesario
         try {
-            const psiRows = (psicologia || []).slice(0, 3).map(p => [
+            const psiSorted = (psicologia || []).slice().sort((a, b) => {
+                const fa = a.fecha_creacion || a.fecha || a.fecha_informe || '';
+                const fb = b.fecha_creacion || b.fecha || b.fecha_informe || '';
+                const da = fa ? new Date(fa).getTime() : 0;
+                const db = fb ? new Date(fb).getTime() : 0;
+                return db - da;
+            });
+            const psiRows = psiSorted.slice(0, 3).map(p => [
                 p.id_informe || '',
-                p.motivo_consulta || '',
-                p.tipo_consulta || ''
+                (p.fecha_creacion || p.fecha || p.fecha_informe) ? new Date(p.fecha_creacion || p.fecha || p.fecha_informe).toLocaleDateString('es-ES') : '',
+                p.tipo_consulta || '',
+                p.tipo_atencion || '',
+                p.motivo_consulta || ''
             ]);
-            if (psiRows.length) drawTable('Psicología', ['ID','Motivo','Tipo'], psiRows, ['center','left','left']);
+            if (psiRows.length) drawTable('Psicología', ['ID','Fecha','Tipo','Atención','Motivo'], psiRows, ['center','center','left','left','left']);
         } catch {}
+
+        // Laboratorio: Detalle del último registro con parámetros completos
+        try {
+            const pickDate = (it) => it.fecha_laboratorio || it.fecha || it.fecha_creacion || '';
+            const latest = (laboratorios || []).slice().sort((a,b) => {
+                const da = pickDate(a) ? new Date(pickDate(a)).getTime() : 0;
+                const db = pickDate(b) ? new Date(pickDate(b)).getTime() : 0;
+                return db - da;
+            })[0];
+            if (latest) {
+                // Construir filas de parámetros
+                let paramRows = [];
+                if (Array.isArray(latest.parametros) && latest.parametros.length > 0) {
+                    paramRows = latest.parametros.map(p => [String(p.parametro ?? ''), String(p.valor ?? '')]);
+                } else {
+                    const exclude = new Set(['id_laboratorio','idlaboratorio','no_afiliacion','noafiliacion','primer_nombre','primernombre','segundo_nombre','segundonombre','primer_apellido','primerapellido','segundo_apellido','segundoapellido','sexo','fecha_laboratorio','fecha','periodicidad','examen_realizado','causa_no_realizado','infeccion_acceso','complicacion_acceso','virologia','antigeno_hepatitis_c','antigeno_superficie','hiv','observacion','usuario_creacion','fecha_registro','idperlaboratorio','parametros']);
+                    const entries = Object.entries(latest).filter(([k,v]) => !exclude.has(k) && v !== null && v !== undefined && v !== '');
+                    const pretty = (s) => String(s).replace(/_/g,' ').replace(/\b\w/g, m => m.toUpperCase());
+                    paramRows = entries.map(([k,v]) => [pretty(k), typeof v === 'boolean' ? (v ? 'Sí' : 'No') : String(v)]);
+                }
+                // Encabezado breve del laboratorio
+                const miniRows = [[
+                    latest.no_afiliacion || '',
+                    (pickDate(latest) ? new Date(pickDate(latest)).toLocaleDateString('es-ES') : ''),
+                    latest.periodicidad || '',
+                    latest.examen_realizado ? 'Sí' : 'No'
+                ]];
+                drawTable('Último Laboratorio Registrado', ['Afiliación','Fecha','Periodicidad','Examen'], miniRows, ['left','center','left','center']);
+                // Parámetros completos
+                if (paramRows.length) {
+                    drawTable('Parámetros de Laboratorio', ['Parámetro','Valor'], paramRows, ['left','left']);
+                }
+            }
+        } catch {}
+
+        // QR ya se muestra en el encabezado de cada página
 
         // Pie de página
         doc.setDrawColor(rojo);
@@ -1145,7 +1331,6 @@ const ConsultaPacientes = () => {
         doc.setTextColor(rojo);
         doc.text('Sistema de Gestión de Pacientes', pageWidth / 2, pageHeight - 40, { align: 'center' });
         doc.setTextColor(100);
-        doc.text('Reporte generado automáticamente', pageWidth / 2, pageHeight - 25, { align: 'center' });
 
         doc.save(`reporte_paciente_${paciente.no_afiliacion}.pdf`);
     };
@@ -1153,23 +1338,38 @@ const ConsultaPacientes = () => {
     // Botón para descargar carné
     const handleDescargarCarnet = async () => {
         if (!paciente || !paciente.no_afiliacion) return;
+        const directUrl = `http://localhost:3001/carnet/forzar/${encodeURIComponent(paciente.no_afiliacion)}`;
         try {
-            // Llamar al endpoint especial para forzar la generación del carné desde cero
-            const response = await fetch(`http://localhost:3001/carnet/forzar/${paciente.no_afiliacion}`);
-            if (!response.ok) throw new Error('No se pudo generar ni descargar el carné');
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
+            // Intento 1: descarga directa por enlace (más compatible y evita CORS/Blob issues)
             const a = document.createElement('a');
-            a.href = url;
+            a.href = directUrl;
             a.download = `carnet_${paciente.no_afiliacion}.pdf`;
+            a.rel = 'noopener';
             document.body.appendChild(a);
             a.click();
             a.remove();
-            window.URL.revokeObjectURL(url);
-        } catch (error) {
-            setShowModal(true);
-            setModalMessage('No se pudo descargar o generar el carné.');
-            setModalType('error');
+        } catch (err1) {
+            // Fallback: fetch como blob con mejor diagnóstico
+            try {
+                const response = await fetch(directUrl, { method: 'GET' });
+                if (!response.ok) {
+                    const txt = await response.text().catch(() => '');
+                    throw new Error(`HTTP ${response.status} ${response.statusText} ${txt}`);
+                }
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a2 = document.createElement('a');
+                a2.href = url;
+                a2.download = `carnet_${paciente.no_afiliacion}.pdf`;
+                document.body.appendChild(a2);
+                a2.click();
+                a2.remove();
+                window.URL.revokeObjectURL(url);
+            } catch (err2) {
+                setShowModal(true);
+                setModalMessage(`No se pudo descargar o generar el carné. Detalle: ${String(err2 && err2.message ? err2.message : err2)}`);
+                setModalType('error');
+            }
         }
     };
 
