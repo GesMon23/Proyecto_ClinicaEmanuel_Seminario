@@ -1,6 +1,8 @@
 // Router de Login/Roles
 const express = require('express');
 const pool = require('../../db/pool');
+const jwt = require('jsonwebtoken');
+const { runWithUser } = require('../db');
 const fs = require('fs');
 const path = require('path');
 
@@ -140,7 +142,20 @@ router.put('/Apacientes/:no_afiliacion', async (req, res) => {
       no_afiliacion
     ];
 
-    const result = await pool.query(query, values);
+    // Derivar usuario y ejecutar dentro de runWithUser para que triggers capten app.current_user
+    let userName = 'web';
+    try {
+      const auth = req.headers.authorization || '';
+      if (auth.startsWith('Bearer ')) {
+        const token = auth.slice(7);
+        const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret_change_me');
+        userName = payload?.nombre_usuario || String(payload?.sub || 'web');
+      }
+    } catch (_) {}
+
+    const result = await runWithUser(String(userName), async (client) => {
+      return client.query(query, values);
+    });
 
     if (result.rowCount > 0) {
       res.json({ success: true, paciente: result.rows[0] });
@@ -176,8 +191,19 @@ router.post('/Aupload-foto/:no_Afiliacion', async (req, res) => {
         // Guardar/reemplazar archivo
         fs.writeFileSync(filePath, buffer);
 
-        // Actualizar urlfoto en la base de datos
-        await pool.query('UPDATE tbl_pacientes SET url_foto = $1 WHERE no_afiliacion = $2', [filename, no_Afiliacion]);
+        // Derivar usuario y ejecutar dentro de runWithUser para auditoría
+        let userName = 'web';
+        try {
+          const auth = req.headers.authorization || '';
+          if (auth.startsWith('Bearer ')) {
+            const token = auth.slice(7);
+            const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret_change_me');
+            userName = payload?.nombre_usuario || String(payload?.sub || 'web');
+          }
+        } catch (_) {}
+        await runWithUser(String(userName), async (client) => {
+          await client.query('UPDATE tbl_pacientes SET url_foto = $1 WHERE no_afiliacion = $2', [filename, no_Afiliacion]);
+        });
         res.json({ success: true, url: `${filename}` });
     } catch (err) {
         console.error('Error al subir foto:', err);

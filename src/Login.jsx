@@ -38,13 +38,6 @@ const LoginComponent = () => {
     if (/[A-Z]/.test(usuario)) {
       setMensaje("Todos los caracteres del usuario deben ir en minúsculas");
       return;
-    }if (usuario.length < 8) {
-      setMensaje("El usuario debe tener 8 caracteres");
-      return;
-    }
-    if (password.length < 8) {
-      setMensaje("La contraseña debe tener al menos 8 caracteres");
-      return;
     }
     try {
       const { data } = await api.post('/auth/login', { usuario, password });
@@ -264,8 +257,9 @@ const LoginComponent = () => {
             <input
               type="text"
               value={fpTelefono}
-              onChange={(e) => setFpTelefono((e.target.value || '').replace(/\D+/g, '').slice(0, 15))}
+              onChange={(e) => setFpTelefono((e.target.value || '').replace(/\D+/g, '').slice(0, 8))}
               inputMode="numeric"
+              maxLength={8}
               className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600"
             />
 
@@ -294,7 +288,7 @@ const LoginComponent = () => {
                     setFpError(''); setFpMsg('');
                     if (!fpDpi || fpDpi.length !== 13) { setFpError('DPI debe tener 13 dígitos'); return; }
                     if (!fpNombres || !fpApellidos) { setFpError('Nombres y apellidos son requeridos'); return; }
-                    if (!fpTelefono) { setFpError('Teléfono es requerido'); return; }
+                    if (!fpTelefono || fpTelefono.length !== 8) { setFpError('Teléfono debe tener 8 dígitos'); return; }
                     if (!fpUsuario) { setFpError('Nombre de usuario es requerido'); return; }
                     setFpLoading(true);
                     await api.post('/auth/forgot-password', {

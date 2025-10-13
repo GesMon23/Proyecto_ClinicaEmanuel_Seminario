@@ -65,12 +65,30 @@ router.post('/empleados', verifyJWT, async (req, res) => {
     activo
   } = req.body;
 
-  // Validaciones mínimas
-  if (!dpi || !primer_nombre || !primer_apellido || !direccion || !fecha_ingreso || !sexo) {
+  // Validaciones mínimas (obligatorios excepto: segundo_nombre, otros_nombres, segundo_apellido, apellido_casada)
+  if (
+    !dpi ||
+    !primer_nombre ||
+    !primer_apellido ||
+    !fecha_nacimiento ||
+    !sexo ||
+    !direccion ||
+    !telefono ||
+    !email ||
+    !fecha_ingreso
+  ) {
     return res.status(400).json({ error: 'Faltan campos obligatorios.' });
   }
   if (typeof dpi !== 'string' || dpi.length !== 13) {
     return res.status(400).json({ error: 'El DPI debe tener exactamente 13 caracteres.' });
+  }
+  // Teléfono: 8 dígitos
+  if (typeof telefono !== 'string' || !/^\d{8}$/.test(telefono)) {
+    return res.status(400).json({ error: 'El teléfono debe contener exactamente 8 dígitos.' });
+  }
+  // Email: validación básica
+  if (typeof email !== 'string' || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    return res.status(400).json({ error: 'El email no tiene un formato válido.' });
   }
 
   try {

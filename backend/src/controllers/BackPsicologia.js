@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../../db/pool');
 const jwt = require('jsonwebtoken');
+const { runWithUser } = require('../db');
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
 
 function getUserIdFromReq(req) {
@@ -79,22 +80,24 @@ const guardarEvaluacion = async (req, res) => {
       usuarioNombre || 'sistema'
     ];
 
-    // Llamar al SP con transacción y cursor
-    const client = await pool.connect();
-    let payload;
+    // Derivar usuario autenticado para GUC app.current_user
+    let userName = 'web';
     try {
-      await client.query('BEGIN');
+      const auth = req.headers?.authorization || '';
+      if (auth.startsWith('Bearer ')) {
+        const token = auth.slice(7);
+        const payloadJwt = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret_change_me');
+        userName = payloadJwt?.nombre_usuario || String(payloadJwt?.sub || 'web');
+      }
+    } catch (_) {}
+
+    // Llamar al SP dentro de runWithUser para que los triggers de auditoría tomen app.current_user
+    const payload = await runWithUser(String(userName), async (client) => {
       const cursorName = 'cur_guardar_evaluacion_psicologia';
       await client.query('CALL public.sp_guardar_evaluacion_psicologia($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)', [...params, cursorName]);
       const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
-      payload = fetchRes.rows?.[0]?.result;
-      await client.query('COMMIT');
-    } catch (e) {
-      try { await client.query('ROLLBACK'); } catch (_) {}
-      throw e;
-    } finally {
-      client.release();
-    }
+      return fetchRes.rows?.[0]?.result;
+    });
 
     return res.status(201).json({
       message: 'Evaluación psicológica guardada exitosamente',
