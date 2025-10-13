@@ -171,6 +171,12 @@ router.post('/usuarios', verifyJWT, requireRole(['RolGestionUsuarios']), async (
     ]);
     const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
     const id_usuario = fetchRes.rows?.[0]?.id_usuario || null;
+    // Marcar para forzar cambio de contraseña en el primer login
+    if (id_usuario) {
+      try {
+        await client.query('CALL public.sp_usuario_flag_force_change_set($1, $2)', [id_usuario, true]);
+      } catch (_) { /* noop: no bloquear creación por error de flag */ }
+    }
 
     await client.query('COMMIT');
     return res.status(201).json({ id_usuario });

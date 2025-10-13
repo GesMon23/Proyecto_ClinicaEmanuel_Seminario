@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const app = express();
@@ -5,6 +6,8 @@ const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
 const PDFDocument = require('pdfkit');
+const jwt = require('jsonwebtoken');
+const { runWithUser } = require('./src/db');
 
 const nz = (v) => (v === undefined || v === null || v === '' ? null : v);
 
@@ -1298,7 +1301,7 @@ const definirCarnetPaciente = async (pacienteData, fotoPath, carnetPath) => {
     }
 
     // QR debajo de la foto
-    const qrUrl = `http://localhost:3000/consulta-pacientes?noafiliacion=${encodeURIComponent(pacienteData.noafiliacion)}`;
+    const qrUrl = `http://localhost:3000/layout/consulta-pacientes?noafiliacion=${encodeURIComponent(pacienteData.noafiliacion)}`;
     const qrDataUrl = await QRCode.toDataURL(qrUrl, { margin: 1, width: 70 });
     doc.image(Buffer.from(qrDataUrl.split(",")[1], 'base64'), 450, 105, { width: 50, height: 50 });
     doc.font('Helvetica').fontSize(8).fillColor('black').text('Escanee para ver\ninformación', 445, 158, { width: 65, align: 'center' });
@@ -1614,12 +1617,25 @@ app.post('/pacientes', async (req, res) => {
             b.idJornada ? Number(b.idJornada) : null,                 // 19 id_jornada
             b.sesionesAutorizadasMes ? Number(b.sesionesAutorizadasMes) : null, // 20 sesiones_autorizadas_mes
             savedFileName,                                           // 21 url_foto  <<--- AQUI GUARDAMOS EL NOMBRE DEL ARCHIVO
-            nz(b.usuario_creacion) || 'web',                         // 22 usuario_creacion
+            null,                        // 22 usuario_creacion
             nz(b.fechainicioperiodo),                                // 23 inicio_prest_servicios (YYYY-MM-DD)
             nz(b.fechafinperiodo)                                    // 24 fin_prest_servicios (YYYY-MM-DD)
         ];
 
-        const { rows } = await pool.query(sql, values);
+        let userName = 'web';
+try {
+  const auth = req.headers.authorization || '';
+  if (auth.startsWith('Bearer ')) {
+    const token = auth.slice(7);
+    const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret_change_me');
+    userName = payload?.nombre_usuario || String(payload?.sub || 'web');
+  }
+} catch (_) { /* fallback 'web' */ }
+
+const rows = await runWithUser(String(userName), async (client) => {
+  const r = await client.query(sql, values);
+  return r.rows;
+});
 
         return res.status(201).json({
             ok: true,

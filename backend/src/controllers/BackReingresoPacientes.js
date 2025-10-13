@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../../db/pool');
+const jwt = require('jsonwebtoken');
+const { runWithUser } = require('../db');
 
 // GET /api/reingreso/pacientes/reingreso?noafiliacion=... | dpi=...
 // Devuelve SOLO egresados (id_estado=3) que tengan registro en tbl_egresos
@@ -62,107 +64,116 @@ router.get('/pacientes/reingreso', async (req, res) => {
     return res.json(rows);
   } catch (err) {
     console.error('[GET /api/reingreso/pacientes/reingreso] ERROR:', err);
-    res.status(500).json({ error: 'Error al buscar pacientes para reingreso.' });
+    return res.status(500).json({ error: 'Error al buscar pacientes para reingreso.' });
   }
 });
 
 // POST /api/reingreso/pacientes/reingreso
-// Body: { noAfiliacion, numeroFormulario, fechaReingreso, observaciones, inicioPrestServicios, finPrestServicios, sesionesAutorizadasMes, usuario }
+// Body: { noAfiliacion, numeroFormulario, fechaReingreso, observaciones, inicioPrestServicios, finPrestServicios, sesionesAutorizadasMes }
 router.post('/pacientes/reingreso', async (req, res) => {
-  const client = await pool.connect();
+  // Derivar usuario desde JWT y ejecutar dentro de runWithUser
+  let userName = 'web';
   try {
-    const b = req.body || {};
-    const noAfiliacion     = String(b.noAfiliacion || '').trim();
-    const numeroFormulario = String(b.numeroFormulario || '').trim();
-    const fechaReingreso   = String(b.fechaReingreso || '').trim(); // 'YYYY-MM-DD'
-    const observaciones    = (b.observaciones ?? '').trim() || null;
-    const usuario          = (b.usuario ?? 'web').trim();
-    // Nuevos campos opcionales
-    const inicioPrest      = (b.inicioPrestServicios ? String(b.inicioPrestServicios).trim() : null) || null; // date
-    const finPrest         = (b.finPrestServicios ? String(b.finPrestServicios).trim() : null) || null;        // date
-    const sesionesMes      = (b.sesionesAutorizadasMes !== undefined && b.sesionesAutorizadasMes !== null && b.sesionesAutorizadasMes !== '')
-                              ? Number(b.sesionesAutorizadasMes)
-                              : null; // integer
-
-    if (!noAfiliacion || !numeroFormulario || !fechaReingreso) {
-      return res.status(400).json({ success: false, error: 'noAfiliacion, numeroFormulario y fechaReingreso son obligatorios.' });
+    const auth = req.headers.authorization || '';
+    if (auth.startsWith('Bearer ')) {
+      const token = auth.slice(7);
+      const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret_change_me');
+      userName = payload?.nombre_usuario || String(payload?.sub || 'web');
     }
+  } catch (_) {}
 
-    await client.query('BEGIN');
+  try {
+    const result = await runWithUser(String(userName), async (client) => {
+      const b = req.body || {};
+      const noAfiliacion     = String(b.noAfiliacion || '').trim();
+      const numeroFormulario = String(b.numeroFormulario || '').trim();
+      const fechaReingreso   = String(b.fechaReingreso || '').trim(); // 'YYYY-MM-DD'
+      const observaciones    = (b.observaciones ?? '').trim() || null;
+      const inicioPrest      = (b.inicioPrestServicios ? String(b.inicioPrestServicios).trim() : null) || null; // date
+      const finPrest         = (b.finPrestServicios ? String(b.finPrestServicios).trim() : null) || null;        // date
+      const sesionesMes      = (b.sesionesAutorizadasMes !== undefined && b.sesionesAutorizadasMes !== null && b.sesionesAutorizadasMes !== '')
+                                ? Number(b.sesionesAutorizadasMes)
+                                : null; // integer
 
-    // 1) Validar paciente egresado (id_estado = 3)
-    const qPac = `
-      SELECT id_estado
-      FROM public.tbl_pacientes
-      WHERE no_afiliacion = $1
-      FOR UPDATE
-    `;
-    const rPac = await client.query(qPac, [noAfiliacion]);
-    if (!rPac.rowCount) {
-      await client.query('ROLLBACK');
-      return res.status(404).json({ success: false, error: 'Paciente no encontrado.' });
-    }
-    if (Number(rPac.rows[0].id_estado) !== 3) {
-      await client.query('ROLLBACK');
-      return res.status(409).json({ success: false, error: 'El paciente no está en estado Egresado (id_estado = 3).' });
-    }
+      if (!noAfiliacion || !numeroFormulario || !fechaReingreso) {
+        throw new Error('VALIDATION:noAfiliacion, numeroFormulario y fechaReingreso son obligatorios.');
+      }
 
-    // 2) Validar que tenga egreso registrado
-    const qEg = `SELECT 1 FROM public.tbl_egresos WHERE no_afiliacion = $1 LIMIT 1`;
-    const rEg = await client.query(qEg, [noAfiliacion]);
-    if (!rEg.rowCount) {
-      await client.query('ROLLBACK');
-      return res.status(409).json({ success: false, error: 'No existe egreso registrado para este paciente.' });
-    }
-
-    // 2.1) Verificar existencia previa del mismo (no_afiliacion, numero_formulario) en reingresos
-    const qExistRei = `SELECT 1 FROM public.tbl_reingresos WHERE no_afiliacion = $1 AND numero_formulario = $2 LIMIT 1`;
-    const rExistRei = await client.query(qExistRei, [noAfiliacion, numeroFormulario]);
-    const shouldInsertReingreso = rExistRei.rowCount === 0;
-
-    // 3) Actualizar paciente: numero_formulario_activo + id_estado = 4 (Reingreso)
-    //    y nuevos campos: sesiones_autorizadas_mes, inicio_prest_servicios, fin_prest_servicios
-    const qUpd = `
-      UPDATE public.tbl_pacientes
-      SET
-        numero_formulario_activo = $2,
-        id_estado                 = 4,
-        sesiones_autorizadas_mes  = $3,
-        inicio_prest_servicios    = $4,
-        fin_prest_servicios       = $5,
-        usuario_actualizacion     = $6,
-        fecha_actualizacion       = NOW()
-      WHERE no_afiliacion = $1
-    `;
-    await client.query(qUpd, [
-      noAfiliacion,
-      numeroFormulario,
-      sesionesMes,
-      inicioPrest,
-      finPrest,
-      usuario,
-    ]);
-
-    // 4) Insert en tbl_reingresos (solo si no existe ya ese par)
-    if (shouldInsertReingreso) {
-      const qIns = `
-        INSERT INTO public.tbl_reingresos
-        (no_afiliacion, numero_formulario, fecha_reingreso, observaciones,
-         usuario_creacion, fecha_creacion, usuario_actualizacion, fecha_actualizacion,
-         usuario_eliminacion, fecha_eliminacion)
-        VALUES ($1,$2,$3,$4,$5,NOW(),NULL,NULL,NULL,NULL)
+      // 1) Validar paciente egresado (id_estado = 3)
+      const qPac = `
+        SELECT id_estado
+        FROM public.tbl_pacientes
+        WHERE no_afiliacion = $1
+        FOR UPDATE
       `;
-      await client.query(qIns, [noAfiliacion, numeroFormulario, fechaReingreso, observaciones, usuario]);
-    }
+      const rPac = await client.query(qPac, [noAfiliacion]);
+      if (!rPac.rowCount) {
+        throw new Error('NOT_FOUND:Paciente no encontrado.');
+      }
+      if (Number(rPac.rows[0].id_estado) !== 3) {
+        throw new Error('CONFLICT:El paciente no está en estado Egresado (id_estado = 3).');
+      }
 
-    await client.query('COMMIT');
-    return res.json({ success: true, inserted: shouldInsertReingreso });
+      // 2) Validar que tenga egreso registrado
+      const qEg = `SELECT 1 FROM public.tbl_egresos WHERE no_afiliacion = $1 LIMIT 1`;
+      const rEg = await client.query(qEg, [noAfiliacion]);
+      if (!rEg.rowCount) {
+        throw new Error('CONFLICT:No existe egreso registrado para este paciente.');
+      }
+
+      // 2.1) Verificar existencia previa del mismo (no_afiliacion, numero_formulario) en reingresos
+      const qExistRei = `SELECT 1 FROM public.tbl_reingresos WHERE no_afiliacion = $1 AND numero_formulario = $2 LIMIT 1`;
+      const rExistRei = await client.query(qExistRei, [noAfiliacion, numeroFormulario]);
+      const shouldInsertReingreso = rExistRei.rowCount === 0;
+
+      // 3) Actualizar paciente
+      const qUpd = `
+        UPDATE public.tbl_pacientes
+        SET
+          numero_formulario_activo = $2,
+          id_estado                 = 4,
+          sesiones_autorizadas_mes  = $3,
+          inicio_prest_servicios    = $4,
+          fin_prest_servicios       = $5
+        WHERE no_afiliacion = $1
+      `;
+      await client.query(qUpd, [
+        noAfiliacion,
+        numeroFormulario,
+        sesionesMes,
+        inicioPrest,
+        finPrest
+      ]);
+
+      // 4) Insert en tbl_reingresos (solo si no existe ya ese par)
+      if (shouldInsertReingreso) {
+        const qIns = `
+          INSERT INTO public.tbl_reingresos
+          (no_afiliacion, numero_formulario, fecha_reingreso, observaciones,
+           usuario_creacion, fecha_creacion, usuario_actualizacion, fecha_actualizacion,
+           usuario_eliminacion, fecha_eliminacion)
+          VALUES ($1,$2,$3,$4,NULL,NOW(),NULL,NULL,NULL,NULL)
+        `;
+        await client.query(qIns, [noAfiliacion, numeroFormulario, fechaReingreso, observaciones]);
+      }
+
+      return { inserted: shouldInsertReingreso };
+    });
+
+    return res.json({ success: true, inserted: result.inserted });
   } catch (err) {
-    await client.query('ROLLBACK');
+    const msg = String(err.message || 'Error');
+    if (msg.startsWith('VALIDATION:')) {
+      return res.status(400).json({ success: false, error: msg.slice('VALIDATION:'.length) });
+    }
+    if (msg.startsWith('NOT_FOUND:')) {
+      return res.status(404).json({ success: false, error: msg.slice('NOT_FOUND:'.length) });
+    }
+    if (msg.startsWith('CONFLICT:')) {
+      return res.status(409).json({ success: false, error: msg.slice('CONFLICT:'.length) });
+    }
     console.error('[POST /api/reingreso/pacientes/reingreso] ERROR:', err);
-    res.status(500).json({ success: false, error: 'Error al registrar el reingreso.' });
-  } finally {
-    client.release();
+    return res.status(500).json({ success: false, error: 'Error al registrar el reingreso.' });
   }
 });
 
