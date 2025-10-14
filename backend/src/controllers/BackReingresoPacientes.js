@@ -104,9 +104,17 @@ router.post('/pacientes/reingreso', async (req, res) => {
         SELECT id_estado
         FROM public.tbl_pacientes
         WHERE no_afiliacion = $1
-        FOR UPDATE
+        FOR UPDATE NOWAIT
       `;
-      const rPac = await client.query(qPac, [noAfiliacion]);
+      let rPac;
+      try {
+        rPac = await client.query(qPac, [noAfiliacion]);
+      } catch (e) {
+        if (e && e.code === '55P03') {
+          throw new Error('CONFLICT:El paciente está siendo editado. Intente nuevamente.');
+        }
+        throw e;
+      }
       if (!rPac.rowCount) {
         throw new Error('NOT_FOUND:Paciente no encontrado.');
       }
@@ -136,14 +144,26 @@ router.post('/pacientes/reingreso', async (req, res) => {
           inicio_prest_servicios    = $4,
           fin_prest_servicios       = $5
         WHERE no_afiliacion = $1
+        RETURNING no_afiliacion, usuario_actualizacion, fecha_actualizacion
       `;
-      await client.query(qUpd, [
+      // Debug: verificar GUC y esquema antes del UPDATE
+      try {
+        const dbg = await client.query(
+          "SELECT current_setting('app.current_user', true) AS app_user, current_user AS db_user, current_schema() AS schema, current_setting('search_path', true) AS search_path"
+        );
+        console.log('[REINGRESO DEBUG] app_user=%s db_user=%s schema=%s search_path=%s', dbg.rows?.[0]?.app_user, dbg.rows?.[0]?.db_user, dbg.rows?.[0]?.schema, dbg.rows?.[0]?.search_path);
+      } catch (e) {
+        console.warn('[REINGRESO DEBUG] No se pudo leer GUC/search_path:', e?.message || e);
+      }
+
+      const updRes = await client.query(qUpd, [
         noAfiliacion,
         numeroFormulario,
         sesionesMes,
         inicioPrest,
         finPrest
       ]);
+      console.log('[REINGRESO DEBUG] updated row:', updRes.rows?.[0]);
 
       // 4) Insert en tbl_reingresos (solo si no existe ya ese par)
       if (shouldInsertReingreso) {

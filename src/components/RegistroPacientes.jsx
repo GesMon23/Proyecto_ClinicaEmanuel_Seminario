@@ -141,10 +141,12 @@ const RegistroPacientes = () => {
       }
 
       if (accRes.status === "fulfilled") {
-        const accs = toArray(accRes.value.data).map((a) => ({
-          id: a.idacceso ?? a.id_acceso ?? a.idAcceso ?? a.id,
-          descripcion: a.descripcion ?? "",
-        }));
+        const accs = toArray(accRes.value.data)
+          .map((a) => ({
+            id: a.idacceso ?? a.id_acceso ?? a.idAcceso ?? a.id,
+            descripcion: a.descripcion ?? "",
+          }))
+          .filter((a) => a.id != null);
         setAccesosVasculares(accs);
       } else {
         console.error("Accesos falló:", accRes.reason);
@@ -255,7 +257,7 @@ const RegistroPacientes = () => {
 
       // Verificación previa de unicidad: DPI
       try {
-        await api.get(`/pacientes/dpi/${dpiTrim}`);
+        await api.get(`/pacientes/existe/dpi/${dpiTrim}`);
         // Si no lanzó error, el DPI ya existe
         setModalType("error");
         setModalMessage("El DPI ya está registrado para otro paciente.");
@@ -276,7 +278,7 @@ const RegistroPacientes = () => {
       // Verificación previa de unicidad: No. Afiliación
       try {
         const noAfTrim = String(formData.noAfiliacion || '').trim();
-        await api.get(`/pacientes/${encodeURIComponent(noAfTrim)}`);
+        await api.get(`/pacientes/existe/noafiliacion/${encodeURIComponent(noAfTrim)}`);
         // Si no lanzó error, el No. Afiliación ya existe
         setModalType("error");
         setModalMessage("El Número de Afiliación ya está registrado.");
@@ -317,7 +319,7 @@ const RegistroPacientes = () => {
         sexo: String(formData.sexo),
         direccion: String(formData.direccion).trim(),
         fechaIngreso: formData.fechaIngreso, // YYYY-MM-DD
-        idDepartamento: formData.idDepartamento || null,  // déjalo string "01", "02", etc.
+        idDepartamento: formData.idDepartamento ? String(formData.idDepartamento) : null,
         idAcceso: formData.idAcceso ? Number(formData.idAcceso) : null,
         numeroFormulario: formData.numeroFormulario?.trim() || null,
 
@@ -725,11 +727,11 @@ const RegistroPacientes = () => {
                       className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-gray-600 dark:bg-slate-800 dark:text-white"
                     >
                       <option value="">Seleccione el departamento</option>
-                      {departamentos.map((depto) => (
-                        <option key={depto.id} value={depto.id}>
-                          {depto.nombre}
-                        </option>
-                      ))}
+                      
+                      
+                  {departamentos.map(dep => (
+                    <option key={dep.id} value={dep.id}>{dep.nombre}</option>
+                  ))}
                     </select>
                   </div>
 
