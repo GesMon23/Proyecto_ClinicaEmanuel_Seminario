@@ -14,8 +14,26 @@ const ConsultaLaboratorios = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [detalle, setDetalle] = useState({ isOpen: false, item: null });
+  const [ultimos, setUltimos] = useState({ loading: false, error: '', data: [] });
 
-  const abrirDetalle = (item) => setDetalle({ isOpen: true, item });
+  const abrirDetalle = (item) => {
+    setDetalle({ isOpen: true, item });
+    const afiliacion = item?.no_afiliacion || item?.noafiliacion || '';
+    if (!afiliacion) {
+      setUltimos({ loading: false, error: '', data: [] });
+      return;
+    }
+    setUltimos(prev => ({ ...prev, loading: true, error: '', data: [] }));
+    api
+      .get(`/laboratorios/${afiliacion}/parametros/ultimo`)
+      .then(({ data }) => {
+        const lista = Array.isArray(data?.data) ? data.data : [];
+        setUltimos({ loading: false, error: '', data: lista });
+      })
+      .catch((e) => {
+        setUltimos({ loading: false, error: 'No se pudieron cargar los últimos parámetros.', data: [] });
+      });
+  };
   const cerrarDetalle = () => setDetalle({ isOpen: false, item: null });
 
   const descargarPDF = (item) => {
@@ -49,6 +67,18 @@ const ConsultaLaboratorios = () => {
         </tr>
       `).join('');
     }
+
+    // Construir filas para "Últimos parámetros previos"
+    const ultimosData = Array.isArray(ultimos?.data) ? ultimos.data : [];
+    const prevRows = ultimosData.length > 0
+      ? ultimosData.map(u => `
+          <tr>
+            <td>${u.parametro ?? ''}</td>
+            <td>${u.valor ?? ''}</td>
+            <td>${u.fecha_laboratorio ? new Date(u.fecha_laboratorio).toLocaleDateString() : ''}</td>
+          </tr>
+        `).join('')
+      : '<tr><td colspan="3">—</td></tr>';
 
     const html = `
       <html>
@@ -107,6 +137,19 @@ const ConsultaLaboratorios = () => {
           </thead>
           <tbody>
             ${paramRows || '<tr><td colspan="2">—</td></tr>'}
+          </tbody>
+        </table>
+        <h2>Últimos parámetros previos</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Parámetro</th>
+              <th>Valor</th>
+              <th>Fecha Lab.</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${prevRows}
           </tbody>
         </table>
       </body>
@@ -556,6 +599,39 @@ const ConsultaLaboratorios = () => {
                             ))}
                           </tbody>
                         </table>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="font-semibold">Últimos parámetros previos:</span>
+                      <div className="mt-2">
+                        {ultimos.loading ? (
+                          <div className="text-sm text-slate-600 dark:text-slate-300">Cargando últimos parámetros...</div>
+                        ) : ultimos.error ? (
+                          <div className="text-sm text-red-600 dark:text-red-400">{ultimos.error}</div>
+                        ) : (ultimos.data && ultimos.data.length > 0) ? (
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full border border-slate-200 dark:border-slate-700 text-xs">
+                              <thead>
+                                <tr className="bg-slate-100 dark:bg-slate-700">
+                                  <th className="px-2 py-1 text-left">Parámetro</th>
+                                  <th className="px-2 py-1 text-left">Valor</th>
+                                  <th className="px-2 py-1 text-left">Fecha Lab.</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {ultimos.data.map((u) => (
+                                  <tr key={`${u.idparametro}-${u.parametro}`} className="border-t border-slate-200 dark:border-slate-700">
+                                    <td className="px-2 py-1">{u.parametro ?? ''}</td>
+                                    <td className="px-2 py-1">{u.valor ?? ''}</td>
+                                    <td className="px-2 py-1">{u.fecha_laboratorio ? new Date(u.fecha_laboratorio).toLocaleDateString() : ''}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <div className="text-sm text-slate-600 dark:text-slate-300">No hay registros previos.</div>
+                        )}
                       </div>
                     </div>
                     <div className="flex justify-end gap-3">
