@@ -855,6 +855,55 @@ const ConsultaPacientes = () => {
     // Descargar PDF de Psicología
     const descargarPDFPsicologia = (item) => {
         const it = item || {};
+        // Construir nombre, sexo y fecha como en ConsultaPsicologia.jsx
+        const pn = it.primer_nombre ?? it.primernombre ?? '';
+        const sn = it.segundo_nombre ?? it.segundonombre ?? '';
+        const pa = it.primer_apellido ?? it.primerapellido ?? '';
+        const sa = it.segundo_apellido ?? it.segundoapellido ?? '';
+        const pacienteNombre = [pn, sn, pa, sa].filter(Boolean).join(' ');
+        const sexoTxt = it.sexo ?? it.Sexo ?? '';
+        const fechaTxt = it.fecha_creacion ? new Date(it.fecha_creacion).toLocaleString() : '';
+        // Preparar sección KDQOL (dimensiones, promedio y metadatos)
+        let kdqolObj = null;
+        try { kdqolObj = typeof it.kdqol === 'string' ? JSON.parse(it.kdqol) : it.kdqol; } catch (_) { kdqolObj = null; }
+        const dims = [
+          { key: 'fisico_mental', label: 'Físico y Mental' },
+          { key: 'enfermedad_renal', label: 'Enfermedad Renal' },
+          { key: 'sintomas_problemas', label: 'Síntomas y Problemas' },
+          { key: 'efectos_enfermedad', label: 'Efectos de la Enfermedad' },
+          { key: 'vida_diaria', label: 'Vida Diaria' },
+          // variantes posibles
+          { key: 'puntaje_fisico', label: 'Puntaje Físico' },
+          { key: 'puntaje_mental', label: 'Puntaje Mental' },
+          { key: 'puntaje_sintomas', label: 'Puntaje Síntomas' },
+          { key: 'puntaje_carga', label: 'Puntaje Carga' },
+          { key: 'puntaje_efectos', label: 'Puntaje Efectos' },
+        ];
+        const getNum = (v) => { const n = typeof v === 'string' ? parseFloat(v) : v; return isNaN(n) ? null : n; };
+        const kdqolRows = [];
+        let sum = 0, count = 0;
+        if (kdqolObj && typeof kdqolObj === 'object') {
+          dims.forEach(d => {
+            const num = getNum(kdqolObj[d.key]);
+            if (num != null) { kdqolRows.push({ label: d.label, value: num }); sum += num; count += 1; }
+          });
+        }
+        const promedio = count > 0 ? Math.round((sum / count) * 100) / 100 : null;
+        const kdqolMetaHtml = kdqolObj ? `<div class="meta" style="color:#64748b; font-size:12px; margin:4px 0 8px;">ID KDQOL: ${kdqolObj.id_kdqol ?? '—'} | Fecha aplicación: ${kdqolObj.fecha_aplicacion ? new Date(kdqolObj.fecha_aplicacion).toLocaleString() : '—'}</div>` : '';
+        const kdqolTableHtml = kdqolRows.length > 0 ? `
+          <table style="width:100%; border-collapse:collapse; font-size:12px;">
+            <thead>
+              <tr>
+                <th style="text-align:left; border:1px solid #e5e7eb; padding:6px 8px; background:#f1f5f9;">Dimensión</th>
+                <th style="text-align:left; border:1px solid #e5e7eb; padding:6px 8px; background:#f1f5f9;">Puntaje</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${kdqolRows.map(r => `<tr><td style='border:1px solid #e5e7eb; padding:6px 8px;'>${r.label}</td><td style='border:1px solid #e5e7eb; padding:6px 8px;'>${r.value}</td></tr>`).join('')}
+            </tbody>
+          </table>
+          ${promedio != null ? `<div style="margin-top:8px;"><span class='label'>Promedio KDQOL:</span> ${promedio}</div>` : ''}
+        ` : `<div class="box">—</div>`;
         const html = `
           <html>
           <head>
@@ -879,8 +928,9 @@ const ConsultaPacientes = () => {
             <div class="grid">
               <div class="row"><span class="label">No. Afiliación:</span> ${it.no_afiliacion || ''}</div>
               <div class="row"><span class="label">ID Informe:</span> ${it.id_informe || ''}</div>
-              <div class="row"><span class="label">Tipo Atención:</span> ${it.tipo_atencion || ''}</div>
-              <div class="row"><span class="label">KDQOL:</span> ${(it.kdqol ? 'Sí' : 'No')}</div>
+              <div class="row" style="grid-column: 1 / -1;"><span class="label">Paciente:</span> ${pacienteNombre}</div>
+              <div class="row"><span class="label">Sexo:</span> ${sexoTxt}</div>
+              <div class="row"><span class="label">Fecha:</span> ${fechaTxt}</div>
             </div>
             <h2>Motivo de Consulta</h2>
             <div class="box">${(it.motivo_consulta || '—').toString().replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
@@ -890,6 +940,9 @@ const ConsultaPacientes = () => {
             <div class="box">${(it.pronostico || '—').toString().replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
             <h2>Observaciones</h2>
             <div class="box">${(it.observaciones || '—').toString().replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+            <h2>KDQOL</h2>
+            ${kdqolMetaHtml}
+            ${kdqolTableHtml}
           </body>
           </html>
         `;
@@ -1188,9 +1241,11 @@ const ConsultaPacientes = () => {
             doc.setFont(undefined, 'bold');
             headers.forEach((h, i) => {
                 const cellX = leftX + (i * colWidth);
-                const textX = cellX + 4;
+                const text = String(h);
+                const tw = doc.getTextWidth(text);
+                const textX = cellX + (colWidth - tw) / 2; // centrar encabezado
                 const textY = yCursor + headerH - 4;
-                doc.text(String(h), textX, textY);
+                doc.text(text, textX, textY);
             });
             // borde superior
             doc.rect(leftX, yCursor, tableWidth, headerH);
@@ -1205,16 +1260,18 @@ const ConsultaPacientes = () => {
                     addPage();
                     // repetir encabezado de sección como continuación
                     drawSectionTitle(`${title} (cont.)`);
-                    // repetir encabezado de tabla
+                    // repetir encabezado de tabla (centrado)
                     doc.setFillColor(241, 245, 249);
                     doc.setDrawColor(203, 213, 225);
                     doc.rect(leftX, yCursor, tableWidth, headerH, 'F');
                     doc.setFont(undefined, 'bold');
                     headers.forEach((h, i) => {
                         const cellX = leftX + (i * colWidth);
-                        const textX = cellX + 4;
+                        const text = String(h);
+                        const tw = doc.getTextWidth(text);
+                        const textX = cellX + (colWidth - tw) / 2; // centrar encabezado
                         const textY = yCursor + headerH - 4;
-                        doc.text(String(h), textX, textY);
+                        doc.text(text, textX, textY);
                     });
                     doc.rect(leftX, yCursor, tableWidth, headerH);
                     doc.setFont(undefined, 'normal');
@@ -1261,7 +1318,7 @@ const ConsultaPacientes = () => {
                 t.fecha_turno ? new Date(t.fecha_turno).toLocaleDateString('es-ES') : '',
                 t.id_turno_cod || t.id_turno || ''
             ]);
-            if (turnosRows.length) drawTable('Turnos', ['Afiliación','Paciente','Clínica','Fecha','Código'], turnosRows, ['left','left','left','center','center']);
+            if (turnosRows.length) drawTable('Turnos', ['Afiliación','Paciente','Clínica','Fecha','Código'], turnosRows, ['center','center','center','center','center']);
         } catch {}
 
         // Faltistas: Afiliación, Nombre, Sexo, Fecha Falta, Clínica
@@ -1273,22 +1330,7 @@ const ConsultaPacientes = () => {
                 f.fechafalta || '',
                 f.clinica || ''
             ]);
-            if (faltasRows.length) drawTable('Faltistas', ['Afiliación','Nombre','Sexo','Fecha Falta','Clínica'], faltasRows, ['left','left','center','center','left']);
-        } catch {}
-
-        // Laboratorios: Afiliación, Paciente, Fecha, Periodicidad, Examen
-        try {
-            const labRows = (laboratorios || []).slice(0, 3).map(it => {
-                const pn = it.primer_nombre ?? it.primernombre ?? '';
-                const sn = it.segundo_nombre ?? it.segundonombre ?? '';
-                const pa = it.primer_apellido ?? it.primerapellido ?? '';
-                const sa = it.segundo_apellido ?? it.segundoapellido ?? '';
-                const nombre = [pn,sn,pa,sa].filter(Boolean).join(' ');
-                const rawFecha = it.fecha_laboratorio ?? it.fecha ?? '';
-                const fecha = rawFecha ? new Date(rawFecha).toLocaleDateString('es-ES') : '';
-                return [it.no_afiliacion || '', nombre, fecha, it.periodicidad || '', it.examen_realizado ? 'Sí' : 'No']
-            });
-            if (labRows.length) drawTable('Laboratorios', ['Afiliación','Paciente','Fecha','Periodicidad','Examen'], labRows, ['left','left','center','left','center']);
+            if (faltasRows.length) drawTable('Faltistas', ['Afiliación','Nombre','Sexo','Fecha Falta','Clínica'], faltasRows, ['center','center','center','center','center']);
         } catch {}
 
         // Formularios: Número, Sesiones (A/R/NR), Periodo
@@ -1298,18 +1340,72 @@ const ConsultaPacientes = () => {
                 `${fm.sesiones_autorizadas_mes ?? ''}/${fm.sesiones_realizadas_mes ?? ''}/${fm.sesiones_no_realizadas_mes ?? ''}`,
                 `${formatearFecha(fm.inicio_prest_servicios) || ''} - ${formatearFecha(fm.fin_prest_servicios) || ''}`
             ]);
-            if (formRows.length) drawTable('Formularios', ['Número','A/R/NR','Periodo'], formRows, ['center','center','left']);
+            if (formRows.length) drawTable('Formularios', ['Número','A/R/NR','Periodo'], formRows, ['center','center','center']);
         } catch {}
+
+        // Referencias: Últimos 3 por fecha
+        try {
+            const refSorted = (referencias || []).slice().sort((a, b) => {
+                const da = a.fecha_referencia ? new Date(a.fecha_referencia).getTime() : (a.fecha_creacion ? new Date(a.fecha_creacion).getTime() : 0);
+                const db = b.fecha_referencia ? new Date(b.fecha_referencia).getTime() : (b.fecha_creacion ? new Date(b.fecha_creacion).getTime() : 0);
+                return db - da;
+            });
+            const refRows = refSorted.slice(0, 3).map(r => [
+                r.id_referencia || '',
+                r.fecha_referencia ? new Date(r.fecha_referencia).toLocaleDateString('es-ES') : '',
+                r.especialidad_referencia || '',
+                r.motivo_traslado || '',
+                r.id_medico || ''
+            ]);
+            if (refRows.length) drawTable('Referencias', ['ID','Fecha','Especialidad','Motivo','Médico'], refRows, ['center','center','center','center','center']);
+        } catch {}
+
+        // (Eliminado resumen general de Laboratorios) – se mostrará únicamente el último laboratorio y sus parámetros
 
         // Nutrición: ID, Motivo, Estado, (sin fecha en tabla), mostrar IMC
         try {
-            const nutRows = (nutricion || []).slice(0, 3).map(n => [
+            const nutRows = (nutricion || []).slice(0, 1).map(n => [
                 n.id_informe || '',
                 n.motivo_consulta || '',
                 n.estado_nutricional || '',
                 n.imc ?? ''
             ]);
-            if (nutRows.length) drawTable('Nutrición', ['ID','Motivo','Estado','IMC'], nutRows, ['center','left','left','center']);
+            if (nutRows.length) drawTable('Nutrición', ['ID','Motivo','Estado','IMC'], nutRows, ['center','center','center','center']);
+
+            // Comparativo Nutrición: valor actual vs último previo por campo
+            const pickNutDate = (it) => it.fecha_creacion || it.fecha || it.fecha_informe || '';
+            if (Array.isArray(nutricion) && nutricion.length > 0) {
+                const latestNut = nutricion[0];
+                const fieldsNut = [
+                    { key: 'estado_nutricional', label: 'Estado Nutricional' },
+                    { key: 'imc', label: 'IMC' },
+                    { key: 'altura_cm', label: 'Altura (cm)' },
+                    { key: 'peso_kg', label: 'Peso (kg)' },
+                    { key: 'motivo_consulta', label: 'Motivo' },
+                    { key: 'observaciones', label: 'Observaciones' },
+                ];
+                const prevMapNut = new Map(); // key -> { valor, fecha }
+                // recorrer previos buscando el último valor registrado por campo
+                for (let i = 1; i < nutricion.length; i++) {
+                    const it = nutricion[i] || {};
+                    const f = pickNutDate(it);
+                    const fStr = f ? new Date(f).toLocaleDateString('es-ES') : '';
+                    for (const fdef of fieldsNut) {
+                        if (!prevMapNut.has(fdef.key) && it[fdef.key] != null) {
+                            prevMapNut.set(fdef.key, { valor: String(it[fdef.key]), fecha: fStr });
+                        }
+                    }
+                    if (prevMapNut.size === fieldsNut.length) break;
+                }
+                const compRowsNut = fieldsNut.map(({ key, label }) => {
+                    const actual = latestNut[key] != null ? String(latestNut[key]) : '';
+                    return [label, actual];
+                });
+                if (compRowsNut.some(r => String(r[1]) !== '')) {
+                    drawTable('Campos de Nutrición', ['Campo','Valor actual'], compRowsNut, ['center','center']);
+                }
+                // (Eliminado) Compacto: últimos previos por campo (Nutrición)
+            }
         } catch {}
 
         // Psicología: Últimos 3 (por fecha), con salto de página si es necesario
@@ -1321,14 +1417,96 @@ const ConsultaPacientes = () => {
                 const db = fb ? new Date(fb).getTime() : 0;
                 return db - da;
             });
-            const psiRows = psiSorted.slice(0, 3).map(p => [
+            const psiRows = psiSorted.slice(0, 1).map(p => [
                 p.id_informe || '',
                 (p.fecha_creacion || p.fecha || p.fecha_informe) ? new Date(p.fecha_creacion || p.fecha || p.fecha_informe).toLocaleDateString('es-ES') : '',
                 p.tipo_consulta || '',
                 p.tipo_atencion || '',
                 p.motivo_consulta || ''
             ]);
-            if (psiRows.length) drawTable('Psicología', ['ID','Fecha','Tipo','Atención','Motivo'], psiRows, ['center','center','left','left','left']);
+            if (psiRows.length) drawTable('Psicología', ['ID','Fecha','Tipo','Atención','Motivo'], psiRows, ['center','center','center','center','center']);
+
+            // Comparativo Psicología: valor actual vs último previo por campo
+            const pickPsiDate = (it) => it.fecha_creacion || it.fecha || it.fecha_informe || '';
+            if (Array.isArray(psiSorted) && psiSorted.length > 0) {
+                const latestPsi = psiSorted[0];
+                const fieldsPsi = [
+                    { key: 'tipo_consulta', label: 'Tipo' },
+                    { key: 'tipo_atencion', label: 'Atención' },
+                    { key: 'kdqol', label: 'KDQOL' },
+                    { key: 'pronostico', label: 'Pronóstico' },
+                    { key: 'motivo_consulta', label: 'Motivo' },
+                    { key: 'observaciones', label: 'Observaciones' },
+                ];
+                const prevMapPsi = new Map(); // key -> { valor, fecha }
+                for (let i = 1; i < psiSorted.length; i++) {
+                    const it = psiSorted[i] || {};
+                    const f = pickPsiDate(it);
+                    const fStr = f ? new Date(f).toLocaleDateString('es-ES') : '';
+                    for (const fdef of fieldsPsi) {
+                        if (!prevMapPsi.has(fdef.key) && it[fdef.key] != null) {
+                            prevMapPsi.set(fdef.key, { valor: String(it[fdef.key]), fecha: fStr });
+                        }
+                    }
+                    if (prevMapPsi.size === fieldsPsi.length) break;
+                }
+                const compRowsPsi = fieldsPsi.map(({ key, label }) => {
+                    const actual = latestPsi[key] != null ? String(latestPsi[key]) : '';
+                    return [label, actual];
+                });
+                if (compRowsPsi.some(r => String(r[1]) !== '')) {
+                    drawTable('Campos de Psicología', ['Campo','Valor actual'], compRowsPsi, ['center','center']);
+                }
+                // KDQOL: si el último informe tiene datos, mostrar tabla de dimensiones
+                try {
+                    let kdqolObj = null;
+                    try {
+                        kdqolObj = typeof latestPsi.kdqol === 'string' ? JSON.parse(latestPsi.kdqol) : latestPsi.kdqol;
+                    } catch (_) { kdqolObj = null; }
+                    const dims = [
+                        { key: 'fisico_mental', label: 'Físico y Mental' },
+                        { key: 'enfermedad_renal', label: 'Enfermedad Renal' },
+                        { key: 'sintomas_problemas', label: 'Síntomas y Problemas' },
+                        { key: 'efectos_enfermedad', label: 'Efectos de la Enfermedad' },
+                        { key: 'vida_diaria', label: 'Vida Diaria' },
+                        // claves alternativas posibles
+                        { key: 'puntaje_fisico', label: 'Puntaje Físico' },
+                        { key: 'puntaje_mental', label: 'Puntaje Mental' },
+                        { key: 'puntaje_sintomas', label: 'Puntaje Síntomas' },
+                        { key: 'puntaje_carga', label: 'Puntaje Carga' },
+                        { key: 'puntaje_efectos', label: 'Puntaje Efectos' },
+                    ];
+                    const getNum = (v) => {
+                        const n = typeof v === 'string' ? parseFloat(v) : v;
+                        return isNaN(n) ? null : n;
+                    };
+                    const kdqolRows = [];
+                    let sum = 0, count = 0;
+                    const pushDim = (obj) => {
+                        dims.forEach(d => {
+                            const num = getNum(obj?.[d.key]);
+                            if (num != null) { kdqolRows.push([d.label, String(num)]); sum += num; count += 1; }
+                        });
+                    };
+                    // 1) Intentar desde objeto kdqol
+                    if (kdqolObj && typeof kdqolObj === 'object') {
+                        pushDim(kdqolObj);
+                    }
+                    // 2) Fallback: intentar desde campos directos en latestPsi si no se obtuvo nada
+                    if (!kdqolRows.length) {
+                        pushDim(latestPsi || {});
+                    }
+                    if (kdqolRows.length) {
+                        drawTable('KDQOL', ['Dimensión','Puntaje'], kdqolRows, ['center','center']);
+                        // Agregar promedio si fue posible calcularlo
+                        const promedio = count > 0 ? Math.round((sum / count) * 100) / 100 : null;
+                        if (promedio != null) {
+                            drawTable('Promedio KDQOL', ['Promedio'], [[String(promedio)]], ['center']);
+                        }
+                    }
+                } catch {}
+                // (Eliminado) Tabla 'Últimos campos previos (Psicología)'
+            }
         } catch {}
 
         // Laboratorio: Detalle del último registro con parámetros completos
@@ -1340,15 +1518,41 @@ const ConsultaPacientes = () => {
                 return db - da;
             })[0];
             if (latest) {
-                // Construir filas de parámetros
+                // Construir filas de parámetros: valor actual (de este laboratorio) + fecha del último previo
                 let paramRows = [];
+                let prevMap = new Map(); // parametro -> { valor, fecha }
+                try {
+                    const afili = latest.no_afiliacion || latest.noafiliacion || '';
+                    if (afili) {
+                        const { data } = await api.get(`/laboratorios/${afili}/parametros/ultimo`);
+                        const lista = Array.isArray(data?.data) ? data.data : [];
+                        for (const p of lista) {
+                            const key = String(p.parametro ?? '').trim();
+                            const f = p.fecha_laboratorio || p.fecha_registro || p.fecha_creacion || '';
+                            const fechaPrev = f ? new Date(f).toLocaleDateString('es-ES') : '';
+                            const valorPrev = p.valor != null ? String(p.valor) : '';
+                            if (key) prevMap.set(key, { valor: valorPrev, fecha: fechaPrev });
+                        }
+                    }
+                } catch {}
                 if (Array.isArray(latest.parametros) && latest.parametros.length > 0) {
-                    paramRows = latest.parametros.map(p => [String(p.parametro ?? ''), String(p.valor ?? '')]);
+                    paramRows = latest.parametros.map(p => {
+                        const nombre = String(p.parametro ?? '').trim();
+                        const valorActual = String(p.valor ?? '');
+                        const prev = prevMap.get(nombre) || { valor: '', fecha: '' };
+                        return [nombre, valorActual, prev.valor, prev.fecha];
+                    });
                 } else {
+                    // Fallback si no hay arreglo de parametros en el último laboratorio: construir desde entries
                     const exclude = new Set(['id_laboratorio','idlaboratorio','no_afiliacion','noafiliacion','primer_nombre','primernombre','segundo_nombre','segundonombre','primer_apellido','primerapellido','segundo_apellido','segundoapellido','sexo','fecha_laboratorio','fecha','periodicidad','examen_realizado','causa_no_realizado','infeccion_acceso','complicacion_acceso','virologia','antigeno_hepatitis_c','antigeno_superficie','hiv','observacion','usuario_creacion','fecha_registro','idperlaboratorio','parametros']);
                     const entries = Object.entries(latest).filter(([k,v]) => !exclude.has(k) && v !== null && v !== undefined && v !== '');
                     const pretty = (s) => String(s).replace(/_/g,' ').replace(/\b\w/g, m => m.toUpperCase());
-                    paramRows = entries.map(([k,v]) => [pretty(k), typeof v === 'boolean' ? (v ? 'Sí' : 'No') : String(v)]);
+                    paramRows = entries.map(([k,v]) => {
+                        const nombre = pretty(k);
+                        const valorActual = typeof v === 'boolean' ? (v ? 'Sí' : 'No') : String(v);
+                        const fechaPrev = prevMap.get(nombre) || '';
+                        return [nombre, valorActual, fechaPrev];
+                    });
                 }
                 // Encabezado breve del laboratorio
                 const miniRows = [[
@@ -1357,11 +1561,22 @@ const ConsultaPacientes = () => {
                     latest.periodicidad || '',
                     latest.examen_realizado ? 'Sí' : 'No'
                 ]];
-                drawTable('Último Laboratorio Registrado', ['Afiliación','Fecha','Periodicidad','Examen'], miniRows, ['left','center','left','center']);
-                // Parámetros completos
+                drawTable('Último Laboratorio Registrado', ['Afiliación','Fecha','Periodicidad','Examen'], miniRows, ['center','center','center','center']);
+                // Parámetros completos (Parámetro, Valor actual, Último valor previo, Fecha último previo)
                 if (paramRows.length) {
-                    drawTable('Parámetros de Laboratorio', ['Parámetro','Valor'], paramRows, ['left','left']);
+                    drawTable('Parámetros de Laboratorio', ['Parámetro','Valor actual','Último valor previo','Fecha último previo'], paramRows, ['center','center','center','center']);
                 }
+
+                // Últimos parámetros previos por parámetro (vista compacta como en detalle)
+                try {
+                    const prevRows = Array.from(prevMap.entries())
+                        .filter(([k, v]) => k && v && (v.valor !== undefined || v.fecha !== undefined))
+                        .map(([k, v]) => [k, v.valor || '', v.fecha || ''])
+                        .sort((a, b) => a[0].localeCompare(b[0], 'es'));
+                    if (prevRows.length) {
+                        drawTable('Últimos parámetros previos por parámetro', ['Parámetro','Último valor previo','Fecha'], prevRows, ['center','center','center']);
+                    }
+                } catch {}
             }
         } catch {}
 
@@ -2057,24 +2272,92 @@ const ConsultaPacientes = () => {
                                                     <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full mx-4">
                                                         <div className="p-6">
                                                             <div className="flex items-center justify-between mb-4">
-                                                                <h3 className="text-lg font-semibold text-green-700 dark:text-green-300">Detalle Psicología</h3>
+                                                                <h3 className="text-lg font-semibold text-green-700 dark:text-green-300">Detalle del Informe de Psicología</h3>
                                                                 <button onClick={closePsiDetail} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">×</button>
                                                             </div>
                                                             {(() => {
                                                                 const it = psiDetalle.item || {};
+                                                                const pn = it.primer_nombre ?? it.primernombre ?? '';
+                                                                const sn = it.segundo_nombre ?? it.segundonombre ?? '';
+                                                                const pa = it.primer_apellido ?? it.primerapellido ?? '';
+                                                                const sa = it.segundo_apellido ?? it.segundoapellido ?? '';
+                                                                const sexo = it.sexo ?? it.Sexo ?? '';
+                                                                // Parseo KDQOL
+                                                                let kdqolObj = null;
+                                                                try { kdqolObj = typeof it.kdqol === 'string' ? JSON.parse(it.kdqol) : it.kdqol; } catch (_) { kdqolObj = null; }
+                                                                const dims = [
+                                                                    { key: 'fisico_mental', label: 'Físico y Mental' },
+                                                                    { key: 'enfermedad_renal', label: 'Enfermedad Renal' },
+                                                                    { key: 'sintomas_problemas', label: 'Síntomas y Problemas' },
+                                                                    { key: 'efectos_enfermedad', label: 'Efectos de la Enfermedad' },
+                                                                    { key: 'vida_diaria', label: 'Vida Diaria' },
+                                                                    { key: 'puntaje_fisico', label: 'Puntaje Físico' },
+                                                                    { key: 'puntaje_mental', label: 'Puntaje Mental' },
+                                                                    { key: 'puntaje_sintomas', label: 'Puntaje Síntomas' },
+                                                                    { key: 'puntaje_carga', label: 'Puntaje Carga' },
+                                                                    { key: 'puntaje_efectos', label: 'Puntaje Efectos' },
+                                                                ];
+                                                                const getNum = (v) => { const n = typeof v === 'string' ? parseFloat(v) : v; return isNaN(n) ? null : n; };
+                                                                const rows = [];
+                                                                let s = 0, c = 0;
+                                                                if (kdqolObj && typeof kdqolObj === 'object') {
+                                                                    dims.forEach(d => {
+                                                                        const num = getNum(kdqolObj[d.key]);
+                                                                        if (num != null) { rows.push({ label: d.label, value: num }); s += num; c += 1; }
+                                                                    });
+                                                                }
+                                                                const prom = c > 0 ? Math.round((s / c) * 100) / 100 : null;
                                                                 return (
                                                                     <div className="space-y-4 text-sm">
                                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                                            <div><span className="font-semibold">ID Informe:</span> {it.id_informe ?? ''}</div>
-                                                                            <div><span className="font-semibold">Tipo Atención:</span> {it.tipo_atencion ?? ''}</div>
-                                                                            <div className="md:col-span-2"><span className="font-semibold">Motivo:</span> {it.motivo_consulta ?? ''}</div>
-                                                                            <div><span className="font-semibold">Tipo Consulta:</span> {it.tipo_consulta ?? ''}</div>
-                                                                            <div><span className="font-semibold">Pronóstico:</span> {it.pronostico ?? ''}</div>
-                                                                            <div><span className="font-semibold">KDQOL:</span> {it.kdqol ? 'Sí' : 'No'}</div>
+                                                                            <div><span className="font-semibold">No. Afiliación:</span> {it.no_afiliacion || ''}</div>
+                                                                            <div><span className="font-semibold">ID Informe:</span> {it.id_informe || ''}</div>
+                                                                            <div className="md:col-span-2"><span className="font-semibold">Paciente:</span> {[pn, sn, pa, sa].filter(Boolean).join(' ')}</div>
+                                                                            <div><span className="font-semibold">Sexo:</span> {sexo}</div>
+                                                                            <div><span className="font-semibold">Fecha:</span> {it.fecha_creacion ? new Date(it.fecha_creacion).toLocaleString() : ''}</div>
+                                                                        </div>
+                                                                        <hr className="border-slate-200 dark:border-slate-700" />
+                                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                            <div><span className="font-semibold">Motivo:</span> {it.motivo_consulta ?? ''}</div>
+                                                                            <div><span className="font-semibold">Tipo de Consulta:</span> {it.tipo_consulta ?? ''}</div>
+                                                                            <div><span className="font-semibold">Tipo de Atención:</span> {it.tipo_atencion ?? ''}</div>
+                                                                            <div><span className="font-semibold">Pronóstico:</span> {it.pronostico_paciente ?? it.pronostico ?? ''}</div>
                                                                         </div>
                                                                         <div>
                                                                             <span className="font-semibold">Observaciones:</span>
                                                                             <div className="mt-1 p-2 rounded bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-200">{it.observaciones || '—'}</div>
+                                                                        </div>
+                                                                        <div>
+                                                                            <span className="font-semibold">KDQOL:</span>
+                                                                            {kdqolObj && (
+                                                                                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                                                                    <span className="mr-2">ID KDQOL: {kdqolObj.id_kdqol ?? '—'}</span>
+                                                                                    <span>Fecha aplicación: {kdqolObj.fecha_aplicacion ? new Date(kdqolObj.fecha_aplicacion).toLocaleString() : '—'}</span>
+                                                                                </div>
+                                                                            )}
+                                                                            {rows.length > 0 ? (
+                                                                                <div className="mt-1 overflow-x-auto">
+                                                                                    <table className="min-w-full text-sm">
+                                                                                        <thead>
+                                                                                            <tr>
+                                                                                                <th className="text-left border border-slate-200 dark:border-slate-700 px-2 py-1">Dimensión</th>
+                                                                                                <th className="text-left border border-slate-200 dark:border-slate-700 px-2 py-1">Puntaje</th>
+                                                                                            </tr>
+                                                                                        </thead>
+                                                                                        <tbody>
+                                                                                            {rows.map((r, i) => (
+                                                                                                <tr key={i}>
+                                                                                                    <td className="border border-slate-200 dark:border-slate-700 px-2 py-1">{r.label}</td>
+                                                                                                    <td className="border border-slate-200 dark:border-slate-700 px-2 py-1">{r.value}</td>
+                                                                                                </tr>
+                                                                                            ))}
+                                                                                        </tbody>
+                                                                                    </table>
+                                                                                    <div className="mt-2"><span className="font-semibold">Promedio KDQOL:</span> {prom != null ? prom : '—'}</div>
+                                                                                </div>
+                                                                            ) : (
+                                                                                <div className="mt-1 p-2 rounded bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-200">—</div>
+                                                                            )}
                                                                         </div>
                                                                         <div className="flex justify-end gap-3">
                                                                             <button onClick={() => descargarPDFPsicologia(psiDetalle.item)} className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white">Descargar PDF</button>
