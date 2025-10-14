@@ -14,10 +14,10 @@ const nz = (v) => (v === undefined || v === null || v === '' ? null : v);
 
 // Configuración de CORS y JSON body parsing
 app.use(cors({
-  origin: 'http://localhost:3000',
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
+    origin: 'http://localhost:3000',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
 }));
 app.use(express.json({ limit: '50mb' }));
 app.use(bodyParser.json({ limit: '50mb' }));
@@ -83,7 +83,7 @@ const pool = require('./db/pool');
 // Asegurarnos de que la carpeta 'fotos' existe y servir estáticos
 const fotosDir = path.join(__dirname, 'fotos');
 if (!fs.existsSync(fotosDir)) {
-  fs.mkdirSync(fotosDir);
+    fs.mkdirSync(fotosDir);
 }
 
 app.use(backGestionTurnosRouter);
@@ -1610,7 +1610,9 @@ app.post('/pacientes', async (req, res) => {
             nz(b.sexo),                           // 12 sexo
             nz(b.direccion),                      // 13 direccion
             nz(b.fechaIngreso || b.fechaingreso), // 14 fecha_ingreso (YYYY-MM-DD)
-            b.idDepartamento ? Number(b.idDepartamento) : null,      // 15 id_departamento
+            (b.idDepartamento === undefined || b.idDepartamento === null || b.idDepartamento === '')
+                ? null
+                : String(b.idDepartamento).trim(),         // 15 id_departamento
             b.idEstado ? Number(b.idEstado) : 1,                     // 16 id_estado (por defecto 1 = Nuevo Ingreso)
             b.idAcceso ? Number(b.idAcceso) : null,                  // 17 id_acceso
             nz(b.numeroFormulario),                                   // 18 numero_formulario_activo
@@ -2986,30 +2988,43 @@ app.post('/registrar-faltista', async (req, res) => {
     }
 });
 
+// PON ESTA RUTA ANTES de app.use(backCatalogosRouter)
 app.get("/departamentos", async (_req, res) => {
-    const qFunc = `
-        SELECT id_departamento AS iddepartamento, nombre
-        FROM public.fn_mostrar_departamentos()
-        ORDER BY nombre ASC
-    `;
-    const qTabla = `
-        SELECT id_departamento AS iddepartamento, nombre
-        FROM public.tbl_departamento
-        ORDER BY nombre ASC
-    `;
+  const qFunc = `
+    SELECT t.id_departamento::text AS iddepartamento,
+           t.nombre::text         AS nombre
+    FROM public.fn_mostrar_departamentos()
+         AS t(id_departamento text, nombre text)
+    ORDER BY t.nombre ASC
+  `;
+  const qTabla = `
+    SELECT TRIM(id_departamento)::text AS iddepartamento,
+           TRIM(nombre)::text          AS nombre
+    FROM public.tbl_departamento
+    ORDER BY nombre ASC
+  `;
+  const normalizar = (rows) =>
+    rows.map((r) => ({
+      iddepartamento: (r.iddepartamento ?? "").trim(),
+      nombre: (r.nombre ?? "").trim(),
+    }));
+
+  try {
+    const r1 = await pool.query(qFunc);
+    return res.json(normalizar(r1.rows));
+  } catch (e1) {
     try {
-        const r1 = await pool.query(qFunc);
-        return res.json(r1.rows);
-    } catch (e1) {
-        try {
-            const r2 = await pool.query(qTabla);
-            return res.json(r2.rows);
-        } catch (e2) {
-            console.error("[/departamentos] ERROR:", e1.message, "| fallback:", e2.message);
-            return res.status(500).json({ error: "DB_ERROR" });
-        }
+      const r2 = await pool.query(qTabla);
+      return res.json(normalizar(r2.rows));
+    } catch (e2) {
+      console.error("[/departamentos] ERROR:", e1.message, "| fallback:", e2.message);
+      return res.status(500).json({ error: "DB_ERROR" });
     }
+  }
 });
+
+// Luego recién:
+app.use(backCatalogosRouter);
 
 // Legacy: /accesos-vasculares (usa función)
 app.get('/accesos-vasculares', async (req, res) => {
