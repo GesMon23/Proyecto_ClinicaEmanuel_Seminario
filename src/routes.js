@@ -18,8 +18,17 @@ import GestionReportes from "views/GestionReportes.js";
 import GestionReferencias from "views/GestionReferencias.js";
 import GestionLaboratorios from "views/GestionLaboratorios.jsx";
 import LoginComponent from "views/Login.js";
+import DashboardsInteractivos from "views/DashboardsInteractivos.jsx";
 
 var routes = [
+  {
+    path: "/estadisticas",
+    name: "Estadísticas",
+    icon: "nc-icon nc-chart-bar-32",
+    component: DashboardsInteractivos,
+    layout: "/admin",
+    requiredRole: "RolEstadistica"
+  },
   {
     path: "/consulta-pacientes",
     name: "Consulta Pacientes",
@@ -86,3 +95,4 @@ var routes = [
 ];
 
 export default routes;
+

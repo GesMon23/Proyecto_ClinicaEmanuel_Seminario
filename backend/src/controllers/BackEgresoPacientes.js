@@ -199,10 +199,31 @@ router.post('/egresos', async (req, res) => {
       } catch (e) {
         console.warn('[EGRESO DEBUG] No se pudo leer GUC/search_path:', e?.message || e);
       }
+      // Bloquear fila de paciente para evitar carreras y deadlocks
+      try {
+        await client.query(
+          `SELECT 1 FROM public.tbl_pacientes WHERE no_afiliacion = $1 FOR UPDATE NOWAIT`,
+          [no_afiliacion]
+        );
+      } catch (e) {
+        if (e && e.code === '55P03') {
+          throw new Error('LOCKED');
+        }
+        throw e;
+      }
       let inner = null;
 
     if (id_causa_egreso === '2') {  // Egreso normal
       idEstado = 3; // Paciente Egresado
+      // Actualizar estado del paciente primero
+      const updateQueryFirst = `
+        UPDATE public.tbl_pacientes
+        SET id_estado = $2,
+            fecha_actualizacion = NOW()
+        WHERE no_afiliacion = $1
+        RETURNING *;
+      `;
+      await client.query(updateQueryFirst, [no_afiliacion, idEstado]);
       const insertQuery = `
         INSERT INTO public.tbl_egresos (
           no_afiliacion,
@@ -214,12 +235,6 @@ router.post('/egresos', async (req, res) => {
           fecha_creacion
         )
         VALUES ($1, $2, $3, $4::date, $5, NULL, NOW())
-        ON CONFLICT ON CONSTRAINT tbl_egresos_pkey
-        DO UPDATE SET
-          id_causa_egreso = EXCLUDED.id_causa_egreso,
-          descripcion = EXCLUDED.descripcion,
-          fecha_egreso = EXCLUDED.fecha_egreso,
-          observaciones = EXCLUDED.observaciones
         RETURNING *;
       `;
       const insertValues = [
@@ -234,6 +249,15 @@ router.post('/egresos', async (req, res) => {
 
     if (id_causa_egreso === '1') {  // Fallecimiento
       idEstado = 5; // Paciente fallecido
+      // Actualizar estado del paciente primero
+      const updateQueryFirst = `
+        UPDATE public.tbl_pacientes
+        SET id_estado = $2,
+            fecha_actualizacion = NOW()
+        WHERE no_afiliacion = $1
+        RETURNING *;
+      `;
+      await client.query(updateQueryFirst, [no_afiliacion, idEstado]);
       const insertQuery = `
         INSERT INTO public.tbl_fallecimientos (
           no_afiliacion,
@@ -258,19 +282,11 @@ router.post('/egresos', async (req, res) => {
       ];
       inner = await client.query(insertQuery, insertValues);
     }
-      // Actualizar estado del paciente con el valor correcto
-      const updateQuery = `
-      UPDATE public.tbl_pacientes
-      SET id_estado = $2,
-          fecha_actualizacion = NOW()
-      WHERE no_afiliacion = $1
-      RETURNING *;
-    `;
-      const updateValues = [
-      no_afiliacion,
-      idEstado
-    ];
-      const resultUpdate = await client.query(updateQuery, updateValues);
+      // Devolver último estado del paciente (ya actualizado) y el insert
+      const resultUpdate = await client.query(
+        `SELECT * FROM public.tbl_pacientes WHERE no_afiliacion = $1`,
+        [no_afiliacion]
+      );
       return { insert: inner?.rows?.[0] || null, update: resultUpdate.rows?.[0] || null };
     });
 
@@ -281,6 +297,9 @@ router.post('/egresos', async (req, res) => {
       paciente: resultInsert.update
     });
   } catch (err) {
+    if (err && (err.code === '55P03' || err.message === 'LOCKED')) {
+      return res.status(409).json({ error: 'El paciente está siendo editado. Intente nuevamente.' });
+    }
     console.error("Error en POST /egresos:", err.message, req.body, idEstado);
     res.status(500).json({ error: 'Error al insertar egreso', detalle: err.message });
   }
