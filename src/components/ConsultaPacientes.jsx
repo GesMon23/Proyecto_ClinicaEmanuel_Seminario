@@ -170,6 +170,7 @@ const ConsultaPacientes = () => {
     const [faltistas, setFaltistas] = useState([]);
     const [laboratorios, setLaboratorios] = useState([]);
     const [labDetalle, setLabDetalle] = useState({ isOpen: false, item: null });
+    const [ultimosLab, setUltimosLab] = useState({ loading: false, error: '', data: [] });
     const [nutDetalle, setNutDetalle] = useState({ isOpen: false, item: null });
     const [psiDetalle, setPsiDetalle] = useState({ isOpen: false, item: null });
     const [formDetalle, setFormDetalle] = useState({ isOpen: false, item: null });
@@ -558,8 +559,28 @@ const ConsultaPacientes = () => {
     };
 
     // Abrir detalle de laboratorio (modal específico)
-    const openLabDetail = (item) => setLabDetalle({ isOpen: true, item });
-    const closeLabDetail = () => setLabDetalle({ isOpen: false, item: null });
+    const openLabDetail = (item) => {
+        setLabDetalle({ isOpen: true, item });
+        const afiliacion = item?.no_afiliacion || item?.noafiliacion || '';
+        if (!afiliacion) {
+            setUltimosLab({ loading: false, error: '', data: [] });
+            return;
+        }
+        setUltimosLab(prev => ({ ...prev, loading: true, error: '', data: [] }));
+        api
+            .get(`/laboratorios/${afiliacion}/parametros/ultimo`)
+            .then(({ data }) => {
+                const lista = Array.isArray(data?.data) ? data.data : [];
+                setUltimosLab({ loading: false, error: '', data: lista });
+            })
+            .catch(() => {
+                setUltimosLab({ loading: false, error: 'No se pudieron cargar los últimos parámetros.', data: [] });
+            });
+    };
+    const closeLabDetail = () => {
+        setLabDetalle({ isOpen: false, item: null });
+        setUltimosLab({ loading: false, error: '', data: [] });
+    };
     const openNutDetail = (item) => setNutDetalle({ isOpen: true, item });
     const closeNutDetail = () => setNutDetalle({ isOpen: false, item: null });
     const openPsiDetail = (item) => setPsiDetalle({ isOpen: true, item });
@@ -661,6 +682,29 @@ const ConsultaPacientes = () => {
               </thead>
               <tbody>
                 ${paramRows || '<tr><td colspan="2">—</td></tr>'}
+              </tbody>
+            </table>
+            <h2>Últimos parámetros previos</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Parámetro</th>
+                  <th>Valor</th>
+                  <th>Fecha Lab.</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${(() => {
+                  const data = Array.isArray(ultimosLab?.data) ? ultimosLab.data : [];
+                  if (data.length === 0) return '<tr><td colspan="3">—</td></tr>';
+                  return data.map(u => `
+                    <tr>
+                      <td>${u.parametro ?? ''}</td>
+                      <td>${u.valor ?? ''}</td>
+                      <td>${u.fecha_laboratorio ? new Date(u.fecha_laboratorio).toLocaleDateString() : ''}</td>
+                    </tr>
+                  `).join('');
+                })()}
               </tbody>
             </table>
           </body>
@@ -2509,6 +2553,39 @@ const ConsultaPacientes = () => {
                                                                                         ))}
                                                                                     </tbody>
                                                                                 </table>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div>
+                                                                            <span className="font-semibold">Últimos parámetros previos:</span>
+                                                                            <div className="mt-2">
+                                                                                {ultimosLab.loading ? (
+                                                                                    <div className="text-sm text-slate-600 dark:text-slate-300">Cargando últimos parámetros...</div>
+                                                                                ) : ultimosLab.error ? (
+                                                                                    <div className="text-sm text-red-600 dark:text-red-400">{ultimosLab.error}</div>
+                                                                                ) : (ultimosLab.data && ultimosLab.data.length > 0) ? (
+                                                                                    <div className="overflow-x-auto">
+                                                                                        <table className="min-w-full border border-slate-200 dark:border-slate-700 text-xs">
+                                                                                            <thead>
+                                                                                                <tr className="bg-slate-100 dark:bg-slate-700">
+                                                                                                    <th className="px-2 py-1 text-left">Parámetro</th>
+                                                                                                    <th className="px-2 py-1 text-left">Valor</th>
+                                                                                                    <th className="px-2 py-1 text-left">Fecha Lab.</th>
+                                                                                                </tr>
+                                                                                            </thead>
+                                                                                            <tbody>
+                                                                                                {ultimosLab.data.map((u, i) => (
+                                                                                                    <tr key={`${u.idparametro || i}-${u.parametro}`} className="border-t border-slate-200 dark:border-slate-700">
+                                                                                                        <td className="px-2 py-1">{u.parametro ?? ''}</td>
+                                                                                                        <td className="px-2 py-1">{u.valor ?? ''}</td>
+                                                                                                        <td className="px-2 py-1">{u.fecha_laboratorio ? new Date(u.fecha_laboratorio).toLocaleDateString() : ''}</td>
+                                                                                                    </tr>
+                                                                                                ))}
+                                                                                            </tbody>
+                                                                                        </table>
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <div className="text-sm text-slate-600 dark:text-slate-300">No hay registros previos.</div>
+                                                                                )}
                                                                             </div>
                                                                         </div>
                                                                         <div className="flex justify-end gap-3">
