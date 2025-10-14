@@ -140,20 +140,13 @@ const RegistroPacientes = () => {
         console.error("Departamentos falló:", depRes.reason);
       }
 
-        // Normalizamos claves más comunes (id y texto) y evitamos opciones vacías
-        const deps = rawDeps
-          .map((d) => {
-            const rawId = d.iddepartamento ?? d.id_departamento ?? d.idDepartamento ?? d.id;
-            const id = rawId != null ? String(rawId).trim() : null; // preservar ceros a la izquierda
-            let nombre = d.nombre ?? d.descripcion ?? d.departamento ?? d.nombre_departamento ?? "";
-            if (!nombre && id != null) nombre = String(id);
-            return { id, nombre };
-          })
-          .filter((d) => d.id != null);
-        const accs = rawAccs.map((a) => ({
-          id: a.idacceso ?? a.id_acceso ?? a.idAcceso ?? a.id,
-          descripcion: a.descripcion ?? "",
-        }));
+      if (accRes.status === "fulfilled") {
+        const accs = toArray(accRes.value.data)
+          .map((a) => ({
+            id: a.idacceso ?? a.id_acceso ?? a.idAcceso ?? a.id,
+            descripcion: a.descripcion ?? "",
+          }))
+          .filter((a) => a.id != null);
         setAccesosVasculares(accs);
       } else {
         console.error("Accesos falló:", accRes.reason);
