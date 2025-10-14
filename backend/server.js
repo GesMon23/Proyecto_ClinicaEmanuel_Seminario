@@ -2344,92 +2344,10 @@ app.get('/pacientes', async (req, res) => {
     }
 });
 
-app.put('/pacientes/:noAfiliacion', async (req, res) => {
-    const client = await pool.connect();
-    try {
-        const { noAfiliacion } = req.params;
-        const { idcausa, causaegreso, fechaegreso, nocasoconcluido, observaciones, comorbilidades, fechafallecimiento, lugarfallecimiento, causafallecimiento, desdeEgreso, desdeReingreso, primerNombre, segundoNombre, primerApellido, segundoApellido, numeroformulario, sesionesautorizadasmes, fechainicioperiodo, fechafinperiodo } = req.body;
-
-        await client.query('BEGIN');
-        let result;
-        if (desdeReingreso) {
-            // Si viene de reingreso, también actualizar idestado = 2 y limpiar campos de egreso
-            result = await client.query(`
-                    UPDATE tbl_pacientes 
-                    SET 
-                        primerNombre = $1, 
-                        segundoNombre = $2, 
-                        primerApellido = $3, 
-                        segundoApellido = $4,
-                        numeroformulario = $5,
-                        sesionesautorizadasmes = $6,
-                        fechainicioperiodo = $7,
-                        fechafinperiodo = $8,
-                        observaciones = $9,
-                        idestado = 2,
-                        idcausa = NULL,
-                        causaegreso = NULL,
-                        fechaegreso = NULL,
-                        nocasoconcluido = NULL
-                    WHERE noAfiliacion = $10
-                    RETURNING *
-                `, [primerNombre, segundoNombre, primerApellido, segundoApellido, numeroformulario, sesionesautorizadasmes, fechainicioperiodo, fechafinperiodo, observaciones, noAfiliacion]);
-        } else if (desdeEgreso) {
-            // Egreso de paciente (incluye fallecimiento)
-            result = await client.query(`
-                    UPDATE tbl_pacientes
-                    SET
-                        idestado = 3,
-                        idcausa = $1,
-                        causaegreso = $2,
-                        fechaegreso = $3::date,
-                        nocasoconcluido = $4,
-                        observaciones = $5,
-                        comorbilidades = COALESCE($6, NULL),
-                        fechafallecido = COALESCE($7::date, NULL),
-                        lugarfallecimiento = COALESCE($8, NULL),
-                        causafallecimiento = COALESCE($9, NULL)
-                    WHERE noAfiliacion = $10
-                    RETURNING *
-                `, [idcausa, causaegreso, fechaegreso, nocasoconcluido, observaciones, comorbilidades, fechafallecimiento, lugarfallecimiento, causafallecimiento, noAfiliacion]);
-        } else {
-            // Si no, no modificar idestado
-            result = await client.query(`
-                    UPDATE tbl_pacientes 
-                    SET 
-                        primerNombre = $1, 
-                        segundoNombre = $2, 
-                        primerApellido = $3, 
-                        segundoApellido = $4,
-                        numeroformulario = $5,
-                        sesionesautorizadasmes = $6,
-                        fechainicioperiodo = $7,
-                        fechafinperiodo = $8,
-                        observaciones = $9
-                    WHERE noAfiliacion = $10
-                    RETURNING *
-                `, [primerNombre, segundoNombre, primerApellido, segundoApellido, numeroformulario, sesionesautorizadasmes, fechainicioperiodo, fechafinperiodo, observaciones, noAfiliacion]);
-        }
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ detail: 'Paciente no encontrado' });
-        }
-
-        await client.query('COMMIT');
-
-        res.json({
-            success: true,
-            message: "Paciente actualizado exitosamente",
-            paciente: result.rows[0]
-        });
-    } catch (err) {
-        await client.query('ROLLBACK');
-        console.error('Error en PUT /pacientes/:noAfiliacion:', err.message, err.stack);
-        res.status(500).json({ detail: err.message });
-    } finally {
-        client.release();
-    }
-});
+// Endpoint duplicado de actualización de paciente (reingreso/egreso) eliminado.
+// La lógica ha sido migrada a:
+// - `backend/src/controllers/BackReingresoPacientes.js`
+// - `backend/src/controllers/BackEgresoPacientes.js`
 
 // Obtener paciente por número de afiliación
 app.get('/pacientes/:noAfiliacion', async (req, res) => {
