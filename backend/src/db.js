@@ -13,6 +13,8 @@ async function runWithUser(userName, fn) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    // Evitar esperas largas por bloqueos
+    await client.query("SET LOCAL lock_timeout = '5s'");
     // Establecemos el usuario actual de la app sólo para esta transacción
     // Establecer GUC por transacción usando set_config (seguro para variables custom)
     await client.query('SELECT set_config($1, $2, true)', ['app.current_user', String(userName || 'anon')]);

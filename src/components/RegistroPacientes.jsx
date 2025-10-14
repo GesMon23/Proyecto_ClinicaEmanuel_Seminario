@@ -105,11 +105,16 @@ const RegistroPacientes = () => {
         const rawAccs = toArray(respAcc.data);
         const rawJors = toArray(respJor.data);
 
-        // Normalizamos claves más comunes (id y texto)
-        const deps = rawDeps.map((d) => ({
-          id: d.iddepartamento ?? d.id_departamento ?? d.idDepartamento ?? d.id,
-          nombre: d.nombre ?? d.descripcion ?? "",
-        }));
+        // Normalizamos claves más comunes (id y texto) y evitamos opciones vacías
+        const deps = rawDeps
+          .map((d) => {
+            const rawId = d.iddepartamento ?? d.id_departamento ?? d.idDepartamento ?? d.id;
+            const id = rawId != null ? String(rawId).trim() : null; // preservar ceros a la izquierda
+            let nombre = d.nombre ?? d.descripcion ?? d.departamento ?? d.nombre_departamento ?? "";
+            if (!nombre && id != null) nombre = String(id);
+            return { id, nombre };
+          })
+          .filter((d) => d.id != null);
         const accs = rawAccs.map((a) => ({
           id: a.idacceso ?? a.id_acceso ?? a.idAcceso ?? a.id,
           descripcion: a.descripcion ?? "",
@@ -281,7 +286,7 @@ const RegistroPacientes = () => {
         sexo: String(formData.sexo),
         direccion: String(formData.direccion).trim(),
         fechaIngreso: formData.fechaIngreso, // YYYY-MM-DD
-        idDepartamento: formData.idDepartamento ? Number(formData.idDepartamento) : null,
+        idDepartamento: formData.idDepartamento ? String(formData.idDepartamento) : null,
         idAcceso: formData.idAcceso ? Number(formData.idAcceso) : null,
         numeroFormulario: formData.numeroFormulario?.trim() || null,
 
@@ -691,11 +696,11 @@ const RegistroPacientes = () => {
                       className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-gray-600 dark:bg-slate-800 dark:text-white"
                     >
                       <option value="">Seleccione el departamento</option>
-                      {departamentos.map((depto) => (
-                        <option key={depto.id} value={depto.id}>
-                          {depto.nombre}
-                        </option>
-                      ))}
+                      
+                      
+                  {departamentos.map(dep => (
+                    <option key={dep.nombre} value={dep.nombre}>{dep.nombre}</option>
+                  ))}
                     </select>
                   </div>
 

@@ -25,9 +25,24 @@ import { useAuth } from "@/contexts/auth-context";
 function Sidebar({ color, image, routes, collapsed, setCollapsed }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth() || {};
+  const { logout, user } = useAuth() || {};
   const activeRoute = (routeName) => {
     return location.pathname.indexOf(routeName) > -1 ? "active" : "";
+  };
+
+  const hasRole = (role) => {
+    if (!role) return true;
+    if (!user) return false;
+    // Soporta distintas estructuras comunes de roles
+    if (Array.isArray(user.roles)) {
+      return user.roles.includes(role) || user.roles.some(r => r?.name === role || r?.rol === role);
+    }
+    return (
+      user.role === role ||
+      user.rol === role ||
+      user?.role?.name === role ||
+      user?.rol?.nombre === role
+    );
   };
 
   return (
@@ -41,6 +56,7 @@ function Sidebar({ color, image, routes, collapsed, setCollapsed }) {
       <div className="sidebar-wrapper">
         <Nav>
           {routes.map((prop, key) => {
+            if (prop.requiredRole && !hasRole(prop.requiredRole)) return null;
             if (!prop.redirect)
               return (
                 <li
@@ -111,3 +127,4 @@ function Sidebar({ color, image, routes, collapsed, setCollapsed }) {
 }
 
 export default Sidebar;
+

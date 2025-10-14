@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const app = express();
+
 const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
@@ -56,9 +57,10 @@ const backConsultaLaboratoriosRouter = require('./src/controllers/BackConsultaLa
 const backCatalogosRouter = require('./src/controllers/BackCatalogos');
 // Importar router de reporte de pacientes
 const backPacientesReporteRouter = require('./src/controllers/BackPacientesReporte');
+// Importar router de estadísticas resumen
+const backEstadisticasResumenRouter = require('./src/controllers/BackEstadisticasResumen');
 
 const backReporteFaltistasRouter = require('./src/controllers/BackReporteFaltistas');
-
 
 const backNuevoIngresoReportesRouter = require('./src/controllers/BackNuevoIngresoReportes');
 // Importar otros routers usados más abajo
@@ -86,11 +88,11 @@ if (!fs.existsSync(fotosDir)) {
 
 app.use(backGestionTurnosRouter);
 
-
 app.use(backConsultaLaboratoriosRouter);
 
 app.use(backPacientesReporteRouter);
 app.use(backFallecidosReportesRouter);
+app.use(backEstadisticasResumenRouter);
 app.use('/fotos', express.static(fotosDir));
 // (Desmontado) Usar el router legacy para actualización masiva de pacientes
 // app.use(updateMasivoPacientesRouter);
