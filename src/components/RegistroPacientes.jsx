@@ -257,7 +257,7 @@ const RegistroPacientes = () => {
 
       // Verificación previa de unicidad: DPI
       try {
-        await api.get(`/pacientes/dpi/${dpiTrim}`);
+        await api.get(`/pacientes/existe/dpi/${dpiTrim}`);
         // Si no lanzó error, el DPI ya existe
         setModalType("error");
         setModalMessage("El DPI ya está registrado para otro paciente.");
@@ -278,7 +278,7 @@ const RegistroPacientes = () => {
       // Verificación previa de unicidad: No. Afiliación
       try {
         const noAfTrim = String(formData.noAfiliacion || '').trim();
-        await api.get(`/pacientes/${encodeURIComponent(noAfTrim)}`);
+        await api.get(`/pacientes/existe/noafiliacion/${encodeURIComponent(noAfTrim)}`);
         // Si no lanzó error, el No. Afiliación ya existe
         setModalType("error");
         setModalMessage("El Número de Afiliación ya está registrado.");
@@ -730,7 +730,7 @@ const RegistroPacientes = () => {
                       
                       
                   {departamentos.map(dep => (
-                    <option key={dep.nombre} value={dep.nombre}>{dep.nombre}</option>
+                    <option key={dep.id} value={dep.id}>{dep.nombre}</option>
                   ))}
                     </select>
                   </div>
