@@ -154,27 +154,148 @@ router.get('/api/estadisticas/resumen', async (req, res) => {
   }
 });
 
+// GET /api/estadisticas/nutricion-por-sexo?desde=YYYY-MM-DD&hasta=YYYY-MM-DD
+router.get('/api/estadisticas/nutricion-por-sexo', async (req, res) => {
+  try {
+    const { desde, hasta } = req.query;
+    let { motivo } = req.query;
+    if (motivo) {
+      const m = String(motivo).trim();
+      if (!['Nuevo','Reconsulta'].includes(m)) motivo = null;
+    }
+    const conds = [];
+    const params = [];
+    if (desde && hasta) {
+      conds.push(`(n.fecha_creacion::date BETWEEN $${params.length + 1} AND $${params.length + 2})`);
+      params.push(desde, hasta);
+    }
+    if (motivo) {
+      conds.push(`COALESCE(n.motivo_consulta,'N/D') = $${params.length + 1}`);
+      params.push(motivo);
+    }
+    const where = conds.length ? ('WHERE ' + conds.join(' AND ')) : '';
+    const q = `
+      SELECT CASE 
+               WHEN LOWER(COALESCE(p.sexo,'ND')) LIKE 'm%' THEN 'Masculino'
+               WHEN LOWER(COALESCE(p.sexo,'ND')) LIKE 'f%' THEN 'Femenino'
+               ELSE 'N/D'
+             END AS sexo, 
+             COUNT(*)::int AS total
+      FROM public.tbl_informe_nutricion n
+      LEFT JOIN public.tbl_pacientes p ON p.no_afiliacion = n.no_afiliacion
+      ${where}
+      GROUP BY 1
+      ORDER BY 2 DESC
+    `;
+    const r = await pool.query(q, params);
+    return res.json({ rango: { desde: desde || null, hasta: hasta || null }, items: r.rows });
+  } catch (error) {
+    console.error('[Estadisticas] nutricion-por-sexo error:', error);
+    res.status(500).json({ error: 'Error al obtener nutrición por sexo.' });
+  }
+});
+
+// GET /api/estadisticas/nutricion-por-jornada?desde=YYYY-MM-DD&hasta=YYYY-MM-DD
+router.get('/api/estadisticas/nutricion-por-jornada', async (req, res) => {
+  try {
+    const { desde, hasta } = req.query;
+    let { motivo } = req.query;
+    if (motivo) {
+      const m = String(motivo).trim();
+      if (!['Nuevo','Reconsulta'].includes(m)) motivo = null;
+    }
+    let { sexo } = req.query;
+    if (sexo) {
+      const s = String(sexo).toLowerCase();
+      if (s.startsWith('m')) sexo = 'Masculino';
+      else if (s.startsWith('f')) sexo = 'Femenino';
+    }
+    const conds = [];
+    const params = [];
+    if (desde && hasta) {
+      conds.push(`(n.fecha_creacion::date BETWEEN $${params.length + 1} AND $${params.length + 2})`);
+      params.push(desde, hasta);
+    }
+    if (sexo && ['Masculino','Femenino'].includes(sexo)) {
+      conds.push(`COALESCE(p.sexo,'N/D') = $${params.length + 1}`);
+      params.push(sexo);
+    }
+    if (motivo) {
+      conds.push(`COALESCE(n.motivo_consulta,'N/D') = $${params.length + 1}`);
+      params.push(motivo);
+    }
+    const where = conds.length ? ('WHERE ' + conds.join(' AND ')) : '';
+    const q = `
+      SELECT 
+        COALESCE(j.descripcion, 'N/D') AS jornada,
+        COUNT(*)::int AS total
+      FROM public.tbl_informe_nutricion n
+      LEFT JOIN public.tbl_pacientes p ON p.no_afiliacion = n.no_afiliacion
+      LEFT JOIN public.tbl_jornadas j ON j.id_jornada = p.id_jornada
+      ${where}
+      GROUP BY 1
+      ORDER BY 2 DESC
+    `;
+    const r = await pool.query(q, params);
+    return res.json({ rango: { desde: desde || null, hasta: hasta || null }, items: r.rows });
+  } catch (error) {
+    console.error('[Estadisticas] nutricion-por-jornada error:', error);
+    res.status(500).json({ error: 'Error al obtener nutrición por jornada.' });
+  }
+});
+
 // GET /api/estadisticas/nutricion-detalle?desde=YYYY-MM-DD&hasta=YYYY-MM-DD
 router.get('/api/estadisticas/nutricion-detalle', async (req, res) => {
   try {
-    const { desde, hasta } = req.query;
-    const desdeDef = desde || new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString().slice(0, 10);
-    const hastaDef = hasta || new Date().toISOString().slice(0, 10);
+    const { desde, hasta, estado } = req.query;
+    let { motivo } = req.query;
+    if (motivo) {
+      const m = String(motivo).trim();
+      if (!['Nuevo','Reconsulta'].includes(m)) motivo = null;
+    }
+    let { sexo } = req.query;
+    if (sexo) {
+      const s = String(sexo).toLowerCase();
+      if (s.startsWith('m')) sexo = 'Masculino';
+      else if (s.startsWith('f')) sexo = 'Femenino';
+    }
+    const conds = [];
+    const params = [];
+    if (desde && hasta) {
+      conds.push(`n.fecha_creacion::date BETWEEN $${params.length + 1} AND $${params.length + 2}`);
+      params.push(desde, hasta);
+    }
+    if (estado) {
+      conds.push(`COALESCE(n.estado_nutricional,'N/D') = $${params.length + 1}`);
+      params.push(estado);
+    }
+    if (sexo && ['Masculino','Femenino'].includes(sexo)) {
+      conds.push(`COALESCE(p.sexo,'N/D') = $${params.length + 1}`);
+      params.push(sexo);
+    }
+    if (motivo) {
+      conds.push(`COALESCE(n.motivo_consulta,'N/D') = $${params.length + 1}`);
+      params.push(motivo);
+    }
+    const where = conds.length ? ('WHERE ' + conds.join(' AND ')) : '';
     const q = `
       SELECT 
-        COALESCE(motivo_consulta,'N/D') AS motivo_consulta,
-        COALESCE(estado_nutricional,'N/D') AS estado_nutricional,
-        altura,
-        peso,
-        imc,
-        fecha_creacion::date AS fecha
-      FROM public.tbl_informe_nutricion
-      WHERE (fecha_creacion::date BETWEEN $1 AND $2)
-      ORDER BY fecha_creacion DESC
+        n.no_afiliacion,
+        TRIM(CONCAT_WS(' ', p.primer_nombre, p.segundo_nombre, p.primer_apellido, p.segundo_apellido)) AS nombre_paciente,
+        COALESCE(n.motivo_consulta,'N/D') AS motivo_consulta,
+        COALESCE(n.estado_nutricional,'N/D') AS estado_nutricional,
+        n.altura_cm AS altura,
+        n.peso_kg AS peso,
+        n.imc,
+        n.fecha_creacion::date AS fecha
+      FROM public.tbl_informe_nutricion n
+      LEFT JOIN public.tbl_pacientes p ON p.no_afiliacion = n.no_afiliacion
+      ${where}
+      ORDER BY n.fecha_creacion DESC
       LIMIT 500
     `;
-    const r = await pool.query(q, [desdeDef, hastaDef]);
-    return res.json({ rango: { desde: desdeDef, hasta: hastaDef }, items: r.rows });
+    const r = await pool.query(q, params);
+    return res.json({ rango: { desde: desde || null, hasta: hasta || null }, items: r.rows });
   } catch (error) {
     console.error('[Estadisticas] nutricion-detalle error:', error);
     res.status(500).json({ error: 'Error al obtener detalle de nutrición.' });
@@ -189,20 +310,90 @@ module.exports = router;
 router.get('/api/estadisticas/nutricion-por-tipo', async (req, res) => {
   try {
     const { desde, hasta } = req.query;
-    const desdeDef = desde || new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString().slice(0, 10);
-    const hastaDef = hasta || new Date().toISOString().slice(0, 10);
+    let { motivo } = req.query;
+    if (motivo) {
+      const m = String(motivo).trim();
+      if (!['Nuevo','Reconsulta'].includes(m)) motivo = null;
+    }
+    let { sexo } = req.query;
+    if (sexo) {
+      const s = String(sexo).toLowerCase();
+      if (s.startsWith('m')) sexo = 'Masculino';
+      else if (s.startsWith('f')) sexo = 'Femenino';
+    }
+    const conds = [];
+    const params = [];
+    if (desde && hasta) {
+      conds.push(`(fecha_creacion::date BETWEEN $${params.length + 1} AND $${params.length + 2})`);
+      params.push(desde, hasta);
+    }
+    if (sexo && ['Masculino','Femenino'].includes(sexo)) {
+      conds.push(`EXISTS (SELECT 1 FROM public.tbl_pacientes p WHERE p.no_afiliacion = public.tbl_informe_nutricion.no_afiliacion AND COALESCE(p.sexo,'N/D') = $${params.length + 1})`);
+      params.push(sexo);
+    }
+    if (motivo) {
+      conds.push(`COALESCE(motivo_consulta,'N/D') = $${params.length + 1}`);
+      params.push(motivo);
+    }
+    const where = conds.length ? ('WHERE ' + conds.join(' AND ')) : '';
     const q = `
-      SELECT COALESCE(estado_nutricional,'N/D') AS estado, COUNT(*)::int AS total
+      SELECT 
+        COALESCE(estado_nutricional,'N/D') AS estado, 
+        COUNT(*)::int AS total,
+        ROUND(AVG(imc)::numeric, 2) AS imc_promedio,
+        ROUND(AVG(peso_kg)::numeric, 2) AS peso_promedio,
+        ROUND(AVG(altura_cm)::numeric, 2) AS altura_promedio
       FROM public.tbl_informe_nutricion
-      WHERE (fecha_creacion::date BETWEEN $1 AND $2)
+      ${where}
       GROUP BY 1
       ORDER BY 2 DESC
     `;
-    const r = await pool.query(q, [desdeDef, hastaDef]);
-    return res.json({ rango: { desde: desdeDef, hasta: hastaDef }, items: r.rows });
+    const r = await pool.query(q, params);
+    return res.json({ rango: { desde: desde || null, hasta: hasta || null }, items: r.rows });
   } catch (error) {
     console.error('[Estadisticas] nutricion-por-tipo error:', error);
     res.status(500).json({ error: 'Error al obtener nutrición por tipo.' });
+  }
+});
+
+// GET /api/estadisticas/nutricion-por-motivo?desde=YYYY-MM-DD&hasta=YYYY-MM-DD&sexo=Masculino|Femenino
+router.get('/api/estadisticas/nutricion-por-motivo', async (req, res) => {
+  try {
+    const { desde, hasta } = req.query;
+    let { sexo } = req.query;
+    // Siempre limitar a motivos permitidos
+    if (sexo) {
+      const s = String(sexo).toLowerCase();
+      if (s.startsWith('m')) sexo = 'Masculino';
+      else if (s.startsWith('f')) sexo = 'Femenino';
+    }
+    const conds = [];
+    const params = [];
+    if (desde && hasta) {
+      conds.push(`(n.fecha_creacion::date BETWEEN $${params.length + 1} AND $${params.length + 2})`);
+      params.push(desde, hasta);
+    }
+    if (sexo && ['Masculino','Femenino'].includes(sexo)) {
+      conds.push(`COALESCE(p.sexo,'N/D') = $${params.length + 1}`);
+      params.push(sexo);
+    }
+    // Forzar solo motivos 'Nuevo' y 'Reconsulta'
+    conds.push(`COALESCE(n.motivo_consulta,'N/D') IN ('Nuevo','Reconsulta')`);
+    const where = 'WHERE ' + conds.join(' AND ');
+    const q = `
+      SELECT COALESCE(n.motivo_consulta,'N/D') AS motivo, COUNT(*)::int AS total
+      FROM public.tbl_informe_nutricion n
+      LEFT JOIN public.tbl_pacientes p ON p.no_afiliacion = n.no_afiliacion
+      ${where}
+      GROUP BY 1
+      ORDER BY 2 DESC
+      LIMIT 12
+    `;
+    const r = await pool.query(q, params);
+    return res.json({ rango: { desde: desde || null, hasta: hasta || null }, items: r.rows });
+  } catch (error) {
+    console.error('[Estadisticas] nutricion-por-motivo error:', error);
+    res.status(500).json({ error: 'Error al obtener nutrición por motivo.' });
   }
 });
 
