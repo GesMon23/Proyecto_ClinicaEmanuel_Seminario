@@ -144,16 +144,19 @@ const ConsultaPacientes = () => {
     const [fotoCargando, setFotoCargando] = useState(false);
     const [departamentos, setDepartamentos] = useState([]);
 
-    // Autocompletar noafiliacion desde la URL y ejecutar la búsqueda al cargar
+    // Autocompletar desde la URL (noafiliacion o dpi) y ejecutar la búsqueda al cargar
     useEffect(() => {
         try {
             const query = typeof window !== 'undefined' ? window.location.search : '';
             const params = new URLSearchParams(query);
-            const n = params.get('noafiliacion') || params.get('no_afiliacion');
-            if (n && n.trim() !== '') {
-                setBusqueda(prev => ({ ...prev, noafiliacion: n.trim(), dpi: '' }));
-                // Ejecutar búsqueda con override directo (sin depender del timing del estado)
-                setTimeout(() => { if (typeof buscarPacientes === 'function') buscarPacientes(null, { noafiliacion: n.trim(), dpi: '' }); }, 0);
+            const n = (params.get('noafiliacion') || params.get('no_afiliacion') || '').trim();
+            const d = (params.get('dpi') || '').trim();
+            if (n) {
+                setBusqueda(prev => ({ ...prev, noafiliacion: n, dpi: '' }));
+                setTimeout(() => { if (typeof buscarPacientes === 'function') buscarPacientes(null, { noafiliacion: n, dpi: '' }); }, 0);
+            } else if (d) {
+                setBusqueda(prev => ({ ...prev, noafiliacion: '', dpi: d }));
+                setTimeout(() => { if (typeof buscarPacientes === 'function') buscarPacientes(null, { noafiliacion: '', dpi: d }); }, 0);
             }
         } catch {}
     }, []);
@@ -507,8 +510,18 @@ const ConsultaPacientes = () => {
     };
 
     const fetchPsicologia = async (noAfiliacion) => {
-        const res = await api.get(`/psicologia/${noAfiliacion}`);
-        setPsicologia(Array.isArray(res.data) ? res.data : []);
+        try {
+            const { data } = await api.get(`/api/psicologia/historial/${noAfiliacion}`);
+            const rows = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+            setPsicologia(rows);
+        } catch (e) {
+            try {
+                const res = await api.get(`/psicologia/${noAfiliacion}`);
+                setPsicologia(Array.isArray(res.data) ? res.data : []);
+            } catch (_) {
+                setPsicologia([]);
+            }
+        }
     };
 
     const fetchFormularios = async (noAfiliacion) => {
@@ -1055,7 +1068,11 @@ const ConsultaPacientes = () => {
         // Logo (asegúrate de tener el logo en base64 o usa una imagen pública accesible)
         const logoImg = await getLogoBase64(); // función auxiliar para obtener el logo en base64
         // URL fija para abrir directamente la consulta del paciente por no_afiliacion
-        const qrTarget = `http://localhost:3000/layout/consulta-pacientes?noafiliacion=${encodeURIComponent(paciente.no_afiliacion || '')}`;
+        const origin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'http://localhost:3000';
+        const qp = [];
+        if (paciente?.no_afiliacion) qp.push(`noafiliacion=${encodeURIComponent(paciente.no_afiliacion)}`);
+        if (paciente?.dpi) qp.push(`dpi=${encodeURIComponent(paciente.dpi)}`);
+        const qrTarget = `${origin}/layout/consulta-pacientes${qp.length ? `?${qp.join('&')}` : ''}`;
         const qrImgData = await getQRBase64(qrTarget);
         if (logoImg) {
             // Logo ligeramente más largo
@@ -2221,40 +2238,56 @@ const ConsultaPacientes = () => {
                                                     </select>
                                                 </div>
                                             </div>
-                                            <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 shadow-sm overflow-x-auto md:overflow-hidden" style={{ maxHeight: 420, overflowY: 'auto' }}>
-                                                <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
-                                                    <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                                            <div className="mt-2 overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 shadow-sm">
+                                                <table className="min-w-full divide-y divide-gray-300 dark:divide-slate-700 text-sm text-left text-gray-800 dark:text-gray-100">
+                                                    <thead className="bg-gray-100 dark:bg-slate-800 text-xs uppercase font-semibold text-gray-700 dark:text-gray-200">
                                                         <tr>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">ID Informe</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Motivo Consulta</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Tipo Consulta</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Observaciones</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Tipo Atención</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Pronóstico</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">KDQOL</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Acciones</th>
+                                                            <th className="px-4 py-2 text-left">#</th>
+                                                            <th className="px-4 py-2 text-left">No. Afiliación</th>
+                                                            <th className="px-4 py-2 text-left">Paciente</th>
+                                                            <th className="px-4 py-2 text-left">Sexo</th>
+                                                            <th className="px-4 py-2 text-left">ID Informe</th>
+                                                            <th className="px-4 py-2 text-left">Fecha</th>
+                                                            <th className="px-4 py-2 text-left">Motivo</th>
+                                                            <th className="px-4 py-2 text-left">Tipo Consulta</th>
+                                                            <th className="px-4 py-2 text-left">Tipo Atención</th>
+                                                            <th className="px-4 py-2 text-left">Pronóstico</th>
+                                                            <th className="px-4 py-2 text-left">Usuario</th>
+                                                            <th className="px-4 py-2 text-left">Acciones</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
-                                                        {psiPageItems && psiPageItems.length > 0 ? (
-                                                            psiPageItems.map((p, idx) => (
-                                                                <tr key={p.id_informe || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{p.id_informe || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{p.motivo_consulta || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{p.tipo_consulta || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{p.observaciones || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{p.tipo_atencion || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{p.pronostico || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{p.kdqol ? 'Sí' : 'No'}</td>
-                                                                    <td className="p-3 border dark:border-gray-600">
-                                                                        <button className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white" onClick={() => openPsiDetail(p)}>Ver detalle</button>
-                                                                    </td>
-                                                                </tr>
-                                                            ))
-                                                        ) : (
+                                                    <tbody>
+                                                        {(!psiPageItems || psiPageItems.length === 0) ? (
                                                             <tr>
-                                                                <td colSpan={8} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
+                                                                <td colSpan={12} className="text-center py-4 text-gray-600 dark:text-gray-300">No hay informes para mostrar.</td>
                                                             </tr>
+                                                        ) : (
+                                                            psiPageItems.map((it, idx) => {
+                                                                const pn = it.primer_nombre ?? it.primernombre ?? '';
+                                                                const sn = it.segundo_nombre ?? it.segundonombre ?? '';
+                                                                const pa = it.primer_apellido ?? it.primerapellido ?? '';
+                                                                const sa = it.segundo_apellido ?? it.segundoapellido ?? '';
+                                                                const sexo = it.sexo ?? it.Sexo ?? '';
+                                                                const nombre = [pn, sn, pa, sa].filter(Boolean).join(' ');
+                                                                return (
+                                                                    <tr key={it.id_informe || idx} className="border-t border-gray-200 dark:border-slate-700">
+                                                                        <td className="px-3 py-2">{(pagePsicologia - 1) * pageSizePsicologia + idx + 1}</td>
+                                                                        <td className="px-3 py-2">{it.no_afiliacion ?? ''}</td>
+                                                                        <td className="px-3 py-2">{nombre}</td>
+                                                                        <td className="px-3 py-2">{sexo}</td>
+                                                                        <td className="px-3 py-2">{it.id_informe ?? ''}</td>
+                                                                        <td className="px-3 py-2">{it.fecha_creacion ? new Date(it.fecha_creacion).toLocaleDateString() : ''}</td>
+                                                                        <td className="px-3 py-2">{it.motivo_consulta ?? ''}</td>
+                                                                        <td className="px-3 py-2">{it.tipo_consulta ?? ''}</td>
+                                                                        <td className="px-3 py-2">{it.tipo_atencion ?? ''}</td>
+                                                                        <td className="px-3 py-2">{it.pronostico_paciente ?? it.pronostico ?? ''}</td>
+                                                                        <td className="px-3 py-2">{it.usuario_creacion ?? ''}</td>
+                                                                        <td className="px-3 py-2">
+                                                                            <button type="button" onClick={() => openPsiDetail(it)} className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm">Ver detalle</button>
+                                                                        </td>
+                                                                    </tr>
+                                                                );
+                                                            })
                                                         )}
                                                     </tbody>
                                                 </table>
