@@ -13,8 +13,18 @@ const { runWithUser } = require('./src/db');
 const nz = (v) => (v === undefined || v === null || v === '' ? null : v);
 
 // Configuración de CORS y JSON body parsing
+const allowedOrigins = new Set([
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+]);
 app.use(cors({
-    origin: 'http://localhost:3000',
+    origin: (origin, callback) => {
+        // Permitir tools como curl/postman (sin origin) y los orígenes de la lista
+        if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+        return callback(new Error('Not allowed by CORS'));
+    },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,

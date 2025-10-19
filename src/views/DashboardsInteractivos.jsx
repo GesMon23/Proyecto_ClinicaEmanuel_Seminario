@@ -14,8 +14,10 @@ import {
   Bar,
   Legend,
   ComposedChart,
+  Treemap,
 } from "recharts";
 import api from "@/config/api";
+import DashboardPsicologia from "./DashboardPsicologia.jsx";
 
 // Nota: Los datos reales se pueden cargar desde el backend usando fetch a endpoints existentes.
 // Aquí dejamos estructuras listas para conectar.
@@ -27,6 +29,25 @@ function DashboardsInteractivos() {
     citasPendientes: 0,
     faltistasMes: 0,
   });
+  const [pacientesTotal, setPacientesTotal] = useState(0);
+  const [cargandoPacientesTotal, setCargandoPacientesTotal] = useState(true);
+  const [pacientesEstadoData, setPacientesEstadoData] = useState([]);
+  const [pacientesAccesoData, setPacientesAccesoData] = useState([]);
+  const [pacientesSexoData, setPacientesSexoData] = useState([]);
+  const [pacientesJornadaData, setPacientesJornadaData] = useState([]);
+  const [origPacientesEstadoData, setOrigPacientesEstadoData] = useState([]);
+  const [origPacientesAccesoData, setOrigPacientesAccesoData] = useState([]);
+  const [origPacientesSexoData, setOrigPacientesSexoData] = useState([]);
+  const [origPacientesJornadaData, setOrigPacientesJornadaData] = useState([]);
+  const [pacientesDeptoData, setPacientesDeptoData] = useState([]);
+  const [mostrarFiltrosPacientes, setMostrarFiltrosPacientes] = useState(false);
+  const [filtroAcceso, setFiltroAcceso] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('');
+  const [filtroJornada, setFiltroJornada] = useState('');
+  const [filtroSexo, setFiltroSexo] = useState('');
+  const [progDentro, setProgDentro] = useState(0);
+  const [progFuera, setProgFuera] = useState(0);
+  const [cargandoPrograma, setCargandoPrograma] = useState(true);
 
   const [lineData, setLineData] = useState([]);
   const [barData, setBarData] = useState([]);
@@ -54,17 +75,73 @@ function DashboardsInteractivos() {
     purple: "#6f42c1"
   });
   const [isDark, setIsDark] = useState(false);
-  // Paleta enfocada en tonos de AZUL y VERDE
+  const withAlpha = (hex, alpha = 1) => {
+    try {
+      const h = hex?.toString()?.replace('#','') || '';
+      const base = h.length === 3 ? h.split('').map(c=>c+c).join('') : h;
+      const bigint = parseInt(base || '000000', 16);
+      const r = (bigint >> 16) & 255;
+      const g = (bigint >> 8) & 255;
+      const b = bigint & 255;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    } catch { return hex; }
+  };
+
+  const aplicarFiltrosPacientes = async () => {
+    const params = {};
+    if (filtroAcceso) params.acceso = filtroAcceso;
+    if (filtroEstado) params.estado = filtroEstado;
+    if (filtroJornada) params.jornada = filtroJornada;
+    if (filtroSexo) params.sexo = filtroSexo;
+
+    const filtra = (arr, sel) => sel ? arr.filter(d => String(d.name) === String(sel)) : arr;
+
+    try {
+      const [{ data: est }, { data: acc }, { data: sex }, { data: jor }, { data: dep }] = await Promise.all([
+        api.get('/api/estadisticas/pacientes-por-estado', { params }).catch(() => ({ data: { items: [] } })),
+        api.get('/api/estadisticas/pacientes-por-acceso', { params }).catch(() => ({ data: { items: [] } })),
+        api.get('/api/estadisticas/pacientes-por-sexo', { params }).catch(() => ({ data: { items: [] } })),
+        api.get('/api/estadisticas/pacientes-por-jornada', { params }).catch(() => ({ data: { items: [] } })),
+        api.get('/api/estadisticas/pacientes-por-departamento', { params }).catch(() => ({ data: { items: [] } })),
+      ]);
+
+      const mapEstado = (est?.items || []).map(i => ({ name: i.estado ?? i.name ?? i.descripcion ?? i.nombre, total: Number(i.total || 0) }));
+      const mapAcceso = (acc?.items || []).map(i => ({ name: i.acceso ?? i.name ?? i.descripcion ?? i.nombre, total: Number(i.total || 0) }));
+      const mapSexo = (sex?.items || []).map(i => ({ name: i.sexo ?? i.name ?? i.descripcion ?? i.nombre, total: Number(i.total || 0) }));
+      const mapJor = (jor?.items || []).map(i => ({ name: i.jornada ?? i.name ?? i.descripcion ?? i.nombre, total: Number(i.total || 0) }));
+      const mapDep = (dep?.items || []).map(i => ({ name: i.departamento ?? i.name ?? i.descripcion ?? i.nombre, size: Number(i.total || i.size || 0) }));
+
+      // Si la API devolvió datos, úsalos; si no, aplica fallback en cliente
+      setPacientesEstadoData(mapEstado.length ? mapEstado : filtra(origPacientesEstadoData, filtroEstado));
+      setPacientesAccesoData(mapAcceso.length ? mapAcceso : filtra(origPacientesAccesoData, filtroAcceso));
+      setPacientesSexoData(mapSexo.length ? mapSexo : filtra(origPacientesSexoData, filtroSexo));
+      setPacientesJornadaData(mapJor.length ? mapJor : filtra(origPacientesJornadaData, filtroJornada));
+      if (mapDep.length) setPacientesDeptoData(mapDep);
+    } catch (_) {
+      // Fallback completo en cliente si falla todo
+      setPacientesAccesoData(filtra(origPacientesAccesoData, filtroAcceso));
+      setPacientesEstadoData(filtra(origPacientesEstadoData, filtroEstado));
+      setPacientesSexoData(filtra(origPacientesSexoData, filtroSexo));
+      setPacientesJornadaData(filtra(origPacientesJornadaData, filtroJornada));
+    }
+  };
+  // Paleta combinada: AZUL + VERDE + ROJO
   const colorPalette = useMemo(() => [
-    // Azules
-    theme.primary,            // azul base del tema
+    // Base del tema
+    theme.primary,
+    (theme.success || '#28a745'),
+    (theme.warning || '#f59f00'),
     (theme.info || '#0dcaf0'),
-    '#4dabf7',                // blue-4
-    '#1e88e5',                // blue-6
-    // Verdes
-    theme.success,            // verde base del tema
-    '#51cf66',                // green-4
-    '#2f9e44'                 // green-7
+    (theme.danger || '#dc3545'),
+    // Acentos complementarios
+    withAlpha(theme.primary, 0.7),
+    withAlpha(theme.success || '#28a745', 0.7),
+    '#7950f2',   // violeta
+    '#12b886',   // teal
+    '#ffa94d',   // orange soft
+    '#2b8a3e',   // verde oscuro
+    '#e8590c',   // naranja intenso
+    '#868e96'    // gris neutro
   ], [theme]);
   const colorByEstado = useMemo(() => {
     const map = {};
@@ -72,17 +149,111 @@ function DashboardsInteractivos() {
       if (e && e.name) map[e.name] = map[e.name] || colorPalette[i % colorPalette.length];
     });
     return map;
-  }, [nutricionEstadoData]);
+  }, [nutricionEstadoData, colorPalette]);
 
-  const withAlpha = (hex, alpha = 1) => {
+  // Utilidades para tooltips con porcentaje
+  const calcTotal = (arr, key) => (Array.isArray(arr) ? arr.reduce((a, b) => a + (Number(b?.[key] || 0)), 0) : 0);
+  const pctFormatter = (total) => (value, name) => {
+    const v = Number(value || 0);
+    const pct = total > 0 ? ((v * 100) / total).toFixed(1) : '0.0';
+    return [`${v.toLocaleString()} (${pct}%)`, name];
+  };
+
+  const ChartTooltip = ({ active, payload, label, total }) => {
+    if (!active || !payload || !payload.length) return null;
+    const v = Number(payload[0]?.value || 0);
+    const pct = total > 0 ? ((v * 100) / total).toFixed(1) : '0.0';
+    const name = payload[0]?.name || payload[0]?.payload?.name || label;
+    return (
+      <div style={{ background: '#fff', border: '1px solid #ddd', padding: 8, borderRadius: 6 }}>
+        <div style={{ fontWeight: 600 }}>{name}</div>
+        <div>Valor: {v.toLocaleString()}</div>
+        <div>%: {pct}%</div>
+      </div>
+    );
+  };
+
+  
+
+  const fetchPacientesPorJornada = async () => {
     try {
-      const h = hex.replace('#','');
-      const bigint = parseInt(h.length === 3 ? h.split('').map(c=>c+c).join('') : h, 16);
-      const r = (bigint >> 16) & 255;
-      const g = (bigint >> 8) & 255;
-      const b = bigint & 255;
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    } catch { return hex; }
+      const { data } = await api.get('/api/estadisticas/pacientes-por-jornada');
+      console.log('[pacientes-por-jornada] respuesta:', data);
+      const items = (data?.items || []).map(i => {
+        const name = (i?.jornada ?? i?.descripcion ?? i?.nombre ?? 'N/D');
+        const total = Number(i?.total ?? i?.c ?? i?.count ?? 0);
+        return { name: String(name), total };
+      });
+      setPacientesJornadaData(items);
+      setOrigPacientesJornadaData(items);
+    } catch (e) {
+      console.error('[pacientes-por-jornada] error:', e);
+      setPacientesJornadaData([]);
+    }
+  };
+
+  const fetchPacientesPorDepartamento = async () => {
+    try {
+      const { data } = await api.get('/api/estadisticas/pacientes-por-departamento');
+      console.log('[pacientes-por-departamento] respuesta:', data);
+      const items = (data?.items || []).map(i => {
+        const name = (i?.departamento ?? i?.descripcion ?? i?.nombre ?? 'N/D');
+        const size = Number(i?.total ?? i?.c ?? i?.count ?? 0);
+        return { name: String(name), size };
+      });
+      setPacientesDeptoData(items);
+    } catch (e) {
+      console.error('[pacientes-por-departamento] error:', e);
+      setPacientesDeptoData([]);
+    }
+  };
+
+  const fetchProgramaResumen = async () => {
+    try {
+      setCargandoPrograma(true);
+      const { data } = await api.get('/api/estadisticas/pacientes-programa-resumen');
+      setProgDentro(Number(data?.dentro || 0));
+      setProgFuera(Number(data?.fuera || 0));
+    } catch (_) {
+      setProgDentro(0);
+      setProgFuera(0);
+    } finally {
+      setCargandoPrograma(false);
+    }
+  };
+
+  const fetchPacientesPorSexo = async () => {
+    try {
+      const { data } = await api.get('/api/estadisticas/pacientes-por-sexo');
+      console.log('[pacientes-por-sexo] respuesta:', data);
+      const items = (data?.items || []).map(i => {
+        const name = (i?.sexo ?? i?.descripcion ?? i?.nombre ?? 'N/D');
+        const total = Number(i?.total ?? i?.c ?? i?.count ?? 0);
+        return { name: String(name), total };
+      });
+      setPacientesSexoData(items);
+      setOrigPacientesSexoData(items);
+    } catch (e) {
+      console.error('[pacientes-por-sexo] error:', e);
+      setPacientesSexoData([]);
+    }
+  };
+
+  const fetchPacientesPorAcceso = async () => {
+    try {
+      const { data } = await api.get('/api/estadisticas/pacientes-por-acceso');
+      console.log('[pacientes-por-acceso] respuesta:', data);
+      const items = (data?.items || []).map(i => {
+        const name = (i?.acceso ?? i?.descripcion ?? i?.nombre ?? 'N/D');
+        const total = Number(i?.total ?? i?.c ?? i?.count ?? 0);
+        return { name: String(name), total };
+      });
+      setPacientesAccesoData(items);
+      setOrigPacientesAccesoData(items);
+    } catch (e) {
+      console.error('[pacientes-por-acceso] error:', e);
+      setPacientesAccesoData([]);
+    }
   };
 
   const getDefaultRange = () => {
@@ -120,7 +291,25 @@ function DashboardsInteractivos() {
     } catch { return 1; }
   };
 
+  const fetchPacientesPorEstado = async () => {
+    try {
+      const { data } = await api.get('/api/estadisticas/pacientes-por-estado');
+      console.log('[pacientes-por-estado] respuesta:', data);
+      const items = (data?.items || []).map(i => {
+        const name = (i?.estado ?? i?.descripcion ?? i?.nombre ?? 'N/D');
+        const total = Number(i?.total ?? i?.c ?? i?.count ?? 0);
+        return { name: String(name), total };
+      });
+      setPacientesEstadoData(items);
+      setOrigPacientesEstadoData(items);
+    } catch (e) {
+      console.error('[pacientes-por-estado] error:', e);
+      setPacientesEstadoData([]);
+    }
+  };
+
   useEffect(() => {
+    let cleanup = null;
     // leer colores desde variables CSS del proyecto (Bootstrap 5)
     try {
       const root = getComputedStyle(document.documentElement);
@@ -144,13 +333,13 @@ function DashboardsInteractivos() {
       setIsDark(byLum || byAttr || byClass);
     } catch (_) {}
 
-    // reaccionar a prefers-color-scheme
+    // reaccionar a prefers-color-scheme (sin cortar el efecto)
     try {
       const mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
       if (mq && typeof mq.addEventListener === 'function') {
         const handler = (e) => setIsDark(e.matches);
         mq.addEventListener('change', handler);
-        return () => mq.removeEventListener('change', handler);
+        cleanup = () => mq.removeEventListener('change', handler);
       }
     } catch (_) {}
     const fetchResumen = async () => {
@@ -176,6 +365,19 @@ function DashboardsInteractivos() {
         setLineData([]);
         setBarData([]);
         setPieData([]);
+      }
+    };
+    const fetchPacientesTotal = async () => {
+      try {
+        setCargandoPacientesTotal(true);
+        const { data } = await api.get('/api/estadisticas/pacientes-total');
+        console.log('[pacientes-total] respuesta:', data);
+        setPacientesTotal(Number(data?.total || 0));
+      } catch (e) {
+        console.error('[pacientes-total] error:', e);
+        setPacientesTotal(0);
+      } finally {
+        setCargandoPacientesTotal(false);
       }
     };
     const fetchPsico = async () => {
@@ -225,6 +427,31 @@ function DashboardsInteractivos() {
     fetchResumen();
     fetchPsico();
     fetchNutri();
+    fetchPacientesTotal();
+    fetchPacientesPorEstado();
+    fetchPacientesPorAcceso();
+    fetchPacientesPorSexo();
+    fetchProgramaResumen();
+    fetchPacientesPorJornada();
+    fetchPacientesPorDepartamento();
+    return cleanup || undefined;
+  }, []);
+
+  // Garantizar carga automática de KPIs de Pacientes al montar
+  useEffect(() => {
+    (async () => {
+      try { await Promise.all([
+        fetchPacientesPorEstado(),
+        fetchPacientesPorAcceso(),
+        fetchPacientesPorSexo(),
+        fetchProgramaResumen(),
+        fetchPacientesPorJornada(),
+        fetchPacientesPorDepartamento(),
+        (async () => { await api.get('/api/estadisticas/pacientes-total').then(({data}) => setPacientesTotal(Number(data?.total || 0))).catch(()=>{}); })()
+      ]); }
+      catch (_) {}
+      finally { setCargandoPacientesTotal(false); }
+    })();
   }, []);
 
   // Re-cargar automáticamente cuando cambie el sexo o el motivo
@@ -300,6 +527,7 @@ function DashboardsInteractivos() {
   const alturaAvgGlobal = totalNutri > 0
     ? (nutricionEstadoData.reduce((acc, i) => acc + ((Number(i.altura_promedio) || 0) * (Number(i.total) || 0)), 0) / totalNutri)
     : 0;
+  const totalPsico = (psicoTipoData || []).reduce((acc, i) => acc + (Number(i.total) || 0), 0);
 
   
 
@@ -353,202 +581,284 @@ function DashboardsInteractivos() {
 
   return (
     <Container fluid>
-      <Row>
-        <Col lg="3" sm="6">
-          <Card className="card-stats">
-            <Card.Body>
-              <Row>
-                <Col xs="5">
-                  <div className="icon-big text-center icon-warning">
-                    <i className="nc-icon nc-heart text-danger"></i>
-                  </div>
-                </Col>
-                <Col xs="7">
-                  <div className="numbers">
-                    <p className="card-category">Pacientes activos</p>
-                    <Card.Title as="h4">{kpis.pacientesActivos}</Card.Title>
-                  </div>
-                </Col>
-              </Row>
-
+      <Card className="mb-4">
+        <Card.Header style={{ backgroundColor: theme.primary, color: '#fff', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <Card.Title as="h3" style={{ color: '#fff', fontSize: '2.2rem', fontWeight: 900, letterSpacing: '0.04em', textTransform: 'uppercase', margin: 0, textAlign: 'center', width: '100%' }}>PACIENTES</Card.Title>
+        </Card.Header>
+        <Card.Body>
       <Row>
         <Col md="12">
-          <Card>
-            <Card.Header>
-              <Card.Title as="h4">Pacientes por jornada (Nutrición)</Card.Title>
-              <p className="card-category">Distribución de informes por jornada</p>
-            </Card.Header>
-            <Card.Body>
-              <div style={{ width: "100%", height: 300 }}>
-                <ResponsiveContainer>
-                  <BarChart data={nutricionJornadaData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                    <XAxis dataKey="name" interval={0} angle={-15} textAnchor="end" height={60} />
-                    <YAxis />
-                    <RTooltip />
-                    <Bar dataKey="total" fill="#5e72e4" />
-                  </BarChart>
-                </ResponsiveContainer>
+          <Card className="card-stats text-center" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : withAlpha(theme.primary, 0.12), borderColor: isDark ? 'rgba(255,255,255,0.15)' : theme.primary, color: isDark ? '#ffffff' : theme.primary }}>
+            <Card.Body className="text-center">
+              <div className="numbers text-center">
+                <p className="card-category" style={{ fontWeight: 800, marginBottom: 8, letterSpacing: '.06em', color: isDark ? 'rgba(255,255,255,0.85)' : undefined }}>TOTAL PACIENTES REGISTRADOS</p>
+                <Card.Title as="h1" style={{ fontSize: '3.2rem', fontWeight: 900, margin: 0, color: isDark ? '#ffffff' : theme.primary }}>
+                  {cargandoPacientesTotal ? '…' : Number(pacientesTotal || 0).toLocaleString()}
+                </Card.Title>
               </div>
             </Card.Body>
           </Card>
         </Col>
       </Row>
+      
+      
+      
+      
+      <div className="mt-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16, alignItems: 'stretch' }}>
+        <div>
+          <Card className="card-stats text-center" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : withAlpha(theme.success, 0.12), borderColor: isDark ? 'rgba(255,255,255,0.15)' : theme.success, color: isDark ? '#ffffff' : theme.success }}>
+            <Card.Body className="text-center">
+              <div className="numbers text-center">
+                <p className="card-category" style={{ fontWeight: 800, marginBottom: 8, letterSpacing: '.06em', color: isDark ? 'rgba(255,255,255,0.85)' : undefined }}>PACIENTES DENTRO DEL PROGRAMA</p>
+                <Card.Title as="h1" style={{ fontSize: '2.8rem', fontWeight: 900, margin: 0, color: isDark ? '#ffffff' : theme.success }}>
+                  {cargandoPrograma ? '…' : Number(progDentro || 0).toLocaleString()}
+                </Card.Title>
+                <div style={{ marginTop: 6, opacity: .8, fontSize: 12 }}>Reingreso, Activo, Nuevo ingreso</div>
+              </div>
             </Card.Body>
           </Card>
-        </Col>
-        <Col lg="3" sm="6">
-          <Card className="card-stats">
-            <Card.Body>
-              <Row>
-                <Col xs="5">
-                  <div className="icon-big text-center icon-warning">
-                    <i className="nc-icon nc-calendar-60 text-primary"></i>
-                  </div>
-                </Col>
-                <Col xs="7">
-                  <div className="numbers">
-                    <p className="card-category">Ingresos hoy</p>
-                    <Card.Title as="h4">{kpis.ingresosHoy}</Card.Title>
-                  </div>
-                </Col>
-              </Row>
+        </div>
+        <div>
+          <Card className="card-stats text-center" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(220,53,69,0.08)', borderColor: isDark ? 'rgba(255,255,255,0.15)' : theme.danger, color: isDark ? '#ffffff' : theme.danger }}>
+            <Card.Body className="text-center">
+              <div className="numbers text-center">
+                <p className="card-category" style={{ fontWeight: 800, marginBottom: 8, letterSpacing: '.06em', color: isDark ? 'rgba(255,255,255,0.85)' : undefined }}>PACIENTES FUERA DEL PROGRAMA</p>
+                <Card.Title as="h1" style={{ fontSize: '2.8rem', fontWeight: 900, margin: 0, color: isDark ? '#ffffff' : theme.danger }}>
+                  {cargandoPrograma ? '…' : Number(progFuera || 0).toLocaleString()}
+                </Card.Title>
+                <div style={{ marginTop: 6, opacity: .8, fontSize: 12 }}>Egresado, Fallecido</div>
+              </div>
             </Card.Body>
           </Card>
-        </Col>
-        <Col lg="3" sm="6">
-          <Card className="card-stats">
-            <Card.Body>
-              <Row>
-                <Col xs="5">
-                  <div className="icon-big text-center icon-warning">
-                    <i className="nc-icon nc-bullet-list-67 text-warning"></i>
-                  </div>
-                </Col>
-                <Col xs="7">
-                  <div className="numbers">
-                    <p className="card-category">Citas pendientes</p>
-                    <Card.Title as="h4">{kpis.citasPendientes}</Card.Title>
-                  </div>
-                </Col>
-              </Row>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col lg="3" sm="6">
-          <Card className="card-stats">
-            <Card.Body>
-              <Row>
-                <Col xs="5">
-                  <div className="icon-big text-center icon-warning">
-                    <i className="nc-icon nc-simple-remove text-info"></i>
-                  </div>
-                </Col>
-                <Col xs="7">
-                  <div className="numbers">
-                    <p className="card-category">Faltistas mes</p>
-                    <Card.Title as="h4">{kpis.faltistasMes}</Card.Title>
-                  </div>
-                </Col>
-              </Row>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+        </div>
+      </div>
+      
+      {/* Grid 1: Estado y Jornada con columnas iguales */}
+      <div className="mt-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16 }}>
+        {/* Arriba: Estado (izq) y Jornada (der) */}
+        <div style={{ width: '100%', height: 340 }}>
+          <h6 style={{ fontWeight: 700, marginBottom: 8 }}>Pacientes por estado</h6>
+          {Array.isArray(pacientesEstadoData) && pacientesEstadoData.length > 0 ? (
+            <ResponsiveContainer>
+              <PieChart>
+                <Pie data={pacientesEstadoData} dataKey="total" nameKey="name" outerRadius={110} paddingAngle={2} minAngle={1}>
+                  {pacientesEstadoData.map((entry, index) => (
+                    <Cell key={`pe-${index}`} fill={colorPalette[index % colorPalette.length]} />
+                  ))}
+                </Pie>
+                <Legend layout="vertical" verticalAlign="middle" align="right" />
+                <RTooltip content={(props) => <ChartTooltip total={calcTotal(pacientesEstadoData, 'total')} {...props} />} />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#888' }}>Sin datos disponibles</div>
+          )}
+        </div>
 
-      <Row>
-        <Col md="8">
-          <Card>
-            <Card.Header>
-              <Card.Title as="h4">Tendencia de atenciones</Card.Title>
-              <p className="card-category">Últimos 8 períodos</p>
-            </Card.Header>
-            <Card.Body>
-              <div style={{ width: "100%", height: 260 }}>
-                <ResponsiveContainer>
-                  <LineChart data={lineData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                    <XAxis dataKey="name" hide />
-                    <YAxis hide />
-                    <RTooltip />
-                    <Line type="monotone" dataKey="value" stroke="#1d8cf8" strokeWidth={2} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col md="4">
-          <Card>
-            <Card.Header>
-              <Card.Title as="h4">Causas de egreso</Card.Title>
-              <p className="card-category">Top causas últimos 6 meses</p>
-            </Card.Header>
-            <Card.Body>
-              <div style={{ width: "100%", height: 260 }}>
-                <ResponsiveContainer>
-                  <PieChart>
-                    <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={2}>
-                      {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={["#1d8cf8", "#ff8d72", "#e14eca"][index % 3]} />
-                      ))}
-                    </Pie>
-                    <Legend />
-                    <RTooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+        <div style={{ width: '100%', height: 320 }}>
+          <h6 style={{ fontWeight: 700, marginBottom: 8 }}>Pacientes por jornada</h6>
+          {Array.isArray(pacientesJornadaData) && pacientesJornadaData.length > 0 ? (
+            <ResponsiveContainer>
+              <BarChart data={pacientesJornadaData} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
+                <XAxis dataKey="name" interval={0} angle={-15} textAnchor="end" height={50} />
+                <YAxis />
+                <Legend />
+                <RTooltip content={(props) => <ChartTooltip total={calcTotal(pacientesJornadaData, 'total')} {...props} />} />
+                <Bar dataKey="total" name="Total">
+                  {pacientesJornadaData.map((entry, index) => (
+                    <Cell key={`pj-${index}`} fill={colorPalette[index % colorPalette.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#888' }}>Sin datos disponibles</div>
+          )}
+        </div>
 
-      <Row>
-        <Col md="6">
-          <Card>
-            <Card.Header>
-              <Card.Title as="h4">Egresos por mes</Card.Title>
-            </Card.Header>
-            <Card.Body>
-              <div style={{ width: "100%", height: 260 }}>
-                <ResponsiveContainer>
-                  <BarChart data={barData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <RTooltip />
-                    <Bar dataKey="egresos" fill="#00f2c3" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col md="6">
-          <Card>
-            <Card.Header>
-              <Card.Title as="h4">Psicología por tipo de consulta</Card.Title>
-              <p className="card-category">Últimos 90 días</p>
-            </Card.Header>
-            <Card.Body>
-              <div style={{ width: "100%", height: 260 }}>
-                <ResponsiveContainer>
-                  <BarChart data={psicoTipoData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                    <XAxis dataKey="name" interval={0} angle={-15} textAnchor="end" height={60} />
-                    <YAxis />
-                    <RTooltip />
-                    <Bar dataKey="total" fill="#e14eca" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+      </div>
+      <div className="mt-3" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
+        <div style={{ width: '100%', height: 380 }}>
+          <h6 style={{ fontWeight: 700, marginBottom: 8 }}>Pacientes por acceso vascular</h6>
+          {Array.isArray(pacientesAccesoData) && pacientesAccesoData.length > 0 ? (
+            <ResponsiveContainer>
+              <BarChart data={pacientesAccesoData} layout="vertical" margin={{ top: 10, right: 20, left: 20, bottom: 10 }}>
+                <XAxis type="number" />
+                <YAxis dataKey="name" type="category" width={220} />
+                <Legend />
+                <RTooltip content={(props) => <ChartTooltip total={calcTotal(pacientesAccesoData, 'total')} {...props} />} />
+                <Bar dataKey="total" name="Total">
+                  {pacientesAccesoData.map((entry, index) => (
+                    <Cell key={`pa-${index}`} fill={colorPalette[index % colorPalette.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#888' }}>Sin datos disponibles</div>
+          )}
+        </div>
+        <div style={{ width: '100%', height: 300 }}>
+          <h6 style={{ fontWeight: 700, marginBottom: 8 }}>Pacientes por sexo</h6>
+          {Array.isArray(pacientesSexoData) && pacientesSexoData.length > 0 ? (
+            <ResponsiveContainer>
+              <PieChart>
+                <Pie data={pacientesSexoData} dataKey="total" nameKey="name" innerRadius={60} outerRadius={90} paddingAngle={2}>
+                  {pacientesSexoData.map((entry, index) => (
+                    <Cell key={`psx-${index}`} fill={colorPalette[index % colorPalette.length]} />
+                  ))}
+                </Pie>
+                <Legend />
+                <RTooltip content={(props) => <ChartTooltip total={calcTotal(pacientesSexoData, 'total')} {...props} />} />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#888' }}>Sin datos disponibles</div>
+          )}
+        </div>
+      </div>
+
+      {isDark && (
+        <style>{`
+          /* Recharts - modo oscuro */
+          .recharts-default-legend { color: #e5e7eb !important; }
+          .recharts-legend-item-text { color: #e5e7eb !important; }
+          .recharts-cartesian-axis-tick-value { fill: #e5e7eb !important; }
+          .recharts-pie-label-text { fill: #e5e7eb !important; }
+          .recharts-tooltip-wrapper .recharts-default-tooltip {
+            background-color: #111827 !important;
+            border-color: #374151 !important;
+            color: #e5e7eb !important;
+          }
+          /* Panel de filtros del dashboard de pacientes */
+          .pac-filtros .form-label { color: #e5e7eb !important; }
+          .pac-filtros .form-select,
+          .pac-filtros .form-control {
+            color: #e5e7eb !important;
+            background-color: #0b1220 !important;
+            border-color: #1f2937 !important;
+          }
+          .pac-filtros .form-control::placeholder { color: rgba(229,231,235,0.7) !important; }
+          .pac-filtros .form-select:focus,
+          .pac-filtros .form-control:focus {
+            background-color: #0b1220 !important;
+            color: #e5e7eb !important;
+            border-color: #2563eb !important; /* azul enfoque */
+            box-shadow: 0 0 0 .2rem rgba(37,99,235,.25) !important;
+          }
+          .pac-filtros .form-select option { background-color: #0b1220; color: #e5e7eb; }
+          .pac-filtros .btn-primary {
+            background-color: ${'${theme.primary}'} !important;
+            border-color: ${'${theme.primary}'} !important;
+            color: #ffffff !important;
+          }
+          .pac-filtros .btn-primary:hover,
+          .pac-filtros .btn-primary:focus { filter: brightness(1.05); }
+        `}</style>
+      )}
+      <div className="mt-3" style={{ width: '100%', height: 360, marginBottom: 24, overflow: 'hidden' }}>
+        <h6 style={{ fontWeight: 700, marginBottom: 8 }}>Pacientes por departamento</h6>
+        {Array.isArray(pacientesDeptoData) && pacientesDeptoData.length > 0 ? (
+          <ResponsiveContainer>
+            <Treemap
+              data={pacientesDeptoData.map(d => ({ name: d.name, size: d.size }))}
+              dataKey="size"
+              nameKey="name"
+              stroke="#fff"
+              fill={theme.primary}
+              aspectRatio={4/3}
+            >
+              <RTooltip content={(props) => <ChartTooltip total={calcTotal(pacientesDeptoData, 'size')} {...props} />} />
+            </Treemap>
+          </ResponsiveContainer>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#888' }}>Sin datos disponibles</div>
+        )}
+      </div>
+      <div className="d-flex justify-content-end" style={{ marginTop: 12, position: 'relative', zIndex: 3 }}>
+        <Button
+          variant="primary"
+          title={mostrarFiltrosPacientes ? 'Ocultar filtros' : 'Mostrar filtros'}
+          aria-label={mostrarFiltrosPacientes ? 'Ocultar filtros' : 'Mostrar filtros'}
+          onClick={() => setMostrarFiltrosPacientes(v => !v)}
+          style={{
+            borderRadius: 4,
+            width: 44,
+            height: 36,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: theme.primary,
+            borderColor: theme.primary,
+            color: '#fff'
+          }}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <path d="M6 10.117V15l4-2.286V10.12l4.757-5.948A1 1 0 0 0 14.93 2H1.07a1 1 0 0 0-.828 1.172zM2.404 3.5h11.192L9.5 9.06v3.223L6.5 13.94V9.06z"/>
+          </svg>
+        </Button>
+      </div>
+      {mostrarFiltrosPacientes && (
+        <div className="mt-2 pac-filtros" style={{ display: 'flex', gap: 12, alignItems: 'end', flexWrap: 'wrap' }}>
+          <div style={{ minWidth: 220 }}>
+            <label className="form-label mb-1" style={{ color: isDark ? '#ffffff' : theme.primary }}>Acceso vascular:</label>
+            <select className="form-select form-select-sm" value={filtroAcceso} onChange={(e) => setFiltroAcceso(e.target.value)} style={{ borderWidth: 1.5, borderRadius: 6 }}>
+              <option value="">Todos</option>
+              {Array.from(new Set((pacientesAccesoData || []).map(d => d.name))).map(opt => (
+                <option key={`fa-${opt}`} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ minWidth: 220 }}>
+            <label className="form-label mb-1" style={{ color: isDark ? '#ffffff' : theme.primary }}>Estado:</label>
+            <select className="form-select form-select-sm" value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)} style={{ borderWidth: 1.5, borderRadius: 6 }}>
+              <option value="">Todos</option>
+              {Array.from(new Set((pacientesEstadoData || []).map(d => d.name))).map(opt => (
+                <option key={`fe-${opt}`} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ minWidth: 220 }}>
+            <label className="form-label mb-1" style={{ color: isDark ? '#ffffff' : theme.primary }}>Jornada:</label>
+            <select className="form-select form-select-sm" value={filtroJornada} onChange={(e) => setFiltroJornada(e.target.value)} style={{ borderWidth: 1.5, borderRadius: 6 }}>
+              <option value="">Todas</option>
+              {Array.from(new Set((pacientesJornadaData || []).map(d => d.name))).map(opt => (
+                <option key={`fj-${opt}`} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ minWidth: 220 }}>
+            <label className="form-label mb-1" style={{ color: isDark ? '#ffffff' : theme.primary }}>Sexo:</label>
+            <select className="form-select form-select-sm" value={filtroSexo} onChange={(e) => setFiltroSexo(e.target.value)} style={{ borderWidth: 1.5, borderRadius: 6 }}>
+              <option value="">Todos</option>
+              {Array.from(new Set((pacientesSexoData || []).map(d => d.name))).map(opt => (
+                <option key={`fs-${opt}`} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Button
+              variant="primary"
+              className="px-4"
+              style={{ borderRadius: 4, fontWeight: 900, backgroundColor: theme.primary, borderColor: theme.primary, color: '#fff' }}
+              onClick={async () => { await aplicarFiltrosPacientes(); setMostrarFiltrosPacientes(true); }}
+            >
+              Aplicar filtros
+            </Button>
+          </div>
+        </div>
+      )}
+      
+        </Card.Body>
+      </Card>
+
 
       <Row>
         <Col md="12">
           <Card>
             <Card.Header style={{ backgroundColor: theme.primary, color: '#fff', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
               <Card.Title as="h3" style={{ color: '#fff', fontSize: '2.2rem', fontWeight: 900, letterSpacing: '0.04em', textTransform: 'uppercase', margin: 0, textAlign: 'center', width: '100%' }}>
-                Nutrición por estado
+                Nutrición
               </Card.Title>
             </Card.Header>
             <Card.Body>
@@ -658,7 +968,7 @@ function DashboardsInteractivos() {
                         <XAxis type="number" />
                         <YAxis dataKey="name" type="category" width={120} />
                         <Legend />
-                        <RTooltip />
+                        <RTooltip content={(props) => <ChartTooltip total={calcTotal(nutricionMotivoData, 'total')} {...props} />} />
                         <Bar dataKey="total" name="Total">
                           {nutricionMotivoData.map((entry, index) => (
                             <Cell key={`mot-${index}`} fill={colorPalette[index % colorPalette.length]} />
@@ -674,7 +984,7 @@ function DashboardsInteractivos() {
                       <PieChart>
                         <Pie data={nutricionSexoData} dataKey="total" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={2}>
                           {nutricionSexoData.map((entry, index) => (
-                            <Cell key={`sx-${index}`} fill={index % 2 === 0 ? theme.primary : theme.success} />
+                            <Cell key={`sx-${index}`} fill={index % 2 === 0 ? theme.primary : theme.danger} />
                           ))}
                         </Pie>
                         <Legend />
@@ -684,6 +994,7 @@ function DashboardsInteractivos() {
                   </div>
                 </div>
               </div>
+
               <div className="d-flex justify-content-end mt-2">
                 <Button
                   variant="primary"
@@ -799,8 +1110,21 @@ function DashboardsInteractivos() {
           </Card>
         </Col>
       </Row>
-
-    </Container>
+      <Row>
+        <Col md="12">
+          <Card style={{ borderColor: theme.success }}>
+            <Card.Header style={{ backgroundColor: theme.success, color: '#fff', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              <Card.Title as="h3" style={{ color: '#fff', fontSize: '2.2rem', fontWeight: 900, letterSpacing: '0.04em', textTransform: 'uppercase', margin: 0, textAlign: 'center', width: '100%' }}>
+                Psicología
+              </Card.Title>
+            </Card.Header>
+            <Card.Body>
+              <DashboardPsicologia />
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+  </Container>
   );
 }
 
