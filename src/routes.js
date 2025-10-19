@@ -19,6 +19,7 @@ import GestionReferencias from "views/GestionReferencias.js";
 import GestionLaboratorios from "views/GestionLaboratorios.jsx";
 import LoginComponent from "views/Login.js";
 import DashboardsInteractivos from "views/DashboardsInteractivos.jsx";
+import DashboardPsicologia from "views/DashboardPsicologia.jsx";
 import CorazonRojo from "views/CorazonRojo.jsx";
 
 var routes = [
@@ -77,6 +78,13 @@ var routes = [
     name: "Laboratorios",
     icon: "nc-icon nc-atom",
     component: GestionLaboratorios,
+    layout: "/admin"
+  },
+  {
+    path: "/psicologia",
+    name: "Psicología",
+    icon: "nc-icon nc-satisfied",
+    component: DashboardPsicologia,
     layout: "/admin"
   },
   {
