@@ -63,7 +63,7 @@ const AsignarTurno = () => {
 
             // Endpoints alineados con BackGestionTurno.js
             const pacienteResponse = await api.get(`/GpacientesT/${numeroAfiliacion}`);
-            const turnosResponse = await api.get(`/GmuestraTurnosT?noafiliacion=${numeroAfiliacion}`);
+            const turnosResponse = await api.get(`/GmuestraTurnosFaltantesT?noafiliacion=${numeroAfiliacion}`);
 
             if (turnosResponse.data.length === 0) {
                 setShowModal(true);
@@ -279,7 +279,7 @@ const AsignarTurno = () => {
                                 className="h-[180px] max-w-[320px] object-contain bg-white rounded-xl shadow-md p-2 dark:bg-slate-800"
                             />
                             <h1 className="text-3xl font-bold text-green-800 dark:text-white">
-                                Asignar Turno
+                                Faltas
                             </h1>
                         </div>
                     </div>
@@ -345,12 +345,7 @@ const AsignarTurno = () => {
                                                 <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.fecha_turno ? new Date(t.fecha_turno).toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' }) : ''}</td>
                                                 <td className="p-3 border dark:border-gray-600">
                                                     <div className="flex flex-col sm:flex-row gap-2 justify-center">
-                                                        <button
-                                                            onClick={() => handleAsignar(t.id_turno)}
-                                                            className="bg-green-700 hover:bg-green-800 text-white text-base font-semibold py-1 px-3 rounded transition-colors dark:bg-green-600 dark:hover:bg-green-700"
-                                                        >
-                                                            Asignar
-                                                        </button>
+                                                        
                                                         <button
                                                             onClick={() => handleFaltante(t)}
                                                             disabled={!(t.nombre_clinica && t.nombre_clinica.toLowerCase().includes("hemodialisis"))}

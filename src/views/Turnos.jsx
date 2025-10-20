@@ -4,6 +4,7 @@ import LlamadoTurnos from '@/components/LlamadoTurnos';
 import AsignarTurno from '@/components/AsignarTurno';
 import GestionTurno from '@/components/GestionTurno';
 import ConsultaTurnos from '@/components/ConsultaTurnos';
+import LlamadoTurnosTV from '@/components/LlamadoTurnosTV';
 
 function Turnos() {
     const [tab, setTab] = useState('llamado');
@@ -59,6 +60,18 @@ function Turnos() {
                     >
                         Consulta Turnos
                     </button>
+
+                    <button 
+                        className={`font-bold px-4 py-2 rounded transition-colors ${
+                            tab === 'turnosTV' 
+                                ? 'bg-green-800 text-white' 
+                                : 'bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-white hover:bg-blue-100 dark:hover:bg-slate-600'
+                        }`} 
+                        onClick={() => setTab('turnosTV')}
+                    >
+                        Turnos TV
+                    </button>
+                    
                 </div>
 
                 <div>
@@ -66,6 +79,7 @@ function Turnos() {
                     {tab === 'asignar' && <AsignarTurno />}
                     {tab === 'crear' && <GestionTurno />}
                     {tab === 'consulta' && <ConsultaTurnos />}
+                    {tab === 'turnosTV' && <LlamadoTurnosTV />}
                 </div>
             </div>
         </div>

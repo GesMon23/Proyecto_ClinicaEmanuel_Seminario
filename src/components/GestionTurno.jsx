@@ -285,7 +285,7 @@ const GestionTurno = () => {
 
   const confirmarEliminarTurno = async (idTurno) => {
     try {
-      const response = await api.delete(`/eliminar-turno/${idTurno}`);
+      const response = await api.delete(`/Geliminar-turnoT/${idTurno}`);
       if (response.data.success) {
         showSuccessModal("Turno eliminado correctamente");
         // Actualizar tanto la lista de turnos como los eventos del calendario
