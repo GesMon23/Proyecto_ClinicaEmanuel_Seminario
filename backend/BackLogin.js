@@ -248,14 +248,35 @@ router.post('/auth/admin/reset-user-password/token', async (req, res) => {
 
         const to = correoUsuario || process.env.ADMIN_EMAIL;
         if (to) {
+          const baseApp = process.env.APP_BASE_URL || 'http://localhost:3000';
+          const loginLink = `${baseApp}/login`;
           await t.sendMail({
             from: `Soporte Clínica <${process.env.SMTP_USER}>`,
             to,
             subject: 'Credenciales actualizadas',
             html: `
-              <p>Se ha restablecido la contraseña del usuario con ID <b>${payload.target}</b>.</p>
-              <p><b>Nueva contraseña temporal:</b> <code>${plain}</code></p>
-              <p>Por seguridad, solicita cambiarla al iniciar sesión.</p>
+              <!doctype html>
+              <html>
+                <body style="margin:0;background:#f5f7fb;font-family:Arial,Helvetica,sans-serif;color:#2d3748;">
+                  <div style="max-width:640px;margin:24px auto;padding:0 16px;">
+                    <div style="background:#16a34a;color:#fff;padding:16px 20px;border-top-left-radius:8px;border-top-right-radius:8px;">
+                      <h1 style="margin:0;font-size:18px;">Tu contraseña ha sido restablecida</h1>
+                    </div>
+                    <div style="background:#ffffff;border:1px solid #e2e8f0;border-top:none;border-bottom-left-radius:8px;border-bottom-right-radius:8px;padding:20px;">
+                      <p style="margin:0 0 12px;">Se ha restablecido tu contraseña en el sistema.</p>
+                      <p style="margin:0 0 8px;font-weight:bold;">Nueva contraseña temporal:</p>
+                      <div style="background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:6px;padding:10px 12px;margin:0 0 16px;">
+                        <code style="font-family:Consolas,Monaco,monospace;font-size:14px;">${plain}</code>
+                      </div>
+                      <a href="${loginLink}" style="display:inline-block;background:#16a34a;color:#ffffff;text-decoration:none;padding:10px 16px;border-radius:6px;font-weight:600;">Ir al inicio de sesión</a>
+                      <p style="margin:16px 0 0;color:#64748b;">Por seguridad, cambia tu contraseña al iniciar sesión.</p>
+                    </div>
+                    <div style="text-align:center;color:#94a3b8;font-size:12px;margin-top:10px;">
+                      Clínica Renal Emanuel — Soporte
+                    </div>
+                  </div>
+                </body>
+              </html>
             `.trim()
           });
         }
@@ -636,18 +657,33 @@ router.post('/auth/forgot-password', async (req, res) => {
             to,
             subject: 'Solicitud de recuperación de contraseña (acción requerida)',
             html: `
-              <p>Se recibió una solicitud de recuperación de contraseña desde el login.</p>
-              <p><b>Datos suministrados por el usuario:</b></p>
-              <ul>
-                <li>DPI: ${dpi}</li>
-                <li>Nombres: ${nombres}</li>
-                <li>Apellidos: ${apellidos}</li>
-                <li>Teléfono: ${telefono}</li>
-                <li>Usuario: ${usuario}</li>
-              </ul>
-              ${user && user.id_usuario ? `<p><b>ID Usuario en sistema:</b> ${user.id_usuario}</p>` : ''}
-              <p><b>Acción rápida (15 min):</b> <a href="${adminLink}">${adminLink}</a></p>
-              <p>Favor validar la identidad y proceder al cambio de contraseña en el sistema si corresponde.</p>
+              <!doctype html>
+              <html>
+                <body style="margin:0;background:#f5f7fb;font-family:Arial,Helvetica,sans-serif;color:#2d3748;">
+                  <div style="max-width:640px;margin:24px auto;padding:0 16px;">
+                    <div style="background:#16a34a;color:#fff;padding:16px 20px;border-top-left-radius:8px;border-top-right-radius:8px;">
+                      <h1 style="margin:0;font-size:18px;">Solicitud de recuperación de contraseña</h1>
+                    </div>
+                    <div style="background:#ffffff;border:1px solid #e2e8f0;border-top:none;border-bottom-left-radius:8px;border-bottom-right-radius:8px;padding:20px;">
+                      <p style="margin:0 0 12px;">Se recibió una solicitud de recuperación de contraseña desde el login.</p>
+                      <p style="margin:0 0 8px;font-weight:bold;">Datos suministrados por el usuario:</p>
+                      <ul style="margin:0 0 16px;padding-left:18px;line-height:1.6;">
+                        <li><strong>DPI:</strong> ${dpi}</li>
+                        <li><strong>Nombres:</strong> ${nombres}</li>
+                        <li><strong>Apellidos:</strong> ${apellidos}</li>
+                        <li><strong>Teléfono:</strong> ${telefono}</li>
+                        <li><strong>Usuario:</strong> ${usuario}</li>
+                      </ul>
+                      ${user && user.id_usuario ? `<p style="margin:0 0 16px;"><strong>ID Usuario en sistema:</strong> ${user.id_usuario}</p>` : ''}
+                      <a href="${adminLink}" style="display:inline-block;background:#16a34a;color:#ffffff;text-decoration:none;padding:10px 16px;border-radius:6px;font-weight:600;">Abrir acción rápida (expira en 15 min)</a>
+                      <p style="margin:16px 0 0;color:#64748b;">Favor validar la identidad y proceder al cambio de contraseña en el sistema si corresponde.</p>
+                    </div>
+                    <div style="text-align:center;color:#94a3b8;font-size:12px;margin-top:10px;">
+                      Clínica Renal Emanuel — Sistema de Gestión
+                    </div>
+                  </div>
+                </body>
+              </html>
             `.trim(),
           });
         }

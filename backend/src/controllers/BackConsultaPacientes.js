@@ -610,7 +610,11 @@ async function definirCarnetPaciente(paciente, fotoPath, outputPath) {
     const sexo = firstNonEmpty(paciente.sexo);
 
     const baseFrontend = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const qrUrl = `${baseFrontend}/consulta-pacientes?noafiliacion=${encodeURIComponent(noafiliacion)}`;
+    const queryParts = [];
+    if (noafiliacion) queryParts.push(`noafiliacion=${encodeURIComponent(noafiliacion)}`);
+    if (dpi) queryParts.push(`dpi=${encodeURIComponent(dpi)}`);
+    const queryStr = queryParts.join('&');
+    const qrUrl = `${baseFrontend}/layout/consulta-pacientes${queryStr ? `?${queryStr}` : ''}`;
 
     // Generar QR como dataURL
     let qrDataUrl = null;

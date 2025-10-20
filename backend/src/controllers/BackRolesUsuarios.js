@@ -1,6 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const pool = require('../../db/pool');
+const { runWithUser } = require('../db');
 
 const router = express.Router();
 router.use(express.json());
@@ -135,28 +136,20 @@ router.put(
     const id = Number(req.params.id);
     const roles = Array.isArray(req.body?.roles) ? req.body.roles.map(Number).filter(n => Number.isInteger(n)) : [];
     if (!id) return res.status(400).json({ error: 'id inválido' });
-    
-    let client;
+
+    const userName = String(req.user?.nombre_usuario || req.user?.sub || 'sistema');
     try {
-      client = await pool.connect();
-      await client.query('BEGIN');
-      
-      const usuario_creacion = String(req.user?.sub || 'sistema');
-      await client.query(
-        'CALL public.sp_actualizar_roles_usuario($1, $2, $3)',
-        [id, roles, usuario_creacion]
-      );
-      
-      await client.query('COMMIT');
+      await runWithUser(userName, async (client) => {
+        const usuario_creacion = String(req.user?.sub || 'sistema');
+        await client.query(
+          'CALL public.sp_actualizar_roles_usuario($1, $2, $3)',
+          [id, roles, usuario_creacion]
+        );
+      });
       return res.json({ ok: true });
     } catch (err) {
-      if (client) { 
-        try { await client.query('ROLLBACK'); } catch (_) {} 
-      }
       console.error('Error en PUT /usuarios/:id/roles:', err);
       return res.status(500).json({ error: 'No fue posible actualizar roles' });
-    } finally {
-      if (client) client.release();
     }
   }
 );
@@ -180,8 +173,11 @@ router.patch(
         return res.status(400).json({ error: 'No puedes inactivar tu propio usuario' });
       }
 
-      // Actualizar estado con SP (sin cursor)
-      await pool.query('CALL public.sp_actualizar_estado_usuario($1, $2)', [id, estado]);
+      const userName = String(req.user?.nombre_usuario || req.user?.sub || 'sistema');
+      await runWithUser(userName, async (client) => {
+        // Actualizar estado con SP (sin cursor)
+        await client.query('CALL public.sp_actualizar_estado_usuario($1, $2)', [id, estado]);
+      });
       return res.json({ ok: true });
     } catch (err) {
       console.error('Error en PATCH /usuarios/:id/estado:', err);

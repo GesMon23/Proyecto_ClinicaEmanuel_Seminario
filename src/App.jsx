@@ -16,6 +16,7 @@ import GestionUsuarios from "@/views/GestionUsuarios.jsx";
 import Nutricion from "@/views/Nutricion.jsx";
 import Psicologia from "@/views/Psicologia.jsx";
 import AdminResetUser from "@/pages/AdminResetUser.jsx";
+import DashboardsInteractivos from "@/views/DashboardsInteractivos.jsx";
 function App() {
     const router = createBrowserRouter([
         {
@@ -37,6 +38,14 @@ function App() {
                 {
                     path: "dashboard",
                     element: <DashboardPage />,
+                },
+                {
+                    path: "estadisticas",
+                    element: (
+                        <RequireRole roles={["RolEstadistica"]}>
+                            <DashboardsInteractivos/>
+                        </RequireRole>
+                    ),
                 },
                 {
                     path: "consulta-pacientes",

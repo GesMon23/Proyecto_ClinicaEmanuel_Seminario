@@ -16,7 +16,7 @@
 
 */
 import React, { Component } from "react";
-import { useLocation, Route, Switch } from "react-router-dom";
+import { useLocation, Route, Switch, Redirect } from "react-router-dom";
 
 import AdminNavbar from "components/Navbars/AdminNavbar";
 import Footer from "components/Footer/Footer";
@@ -26,6 +26,7 @@ import FixedPlugin from "components/FixedPlugin/FixedPlugin.js";
 import routes from "../routes.js"; // Importación relativa directa, fuera de componentes para evitar ciclos
 
 import sidebarImage from "assets/img/sidebar-3.jpg";
+import { useAuth } from "@/contexts/auth-context";
 
 function Admin() {
   const [image, setImage] = React.useState(sidebarImage);
@@ -34,13 +35,34 @@ function Admin() {
   const [collapsed, setCollapsed] = React.useState(false);
   const location = useLocation();
   const mainPanel = React.useRef(null);
+  const { user } = useAuth() || {};
+
+  const hasRole = (role) => {
+    if (!role) return true;
+    if (!user) return false;
+    if (Array.isArray(user?.roles)) {
+      return user.roles.includes(role) || user.roles.some(r => r?.name === role || r?.rol === role);
+    }
+    return (
+      user.role === role ||
+      user.rol === role ||
+      user?.role?.name === role ||
+      user?.rol?.nombre === role
+    );
+  };
   const getRoutes = (routes) => {
     return routes.map((prop, key) => {
       if (prop.layout === "/admin") {
         return (
           <Route
             path={prop.layout + prop.path}
-            render={(props) => <prop.component {...props} />}
+            render={(props) =>
+              prop.requiredRole && !hasRole(prop.requiredRole) ? (
+                <Redirect to="/admin/consulta-pacientes" />
+              ) : (
+                <prop.component {...props} />
+              )
+            }
             key={key}
           />
         );

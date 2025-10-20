@@ -18,8 +18,19 @@ import GestionReportes from "views/GestionReportes.js";
 import GestionReferencias from "views/GestionReferencias.js";
 import GestionLaboratorios from "views/GestionLaboratorios.jsx";
 import LoginComponent from "views/Login.js";
+import DashboardsInteractivos from "views/DashboardsInteractivos.jsx";
+import DashboardPsicologia from "views/DashboardPsicologia.jsx";
+import CorazonRojo from "views/CorazonRojo.jsx";
 
 var routes = [
+  {
+    path: "/estadisticas",
+    name: "Estadísticas",
+    icon: "nc-icon nc-chart-bar-32",
+    component: DashboardsInteractivos,
+    layout: "/admin",
+    requiredRole: "RolEstadistica"
+  },
   {
     path: "/consulta-pacientes",
     name: "Consulta Pacientes",
@@ -70,10 +81,24 @@ var routes = [
     layout: "/admin"
   },
   {
+    path: "/psicologia",
+    name: "Psicología",
+    icon: "nc-icon nc-satisfied",
+    component: DashboardPsicologia,
+    layout: "/admin"
+  },
+  {
     path: "/icons",
     name: "Icons",
     icon: "nc-icon nc-diamond",
     component: Icons,
+    layout: "/admin"
+  },
+  {
+    path: "/corazon",
+    name: "Corazón",
+    icon: "nc-icon nc-favourite-28",
+    component: CorazonRojo,
     layout: "/admin"
   },
   {
@@ -86,3 +111,4 @@ var routes = [
 ];
 
 export default routes;
+

@@ -16,10 +16,17 @@ export const Sidebar = forwardRef (({collapsed}, ref) => {
 
     const canSee = (link) => {
         const req = link.allowedRoles;
-        // Si no hay restricción o arreglo vacío, mostrar para todos
+        // Sin restricción
         if (!Array.isArray(req) || req.length === 0) return true;
-        // Mostrar si el usuario tiene al menos uno de los roles requeridos
-        return roles.some((r) => req.includes(r));
+        // Soporta roles como strings u objetos {name, rol, nombre, codigo}
+        return roles.some((r) => {
+            if (typeof r === 'string') return req.includes(r);
+            if (r && typeof r === 'object') {
+                const candidates = [r.name, r.rol, r.nombre, r.codigo, r.id, r.role];
+                return candidates.some((v) => typeof v === 'string' && req.includes(v));
+            }
+            return false;
+        });
     };
     return (<aside 
                 ref={ref} 

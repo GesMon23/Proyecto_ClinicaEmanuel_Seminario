@@ -26,6 +26,36 @@ const CustomModal = ({ show, onClose, title, children }) => {
   );
 };
 
+const parseDepartamentoRecord = (d) => {
+  const idDirect =
+    d?.iddepartamento ?? d?.id_departamento ?? d?.idDepartamento ?? d?.id;
+
+  // 👇 agrega estas dos claves
+  const nombreDirect =
+    d?.nombre ??
+    d?.descripcion ??
+    d?.nombredepartamento ??
+    d?.nombreDepartamento ??
+    d?.nombre_departamento;
+
+  if (idDirect && nombreDirect) {
+    return { id: String(idDirect).trim(), nombre: String(nombreDirect).trim() };
+  }
+
+  // Soporte cuando viene como "(01,Guatemala)"
+  const rec = d?.fn_mostrar_departamentos ?? d?.record ?? d;
+  if (rec) {
+    const s = String(rec).replace(/[()"]/g, "");
+    const [idPart, ...rest] = s.split(",");
+    const id = (idPart ?? "").trim();
+    const nombre = (rest.join(",") ?? "").trim();
+    if (id && nombre) return { id, nombre };
+  }
+
+  return null;
+};
+
+
 // ------ Helpers de fecha y carné (sin tocar backend) ------
 const formatFechaYMDToDMY = (ymd) => {
   if (!ymd) return "";
@@ -92,44 +122,52 @@ const RegistroPacientes = () => {
   const [modalType, setModalType] = useState("info");
 
   useEffect(() => {
-    const cargarDatos = async () => {
-      try {
-        const [respDep, respAcc, respJor] = await Promise.all([
-          api.get("/departamentos"),
-          api.get("/accesos-vasculares"),
-          api.get("/jornadas"),
-        ]);
+    (async () => {
+      const toArray = (x) => (Array.isArray(x) ? x : x?.data ?? []);
+      const [depRes, accRes, jorRes] = await Promise.allSettled([
+        api.get("/departamentos"),
+        api.get("/accesos-vasculares"),
+        api.get("/jornadas"),
+      ]);
 
-        const toArray = (x) => (Array.isArray(x) ? x : x?.data ?? []);
-        const rawDeps = toArray(respDep.data);
-        const rawAccs = toArray(respAcc.data);
-        const rawJors = toArray(respJor.data);
+      if (depRes.status === "fulfilled") {
+        const deps = toArray(depRes.value.data)
+          .map(parseDepartamentoRecord)
+          .filter(Boolean)
+          .map(({ id, nombre }) => ({ id: String(id), nombre: String(nombre) }));
+        setDepartamentos(deps);
+      } else {
+        console.error("Departamentos falló:", depRes.reason);
+      }
 
-        // Normalizamos claves más comunes (id y texto)
-        const deps = rawDeps.map((d) => ({
-          id: d.iddepartamento ?? d.id_departamento ?? d.idDepartamento ?? d.id,
-          nombre: d.nombre ?? d.descripcion ?? "",
-        }));
-        const accs = rawAccs.map((a) => ({
-          id: a.idacceso ?? a.id_acceso ?? a.idAcceso ?? a.id,
-          descripcion: a.descripcion ?? "",
-        }));
-        const jors = rawJors.map((j) => ({
+      if (accRes.status === "fulfilled") {
+        const accs = toArray(accRes.value.data)
+          .map((a) => ({
+            id: a.idacceso ?? a.id_acceso ?? a.idAcceso ?? a.id,
+            descripcion: a.descripcion ?? "",
+          }))
+          .filter((a) => a.id != null);
+        setAccesosVasculares(accs);
+      } else {
+        console.error("Accesos falló:", accRes.reason);
+      }
+
+      if (jorRes.status === "fulfilled") {
+        const jors = toArray(jorRes.value.data).map((j) => ({
           id: j.idjornada ?? j.id_jornada ?? j.idJornada ?? j.id,
           descripcion: j.descripcion ?? "",
         }));
-
-        setDepartamentos(deps);
-        setAccesosVasculares(accs);
         setJornadas(jors);
-      } catch (error) {
-        console.error("Error al cargar catálogos:", error);
+      } else {
+        console.error("Jornadas falló:", jorRes.reason);
+      }
+
+      if ([depRes, accRes, jorRes].some(r => r.status === "rejected")) {
         setModalType("error");
-        setModalMessage("No se pudieron cargar los catálogos. Verifique el backend (puerto 3001).");
+        setModalMessage("Uno o más catálogos no se pudieron cargar. Puedes continuar con los disponibles.");
         setShowErrorModal(true);
       }
-    };
-    cargarDatos();
+    })();
   }, []);
 
   const handleInputChange = (e) => {
@@ -219,7 +257,7 @@ const RegistroPacientes = () => {
 
       // Verificación previa de unicidad: DPI
       try {
-        await api.get(`/pacientes/dpi/${dpiTrim}`);
+        await api.get(`/pacientes/existe/dpi/${dpiTrim}`);
         // Si no lanzó error, el DPI ya existe
         setModalType("error");
         setModalMessage("El DPI ya está registrado para otro paciente.");
@@ -240,7 +278,7 @@ const RegistroPacientes = () => {
       // Verificación previa de unicidad: No. Afiliación
       try {
         const noAfTrim = String(formData.noAfiliacion || '').trim();
-        await api.get(`/pacientes/${encodeURIComponent(noAfTrim)}`);
+        await api.get(`/pacientes/existe/noafiliacion/${encodeURIComponent(noAfTrim)}`);
         // Si no lanzó error, el No. Afiliación ya existe
         setModalType("error");
         setModalMessage("El Número de Afiliación ya está registrado.");
@@ -281,7 +319,7 @@ const RegistroPacientes = () => {
         sexo: String(formData.sexo),
         direccion: String(formData.direccion).trim(),
         fechaIngreso: formData.fechaIngreso, // YYYY-MM-DD
-        idDepartamento: formData.idDepartamento ? Number(formData.idDepartamento) : null,
+        idDepartamento: formData.idDepartamento ? String(formData.idDepartamento) : null,
         idAcceso: formData.idAcceso ? Number(formData.idAcceso) : null,
         numeroFormulario: formData.numeroFormulario?.trim() || null,
 
@@ -366,11 +404,10 @@ const RegistroPacientes = () => {
         </p>
         <button
           onClick={() => setShowErrorModal(false)}
-          className={`w-full rounded px-4 py-2 font-medium text-white transition-colors ${
-            modalType === "success"
-              ? "bg-green-600 hover:bg-green-700"
-              : "bg-red-600 hover:bg-red-700"
-          }`}
+          className={`w-full rounded px-4 py-2 font-medium text-white transition-colors ${modalType === "success"
+            ? "bg-green-600 hover:bg-green-700"
+            : "bg-red-600 hover:bg-red-700"
+            }`}
         >
           Cerrar
         </button>
@@ -455,7 +492,7 @@ const RegistroPacientes = () => {
                       className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-gray-600 dark:bg-slate-800 dark:text-white"
                       title="Debe contener 13 dígitos"
                       onKeyDown={(e) => {
-                        if (["e","E","+","-",".",","," "].includes(e.key)) e.preventDefault();
+                        if (["e", "E", "+", "-", ".", ",", " "].includes(e.key)) e.preventDefault();
                       }}
                       onPaste={(e) => {
                         const t = (e.clipboardData.getData('text') || '').trim();
@@ -592,11 +629,10 @@ const RegistroPacientes = () => {
                       onChange={handleInputChange}
                       placeholder="Ingrese el apellido casada"
                       disabled={formData.sexo !== "Femenino"}
-                      className={`w-full rounded-md border px-4 py-2 shadow-sm focus:outline-none focus:ring-2 ${
-                        formData.sexo === "Femenino"
-                          ? "border-gray-300 focus:ring-green-500 dark:border-gray-600 dark:bg-slate-800 dark:text-white"
-                          : "cursor-not-allowed bg-gray-200 text-gray-500"
-                      }`}
+                      className={`w-full rounded-md border px-4 py-2 shadow-sm focus:outline-none focus:ring-2 ${formData.sexo === "Femenino"
+                        ? "border-gray-300 focus:ring-green-500 dark:border-gray-600 dark:bg-slate-800 dark:text-white"
+                        : "cursor-not-allowed bg-gray-200 text-gray-500"
+                        }`}
                     />
                   </div>
 
@@ -691,11 +727,11 @@ const RegistroPacientes = () => {
                       className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-gray-600 dark:bg-slate-800 dark:text-white"
                     >
                       <option value="">Seleccione el departamento</option>
-                      {departamentos.map((depto) => (
-                        <option key={depto.id} value={depto.id}>
-                          {depto.nombre}
-                        </option>
-                      ))}
+                      
+                      
+                  {departamentos.map(dep => (
+                    <option key={dep.id} value={dep.id}>{dep.nombre}</option>
+                  ))}
                     </select>
                   </div>
 
@@ -765,11 +801,10 @@ const RegistroPacientes = () => {
                         required
                         disabled={!formData.periodoInicio}
                         min={formData.periodoInicio || undefined}
-                        className={`min-w-[140px] flex-1 rounded-md border px-4 py-2 shadow-sm focus:outline-none focus:ring-2 ${
-                          !formData.periodoInicio
-                            ? "cursor-not-allowed bg-gray-200 text-gray-500"
-                            : "border-gray-300 focus:ring-green-500 dark:border-gray-600 dark:bg-slate-800 dark:text-white"
-                        }`}
+                        className={`min-w-[140px] flex-1 rounded-md border px-4 py-2 shadow-sm focus:outline-none focus:ring-2 ${!formData.periodoInicio
+                          ? "cursor-not-allowed bg-gray-200 text-gray-500"
+                          : "border-gray-300 focus:ring-green-500 dark:border-gray-600 dark:bg-slate-800 dark:text-white"
+                          }`}
                       />
                     </div>
                   </div>
