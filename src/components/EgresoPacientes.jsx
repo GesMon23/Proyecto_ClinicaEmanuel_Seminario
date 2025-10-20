@@ -86,6 +86,19 @@ const EgresoPacientes = () => {
   const [modalMessage, setModalMessage] = useState('');
   const [modalType, setModalType] = useState('info');
   const [toast, setToast] = useState({ show: false, message: '', type: 'error' });
+  const baseURL = (api?.defaults?.baseURL || '').replace(/\/$/, '');
+
+  const verificarExistenciaFoto = async (idOrFilename) => {
+    try {
+      const response = await api.get(`/check-photo/${idOrFilename}`);
+      if (response.data?.exists && response.data?.filename) {
+        return response.data.filename; // nombre real del archivo
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
 
   // Cargar causas de egreso al montar el componente
   React.useEffect(() => {
@@ -128,7 +141,25 @@ const EgresoPacientes = () => {
           setShowModal(true);
           setResultados([]);
         } else {
-          setResultados(data);
+          // Enriquecer resultados con resolución de foto similar a ConsultaPacientes
+          const enriquecidos = await Promise.all(
+            data.map(async (p) => {
+              const noAf = p.no_afiliacion || p.noafiliacion || '';
+              let filename = null;
+              // Normalizar campo de BD
+              const raw = p.url_foto || p.urlfoto || null;
+              if (raw) {
+                try { filename = String(raw).replace(/^.*[\\\/]/, ''); } catch { filename = raw; }
+              }
+              // Fallback por número de afiliación
+              if (!filename && noAf) {
+                const resolved = await verificarExistenciaFoto(noAf);
+                if (resolved) filename = resolved;
+              }
+              return { ...p, url_foto: filename || null, _cacheBuster: Date.now() };
+            })
+          );
+          setResultados(enriquecidos);
         }
       } else {
         setResultados([]);
@@ -368,7 +399,7 @@ const EgresoPacientes = () => {
                 <div className="w-48 h-48 lg:w-56 lg:h-56 rounded-xl overflow-hidden border-4 border-green-700 dark:border-green-600 shadow-lg bg-gray-100 dark:bg-slate-800">
                   <img
                     alt="Foto del paciente"
-                    src={p.url_foto ? `http://localhost:3001/fotos/${p.url_foto}` : defaultAvatar}
+                    src={p.url_foto ? `${baseURL}/fotos/${p.url_foto}?v=${p._cacheBuster || ''}` : defaultAvatar}
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       e.target.onerror = null;

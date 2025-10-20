@@ -15,6 +15,12 @@ export const navbarLinks = [
                 allowedRoles: [],
             },
             {
+                label: "Estadísticas",
+                icon: FileChartPie,
+                path: "/estadisticas",
+                allowedRoles: ["RolEstadistica"],
+            },
+            {
                 label: "Consulta Pacientes",
                 icon: SquareUser ,
                 path: "/consulta-pacientes",

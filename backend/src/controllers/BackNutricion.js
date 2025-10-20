@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../../db/pool');
 const jwt = require('jsonwebtoken');
+const { runWithUser } = require('../db');
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
 
 function getUserIdFromReq(req) {
@@ -54,7 +55,18 @@ router.post('/evaluacion', async (req, res) => {
       observaciones,
       usuario_creacion
     } = req.body;
-    // Llamar al SP con transacción y cursor
+    // Derivar usuario para GUC app.current_user
+    let userName = 'web';
+    try {
+      const auth = req.headers?.authorization || '';
+      if (auth.startsWith('Bearer ')) {
+        const token = auth.slice(7);
+        const payloadJwt = jwt.verify(token, JWT_SECRET);
+        userName = payloadJwt?.nombre_usuario || String(payloadJwt?.sub || 'web');
+      }
+    } catch (_) {}
+
+    // Llamar al SP dentro de runWithUser para que los triggers tomen app.current_user
     const usuarioNombre = await resolveActorNombre(req);
     const params = [
       no_afiliacion,
@@ -65,21 +77,12 @@ router.post('/evaluacion', async (req, res) => {
       usuarioNombre || 'sistema'
     ];
 
-    const client = await pool.connect();
-    let payload;
-    try {
-      await client.query('BEGIN');
+    const payload = await runWithUser(String(userName), async (client) => {
       const cursorName = 'cur_guardar_informe_nutricion';
       await client.query('CALL public.sp_guardar_informe_nutricion($1, $2, $3, $4, $5, $6, $7)', [...params, cursorName]);
       const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
-      payload = fetchRes.rows?.[0]?.result || null;
-      await client.query('COMMIT');
-    } catch (e) {
-      try { await client.query('ROLLBACK'); } catch (_) {}
-      throw e;
-    } finally {
-      client.release();
-    }
+      return fetchRes.rows?.[0]?.result || null;
+    });
 
     return res.status(201).json({
       message: 'Informe de nutrición guardado exitosamente',
