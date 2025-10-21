@@ -1677,7 +1677,7 @@ const ConsultaPacientes = () => {
                                     </div>
 
                                     {/* Controles de búsqueda centrados */}
-                                    <form onSubmit={buscarPacientes} className="flex items-center gap-4 flex-wrap mb-6 w-full justify-center">
+                                    <form onSubmit={buscarPacientes} className="flex items-center gap-3 md:gap-4 flex-wrap mb-6 w-full justify-center">
                                     <input
                                         placeholder="Número de Afiliación"
                                         type="text"
@@ -1685,7 +1685,9 @@ const ConsultaPacientes = () => {
                                         value={busqueda.noafiliacion}
                                         onChange={handleBusquedaChange}
                                         disabled={Boolean(busqueda.dpi)}
-                                        className="text-lg px-4 py-2 w-56 rounded border border-gray-300 dark:border-gray-600 dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                                        className="text-base md:text-lg px-4 py-2 w-56 rounded-lg border border-slate-300 bg-white text-slate-900 shadow-sm placeholder-slate-400
+                                                   focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent
+                                                   dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-400 transition"
                                     />
 
                                     <input
@@ -1708,19 +1710,26 @@ const ConsultaPacientes = () => {
                                         const t = (e.clipboardData.getData('text') || '').trim();
                                         if (/[^0-9]/.test(t)) e.preventDefault();
                                         }}
-                                        className="text-lg px-4 py-2 w-56 rounded border border-gray-300 dark:border-gray-600 dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                                        className="text-base md:text-lg px-4 py-2 w-56 rounded-lg border border-slate-300 bg-white text-slate-900 shadow-sm placeholder-slate-400
+                                                   focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent
+                                                   dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-400 transition"
                                     />
 
                                     <div className="flex gap-4">
                                         <button
-                                        className="bg-green-700 hover:bg-green-800 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-base font-semibold py-2 px-5 rounded transition-colors dark:bg-green-600 dark:hover:bg-green-700 dark:disabled:bg-gray-600"
+                                        className="bg-green-700 hover:bg-green-800 disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed
+                                                   text-white text-base font-semibold py-2.5 px-5 rounded-lg shadow-sm transition-colors
+                                                   focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:ring-offset-white
+                                                   dark:bg-green-600 dark:hover:bg-green-700 dark:disabled:bg-gray-600 dark:focus:ring-offset-slate-900"
                                         type="submit"
                                         disabled={loading}
                                         >
                                         {loading ? 'Buscando...' : 'Buscar'}
                                         </button>
                                         <button
-                                        className="bg-red-600 hover:bg-red-700 text-white text-base font-semibold py-2 px-5 rounded transition-colors dark:bg-red-600 dark:hover:bg-red-700"
+                                        className="bg-red-600 hover:bg-red-700 text-white text-base font-semibold py-2.5 px-5 rounded-lg shadow-sm transition-colors
+                                                   focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 focus:ring-offset-white
+                                                   dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-offset-slate-900"
                                         type="button"
                                         onClick={handleLimpiarBusqueda}
                                         >
