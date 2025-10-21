@@ -397,8 +397,10 @@ router.get('/referencias/:noafiliacion', async (req, res) => {
                 r.fecha_referencia,
                 r.motivo_traslado,
                 r.id_medico,
+                m.nombre_medico AS nombre_medico,
                 r.especialidad_referencia
             FROM public.tbl_referencias r
+            LEFT JOIN public.tbl_medicos m ON m.id_medico = r.id_medico
             WHERE r.no_afiliacion = $1
               AND (r.fecha_eliminacion IS NULL)
             ORDER BY r.fecha_referencia DESC NULLS LAST, r.fecha_creacion DESC NULLS LAST
@@ -422,6 +424,8 @@ router.get('/nutricion/:noafiliacion', async (req, res) => {
                 n.motivo_consulta,
                 n.estado_nutricional,
                 n.observaciones,
+                n.usuario_creacion,
+                n.fecha_creacion,
                 n.altura_cm,
                 n.peso_kg,
                 n.imc
@@ -493,86 +497,50 @@ router.get('/formularios/:noafiliacion', async (req, res) => {
 
 // Faltistas por número de afiliación (todos los registros)
 router.get('/faltistas/:noafiliacion', async (req, res) => {
-    const client = await pool.connect();
     try {
         const noafiliacion = req.params.noafiliacion;
-        await client.query('BEGIN');
-        const cursorName = 'cur_faltistas_paciente';
-        await client.query('CALL public.sp_faltistas_filtrado($1,$2,$3,$4,$5,$6,$7,$8,$9)', [
-            null, // fechainicio
-            null, // fechafin
-            noafiliacion || null,
-            null, // sexo
-            null, // clinica
-            null, // jornada
-            null, // accesovascular
-            null, // departamento
-            cursorName,
-        ]);
-        const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
-        await client.query('COMMIT');
-        const rows = (fetchRes.rows || []).map(r => ({
-            noafiliacion: r.noafiliacion,
-            nombres: [r.primer_nombre, r.segundo_nombre, r.otros_nombres].filter(Boolean).join(' '),
-            apellidos: [r.primer_apellido, r.segundo_apellido, r.apellido_casada].filter(Boolean).join(' '),
-            sexo: r.sexo,
-            clinica: r.clinica,
-            jornada: r.jornada,
-            accesovascular: r.accesovascular,
-            departamento: r.departamento,
-            fechafalta: r.fechafalta,
-        }));
-        res.json(rows);
+        const query = `
+            SELECT 
+                f.no_afiliacion AS noafiliacion,
+                c.descripcion AS clinica,
+                f.fecha_falta   AS fechafalta,
+                f.motivo_falta  AS motivo_falta
+            FROM public.tbl_faltistas f
+            INNER JOIN public.tbl_clinica c ON c.id_clinica = f.id_clinica
+            WHERE f.no_afiliacion = $1
+            ORDER BY f.fecha_falta DESC
+        `;
+        const { rows } = await pool.query(query, [noafiliacion]);
+        return res.json(rows || []);
     } catch (error) {
-        try { await client.query('ROLLBACK'); } catch (_) {}
         console.error('Error al obtener faltistas del paciente:', error);
-        res.status(500).json({ error: 'Error al obtener faltistas del paciente' });
-    } finally {
-        client.release();
+        return res.status(500).json({ error: 'Error al obtener faltistas del paciente' });
     }
 });
 
 // Faltistas por DPI (resuelve no_afiliacion y reutiliza SP)
 router.get('/faltistas/dpi/:dpi', async (req, res) => {
-    const client = await pool.connect();
     try {
         const dpi = req.params.dpi;
         const p = await pool.query('SELECT no_afiliacion FROM tbl_pacientes WHERE dpi = $1', [dpi]);
         if (!p.rows.length) return res.json([]);
         const noafiliacion = p.rows[0].no_afiliacion;
-        await client.query('BEGIN');
-        const cursorName = 'cur_faltistas_paciente_dpi';
-        await client.query('CALL public.sp_faltistas_filtrado($1,$2,$3,$4,$5,$6,$7,$8,$9)', [
-            null, // fechainicio
-            null, // fechafin
-            noafiliacion || null,
-            null, // sexo
-            null, // clinica
-            null, // jornada
-            null, // accesovascular
-            null, // departamento
-            cursorName,
-        ]);
-        const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
-        await client.query('COMMIT');
-        const rows = (fetchRes.rows || []).map(r => ({
-            noafiliacion: r.noafiliacion,
-            nombres: [r.primer_nombre, r.segundo_nombre, r.otros_nombres].filter(Boolean).join(' '),
-            apellidos: [r.primer_apellido, r.segundo_apellido, r.apellido_casada].filter(Boolean).join(' '),
-            sexo: r.sexo,
-            clinica: r.clinica,
-            jornada: r.jornada,
-            accesovascular: r.accesovascular,
-            departamento: r.departamento,
-            fechafalta: r.fechafalta,
-        }));
-        res.json(rows);
+        const query = `
+            SELECT 
+                f.no_afiliacion AS noafiliacion,
+                c.descripcion AS clinica,
+                f.fecha_falta   AS fechafalta,
+                f.motivo_falta  AS motivo_falta
+            FROM public.tbl_faltistas f
+            INNER JOIN public.tbl_clinica c ON c.id_clinica = f.id_clinica
+            WHERE f.no_afiliacion = $1
+            ORDER BY f.fecha_falta DESC
+        `;
+        const { rows } = await pool.query(query, [noafiliacion]);
+        return res.json(rows || []);
     } catch (error) {
-        try { await client.query('ROLLBACK'); } catch (_) {}
         console.error('Error al obtener faltistas por DPI:', error);
-        res.status(500).json({ error: 'Error al obtener faltistas por DPI' });
-    } finally {
-        client.release();
+        return res.status(500).json({ error: 'Error al obtener faltistas por DPI' });
     }
 });
 
@@ -581,14 +549,59 @@ router.get('/faltistas/dpi/:dpi', async (req, res) => {
 const FOTOS_DIR = path.join(__dirname, '../../fotos');
 const LOGO_PATH = path.join(__dirname, '../../assets/img/logoClinica.png');
 
-router.get('/check-photo/:filename', (req, res) => {
-    const filename = req.params.filename;
-    const filePath = path.join(FOTOS_DIR, filename);
+// Helper local para resolver ruta real de la foto en carpeta /fotos
+function resolveFotoPathLocal(paciente, noafiliacion) {
+    const baseDir = FOTOS_DIR;
+    const candidates = [];
+    const url = paciente?.urlfoto || paciente?.url_foto || paciente?.url_foto || null;
+    if (url) {
+        try {
+            const p = path.isAbsolute(url) ? url : path.join(baseDir, url);
+            candidates.push(p);
+        } catch (_) {}
+    }
+    const exts = ['.jpg', '.jpeg', '.png', '.webp'];
+    for (const ext of exts) candidates.push(path.join(baseDir, `${noafiliacion}${ext}`));
+    for (const cand of candidates) {
+        try { if (fs.existsSync(cand)) return cand; } catch (_) {}
+    }
+    return null;
+}
 
-    if (fs.existsSync(filePath)) {
-        res.json({ exists: true });
-    } else {
-        res.json({ exists: false });
+// Endpoint robusto /check-photo (migrado desde server.js)
+router.get('/check-photo/:id', async (req, res) => {
+    try {
+        const raw = String(req.params.id || '').trim();
+        const id = raw.replace(/\.[a-zA-Z0-9]+$/, ''); // ej: 123.jpg -> 123
+
+        // Lee desde DB la url_foto (si existe)
+        let dbRow = null;
+        try {
+            const r = await pool.query(
+                'SELECT url_foto FROM public.tbl_pacientes WHERE no_afiliacion = $1',
+                [id]
+            );
+            dbRow = r.rows?.[0] || null;
+        } catch (_) { }
+
+        const paciente = { urlfoto: dbRow?.url_foto || null };
+        const fotoPath = resolveFotoPathLocal(paciente, id);
+
+        const wantDebug = 'debug' in req.query;
+        if (fotoPath) {
+            const filename = path.basename(fotoPath);
+            return res.json({
+                exists: true,
+                filename,
+                url: `/fotos/${filename}`,
+                ...(wantDebug ? { resolvedFrom: paciente.urlfoto || null, absolutePath: fotoPath } : {})
+            });
+        }
+
+        return res.json({ exists: false, ...(wantDebug ? { resolvedFrom: paciente.urlfoto || null } : {}) });
+    } catch (e) {
+        console.error('Error en /check-photo (BackConsultaPacientes):', e);
+        return res.status(500).json({ exists: false, error: 'internal_error' });
     }
 });
 
@@ -622,43 +635,64 @@ async function definirCarnetPaciente(paciente, fotoPath, outputPath) {
         qrDataUrl = await QRCode.toDataURL(qrUrl, { margin: 1, width: 70 });
     } catch (_) {}
 
-    const doc = new PDFDocument({ size: 'A4', layout: 'portrait', margin: 40 });
+    const doc = new PDFDocument({ size: 'A4', layout: 'portrait', margin: 40, bufferPages: true });
     const writeStream = fs.createWriteStream(outputPath);
     doc.pipe(writeStream);
 
     // Logo en la esquina superior izquierda
     const logoPath = LOGO_PATH; // ../../assets/img/logoClinica.png
     if (fs.existsSync(logoPath)) {
-        try { doc.image(logoPath, 30, 25, { width: 60 }); } catch (_) {}
+        try { doc.image(logoPath, 28, 18, { width: 88 }); } catch (_) {}
     }
-    // Título alineado a la izquierda
-    doc.font('Helvetica-Bold').fontSize(22).fillColor('black').text('Carné de Paciente', 110, 35, { align: 'left' });
+    // Medidas de página y márgenes
+    const pageWidth = doc.page.width;
+    const ml = doc.page.margins?.left ?? 40;
+    const mr = doc.page.margins?.right ?? 40;
 
-    // Foto del paciente en la esquina superior derecha
+    // Título centrado (verde institucional)
+    doc.font('Helvetica-Bold').fontSize(30).fillColor('#2d6a4f').text('Carné de Paciente', ml, 28, { align: 'center', width: pageWidth - ml - mr });
+
+    // QR a la derecha del título
+    if (qrDataUrl) {
+        try {
+            const buf = Buffer.from(qrDataUrl.split(',')[1], 'base64');
+            const qrW = 60;
+            const qrX = pageWidth - mr - qrW;
+            const qrY = 25;
+            doc.image(buf, qrX, qrY, { width: qrW, height: qrW });
+        } catch (_) {}
+    }
+
+    // Línea separadora verde (como en el reporte)
+    doc.moveTo(ml, 95).lineTo(pageWidth - mr, 95).lineWidth(1.5).strokeColor('#2d6a4f').stroke();
+
+    // Foto del paciente (bajar para no superponer con encabezado/QR) y hacerla un poco más grande
     try {
+        // +20% de tamaño y acercar la foto a la línea del encabezado
+        const frameX = 405, frameY = 110, frameW = 144, frameH = 110;
         if (fotoPath && fs.existsSync(fotoPath)) {
-            // Marco
-            doc.rect(430, 25, 90, 70).fillAndStroke('white', '#bbb');
-            doc.image(fotoPath, 432, 27, { width: 86, height: 66, fit: [86, 66] });
+            // Dibujar la foto ocupando exactamente el marco
+            try {
+                doc.image(fotoPath, frameX, frameY, { width: frameW, height: frameH });
+            } catch (_) {
+                // Fallback si falla dimensiones exactas
+                doc.image(fotoPath, frameX, frameY, { fit: [frameW, frameH] });
+            }
+            // Borde verde por encima, pegado al contorno de la foto
+            doc.lineWidth(1).strokeColor('#2d6a4f');
+            doc.rect(frameX, frameY, frameW, frameH).stroke();
         } else {
-            doc.rect(430, 25, 90, 70).fillAndStroke('white', '#bbb');
-            doc.font('Helvetica').fontSize(12).fillColor('#888').text('Sin Foto', 450, 60);
+            // Marco placeholder con borde verde y texto
+            doc.lineWidth(1).strokeColor('#2d6a4f');
+            doc.rect(frameX, frameY, frameW, frameH).stroke();
+            doc.font('Helvetica').fontSize(10).fillColor('#888').text('Sin Foto', frameX, frameY + frameH / 2 - 5, { width: frameW, align: 'center' });
         }
     } catch (_) {
         // Si falla la imagen, seguir sin romper el PDF
     }
 
-    // QR debajo de la foto
-    if (qrDataUrl) {
-        try {
-            const buf = Buffer.from(qrDataUrl.split(',')[1], 'base64');
-            doc.image(buf, 450, 105, { width: 50, height: 50 });
-            doc.font('Helvetica').fontSize(8).fillColor('black').text('Escanee para ver\ninformación', 445, 158, { width: 65, align: 'center' });
-        } catch (_) {}
-    }
-
-    // Bloque izquierdo: datos personales
-    let datosY = 100;
+    // Bloque izquierdo: datos personales (acercar al encabezado)
+    let datosY = 110;
     const nombreCompleto = `${[primernombre, segundonombre, otrosnombres].filter(Boolean).join(' ')}`.replace(/ +/g, ' ').trim();
     const apellidoCompleto = `${[primerapellido, segundoapellido, apellidocasada].filter(Boolean).join(' ')}`.replace(/ +/g, ' ').trim();
     const formatFecha = (fecha) => {
@@ -671,55 +705,121 @@ async function definirCarnetPaciente(paciente, fotoPath, outputPath) {
         return `${day}/${month}/${year}`;
     };
 
-    doc.font('Helvetica').fontSize(11).fillColor('black');
+    // Datos personales un poco más grandes
+    doc.font('Helvetica-Bold').fontSize(13).fillColor('#2d6a4f');
     doc.text('Nombres:', 30, datosY, { continued: true });
-    doc.font('Helvetica-Bold').text(nombreCompleto, { continued: false });
-    datosY += 15;
-    doc.font('Helvetica').text('Apellidos:', 30, datosY, { continued: true });
-    doc.font('Helvetica-Bold').text(apellidoCompleto, { continued: false });
-    datosY += 15;
-    doc.font('Helvetica').text('Dirección:', 30, datosY, { continued: true });
-    doc.font('Helvetica-Bold').text(direccion || '', { continued: false });
-    datosY += 15;
-    doc.font('Helvetica').text('Fecha Nacimiento:', 30, datosY, { continued: true });
-    doc.font('Helvetica-Bold').text(formatFecha(fechanacimiento), { continued: false });
-    datosY += 15;
-    doc.font('Helvetica').text('Fecha Ingreso:', 30, datosY, { continued: true });
-    doc.font('Helvetica-Bold').text(formatFecha(fechaingreso), { continued: false });
-    datosY += 15;
-    doc.font('Helvetica').text('No. Afiliación:', 30, datosY, { continued: true });
-    doc.font('Helvetica-Bold').text(noafiliacion || '', { continued: false });
-    datosY += 15;
-    doc.font('Helvetica').text('DPI:', 30, datosY, { continued: true });
-    doc.font('Helvetica-Bold').text(dpi || '', { continued: false });
-    datosY += 15;
-    doc.font('Helvetica').text('Sexo:', 30, datosY, { continued: true });
-    doc.font('Helvetica-Bold').text(sexo || '', { continued: false });
+    doc.font('Helvetica').fontSize(13).fillColor('black').text(nombreCompleto, { continued: false });
     datosY += 20;
+    doc.font('Helvetica-Bold').fillColor('#2d6a4f').text('Apellidos:', 30, datosY, { continued: true });
+    doc.font('Helvetica').fillColor('black').text(apellidoCompleto, { continued: false });
+    datosY += 20;
+    doc.font('Helvetica-Bold').fillColor('#2d6a4f').text('Dirección:', 30, datosY, { continued: true });
+    doc.font('Helvetica').fillColor('black').text(direccion || '', { continued: false });
+    datosY += 20;
+    doc.font('Helvetica-Bold').fillColor('#2d6a4f').text('Fecha Nacimiento:', 30, datosY, { continued: true });
+    doc.font('Helvetica').fillColor('black').text(formatFecha(fechanacimiento), { continued: false });
+    datosY += 20;
+    doc.font('Helvetica-Bold').fillColor('#2d6a4f').text('Fecha Ingreso:', 30, datosY, { continued: true });
+    doc.font('Helvetica').fillColor('black').text(formatFecha(fechaingreso), { continued: false });
+    datosY += 20;
+    doc.font('Helvetica-Bold').fillColor('#2d6a4f').text('No. Afiliación:', 30, datosY, { continued: true });
+    doc.font('Helvetica').fillColor('black').text(noafiliacion || '', { continued: false });
+    datosY += 20;
+    doc.font('Helvetica-Bold').fillColor('#2d6a4f').text('DPI:', 30, datosY, { continued: true });
+    doc.font('Helvetica').fillColor('black').text(dpi || '', { continued: false });
+    datosY += 20;
+    doc.font('Helvetica-Bold').fillColor('#2d6a4f').text('Sexo:', 30, datosY, { continued: true });
+    doc.font('Helvetica').fillColor('black').text(sexo || '', { continued: false });
+    datosY += 26;
 
-    // Línea divisoria
-    doc.moveTo(30, datosY + 18).lineTo(540, datosY + 18).lineWidth(1).strokeColor('black').stroke();
+    // Línea divisoria (aún más cerca de los datos)
+    doc.moveTo(30, datosY + 10).lineTo(540, datosY + 10).lineWidth(1).strokeColor('black').stroke();
 
-    // Tabla de firmas
-    const tableTop = datosY + 35;
+    // Tabla de firmas (más próxima a los datos) y ajuste dinámico para 1 sola página
+    const tableTop = datosY + 22;
     const colX = [30, 105, 210, 390, 540];
-    const rowHeight = 24;
-    const numRows = 16;
-    doc.font('Helvetica-Bold').fontSize(11).fillColor('black');
-    doc.text('Fecha', colX[0] + 2, tableTop + 7, { width: colX[1] - colX[0] - 4, align: 'center' });
-    doc.text('Hora', colX[1] + 2, tableTop + 7, { width: colX[2] - colX[1] - 4, align: 'center' });
-    doc.text('Observaciones', colX[2] + 2, tableTop + 7, { width: colX[3] - colX[2] - 4, align: 'center' });
-    doc.text('Firma', colX[3] + 2, tableTop + 7, { width: colX[4] - colX[3] - 4, align: 'center' });
-    doc.font('Helvetica').fillColor('black');
-    // Líneas horizontales
+    const rowHeight = 28; // filas más altas
+    // calcular cuántas filas caben hasta el pie sin provocar salto de página
+    const pageH = doc.page.height;
+    const footerReserve = 90; // reserva para pie de página y margen inferior
+    const maxHeight = pageH - footerReserve - tableTop;
+    let numRows = Math.floor((maxHeight - rowHeight) / rowHeight);
+    // límites razonables
+    if (!isFinite(numRows) || numRows < 8) numRows = 8;
+    if (numRows > 16) numRows = 16;
+    // Verificación estricta para no forzar salto: reducir hasta que la última línea de la tabla quede por encima del pie
+    const pageBottomLimit = pageH - 70; // margen extra para evitar que cualquier texto del pie provoque salto
+    while (tableTop + (numRows + 1) * rowHeight > pageBottomLimit && numRows > 8) {
+        numRows--;
+    }
+    // Encabezado con fondo verde y texto blanco
+    const headerH = rowHeight;
+    const tableRight = colX[4];
+    doc.save();
+    doc.lineWidth(1).strokeColor('#2d6a4f').fillColor('#2d6a4f');
+    doc.rect(colX[0], tableTop, tableRight - colX[0], headerH).fill();
+    doc.font('Helvetica-Bold').fontSize(11).fillColor('white');
+    doc.text('Fecha', colX[0] + 2, tableTop + 10, { width: colX[1] - colX[0] - 4, align: 'center' });
+    doc.text('Hora', colX[1] + 2, tableTop + 10, { width: colX[2] - colX[1] - 4, align: 'center' });
+    doc.text('Observaciones', colX[2] + 2, tableTop + 10, { width: colX[3] - colX[2] - 4, align: 'center' });
+    doc.text('Firma', colX[3] + 2, tableTop + 10, { width: colX[4] - colX[3] - 4, align: 'center' });
+    doc.restore();
+
+    // Franjas alternadas en filas del cuerpo
+    for (let r = 1; r <= numRows; r++) {
+        const y = tableTop + r * rowHeight;
+        if (r % 2 === 1) {
+            doc.save();
+            doc.fillColor('#f5f7f9');
+            doc.rect(colX[0], y, tableRight - colX[0], rowHeight).fill();
+            doc.restore();
+        }
+    }
+
+    // Rejilla: líneas gris claro y borde exterior verde
+    doc.lineWidth(0.8).strokeColor('#a3a3a3');
     for (let i = 0; i <= numRows + 1; i++) {
         const y = tableTop + i * rowHeight;
-        doc.moveTo(colX[0], y).lineTo(colX[4], y).strokeColor('black').stroke();
+        doc.moveTo(colX[0], y).lineTo(tableRight, y).stroke();
     }
-    // Líneas verticales
     for (let i = 0; i < colX.length; i++) {
-        doc.moveTo(colX[i], tableTop).lineTo(colX[i], tableTop + (numRows + 1) * rowHeight).strokeColor('black').stroke();
+        doc.moveTo(colX[i], tableTop).lineTo(colX[i], tableTop + (numRows + 1) * rowHeight).stroke();
     }
+    // Borde exterior
+    doc.lineWidth(1.2).strokeColor('#2d6a4f')
+       .rect(colX[0], tableTop, tableRight - colX[0], (numRows + 1) * rowHeight).stroke();
+
+    // Pie de página (igual al Reporte): línea divisoria + fecha generación + título sistema (centro) + paginación (derecha)
+    try {
+        const gen = new Date();
+        const dd = String(gen.getDate()).padStart(2, '0');
+        const mm = String(gen.getMonth() + 1).padStart(2, '0');
+        const yyyy = gen.getFullYear();
+        const hh = String(gen.getHours()).padStart(2, '0');
+        const min = String(gen.getMinutes()).padStart(2, '0');
+        const genStr = `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+
+        const range = doc.bufferedPageRange();
+        for (let i = 0; i < range.count; i++) {
+            doc.switchToPage(range.start + i);
+            const pw = doc.page.width;
+            const ph = doc.page.height;
+            const left = 40, right = pw - 40;
+            // línea divisoria (gris, ancho 0.5)
+            doc.save();
+            doc.lineWidth(0.5).strokeColor('#c8c8c8')
+               .moveTo(left, ph - 50).lineTo(right, ph - 50).stroke();
+            // textos (negrita, tamaños y colores como en Reporte)
+            doc.font('Helvetica-Bold').fontSize(9);
+            // Fecha (izquierda) gris 80
+            doc.fillColor('#505050').text(`Generado: ${genStr}`, left, ph - 36, { width: 200, align: 'left', lineBreak: false, wordWrap: false, height: 12, paragraphGap: 0, ellipsis: false });
+            // Título del sistema (centro) verde
+            doc.fillColor('#008000').text('Sistema de Gestión de Pacientes', left, ph - 36, { width: pw - 80, align: 'center', lineBreak: false, wordWrap: false, height: 12, paragraphGap: 0, ellipsis: false });
+            // Página (derecha) gris 80
+            doc.fillColor('#505050').text(`Página ${i + 1} de ${range.count}`, left, ph - 36, { width: pw - 80, align: 'right', lineBreak: false, wordWrap: false, height: 12, paragraphGap: 0, ellipsis: false });
+            doc.restore();
+        }
+    } catch (_) {}
 
     doc.end();
 

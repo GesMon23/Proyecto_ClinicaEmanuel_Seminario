@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import logoClinica from "@/assets/logoClinica2.png"
 import Background from "@/assets/backgroundLogin.png";
 import { useNavigate } from "react-router-dom";
@@ -164,9 +165,9 @@ const LoginComponent = () => {
         </div>
       </div>
       {/* Modal Cambio de Contraseña */}
-      {showChangePwd && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-md p-6">
+      {showChangePwd && createPortal((
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
+          <div className="relative z-[10000] bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-md p-6">
             <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-2">Cambiar contraseña</h3>
             <p className="text-slate-600 dark:text-slate-300 mb-4">Debes cambiar tu contraseña genérica antes de continuar.</p>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Nueva contraseña</label>
@@ -208,11 +209,11 @@ const LoginComponent = () => {
             </div>
           </div>
         </div>
-      )}
+      ), document.body)}
       {/* Modal Recuperación de Contraseña */}
-      {showForgot && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-md p-6">
+      {showForgot && createPortal((
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
+          <div className="relative z-[10000] bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-md p-6">
             <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-2">Recuperar contraseña</h3>
             <p className="text-slate-600 dark:text-slate-300 mb-4">Completa tus datos para validar tu identidad.</p>
 
@@ -316,7 +317,7 @@ const LoginComponent = () => {
             </div>
           </div>
         </div>
-      )}
+      ), document.body)}
     </div>
   );
 };

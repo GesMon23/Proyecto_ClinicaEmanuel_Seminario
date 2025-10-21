@@ -48,9 +48,13 @@ export const Sidebar = forwardRef (({collapsed}, ref) => {
                             key={navbarLink.title} 
                             className={cn("sidebar-group", collapsed && "md:items-center")}
                         >
-                            <p className={cn("sidebar-group-tittle", collapsed && "md:w-[45px]")}>
-                                {navbarLink.title}
-                            </p>
+                            {navbarLink.title === 'Sesión' || navbarLink.title === 'Opciones' ? (
+                                <div className={cn("my-2 h-px w-full bg-slate-300 dark:bg-slate-700", collapsed && "md:w-[45px]")} />
+                            ) : (
+                                <p className={cn("sidebar-group-tittle", collapsed && "md:w-[45px]")}> 
+                                    {navbarLink.title}
+                                </p>
+                            )}
                             {navbarLink.links.filter(canSee).map((link) =>(
                                 link.path === "/cerrarsesion" ? (
                                     <button
