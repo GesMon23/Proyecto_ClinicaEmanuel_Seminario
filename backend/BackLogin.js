@@ -249,7 +249,7 @@ router.post('/auth/admin/reset-user-password/token', async (req, res) => {
         const to = correoUsuario || process.env.ADMIN_EMAIL;
         if (to) {
           const baseApp = process.env.APP_BASE_URL || 'http://localhost:3000';
-          const loginLink = `${baseApp}/login`;
+          const loginLink = `${baseApp}`;
           await t.sendMail({
             from: `Soporte Clínica <${process.env.SMTP_USER}>`,
             to,

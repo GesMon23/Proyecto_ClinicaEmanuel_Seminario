@@ -234,11 +234,11 @@ const ConsultaPacientes = () => {
     const histTotalPages = Math.max(1, Math.ceil(histFiltered.length / pageSizeHistorial));
     const histPageItems = React.useMemo(() => histFiltered.slice((pageHistorial - 1) * pageSizeHistorial, pageHistorial * pageSizeHistorial), [histFiltered, pageHistorial, pageSizeHistorial]);
 
-    const refFiltered = React.useMemo(() => filterItems(referencias, searchReferencias, ['id_referencia','fecha_referencia','motivo_traslado','id_medico','especialidad_referencia']), [referencias, searchReferencias]);
+    const refFiltered = React.useMemo(() => filterItems(referencias, searchReferencias, ['id_referencia','fecha_referencia','motivo_traslado','nombre_medico','id_medico','especialidad_referencia']), [referencias, searchReferencias]);
     const refTotalPages = Math.max(1, Math.ceil(refFiltered.length / pageSizeReferencias));
     const refPageItems = React.useMemo(() => refFiltered.slice((pageReferencias - 1) * pageSizeReferencias, pageReferencias * pageSizeReferencias), [refFiltered, pageReferencias, pageSizeReferencias]);
 
-    const nutFiltered = React.useMemo(() => filterItems(nutricion, searchNutricion, ['id_informe','motivo_consulta','estado_nutricional','observaciones','altura_cm','peso_kg','imc']), [nutricion, searchNutricion]);
+    const nutFiltered = React.useMemo(() => filterItems(nutricion, searchNutricion, ['id_informe','motivo_consulta','estado_nutricional','observaciones','altura_cm','peso_kg','imc','usuario_creacion','fecha_creacion']), [nutricion, searchNutricion]);
     const nutTotalPages = Math.max(1, Math.ceil(nutFiltered.length / pageSizeNutricion));
     const nutPageItems = React.useMemo(() => nutFiltered.slice((pageNutricion - 1) * pageSizeNutricion, pageNutricion * pageSizeNutricion), [nutFiltered, pageNutricion, pageSizeNutricion]);
 
@@ -1029,7 +1029,7 @@ const ConsultaPacientes = () => {
         const pageWidth = doc.internal.pageSize.getWidth();
         const verde = '#2d6a4f';
         const rojo = '#dc3545';
-        // Tipografía base más limpia
+        // Usar fuente incorporada segura (helvetica) para evitar errores de cmap
         doc.setFont('helvetica', 'normal');
 
         // Helper para obtener un PNG de QR en base64 (con múltiples fallbacks)
@@ -1082,11 +1082,11 @@ const ConsultaPacientes = () => {
             doc.addImage(logoImg, 'PNG', logoX, logoY, logoW, logoH, undefined, 'FAST');
         }
         // Título principal centrado
-        doc.setFont('helvetica', 'bold');
+        doc.setFont(undefined, 'bold');
         doc.setFontSize(24);
         doc.setTextColor(verde);
         doc.text('Reporte de Paciente', pageWidth / 2, 70, { align: 'center' });
-        doc.setFont('helvetica', 'normal');
+        doc.setFont(undefined, 'normal');
         doc.setDrawColor(verde);
         doc.setLineWidth(1.6);
         doc.line(40, 95, pageWidth - 40, 95);
@@ -1103,9 +1103,35 @@ const ConsultaPacientes = () => {
         let fotoX = 40;
         let yStart = fotoY;
         let fotoPaciente = await getFotoPacienteBase64(paciente);
+        const frameW = 110;
+        const frameH = 130;
         if (fotoPaciente) {
-            // Foto menos alta para evitar apariencia estirada
-            doc.addImage(fotoPaciente, 'JPEG', fotoX, fotoY, 100, 100, undefined, 'FAST');
+            try {
+                const img = new Image();
+                img.src = fotoPaciente;
+                await new Promise(res => { img.onload = () => res(); img.onerror = () => res(); });
+                const iw = img.naturalWidth || 1;
+                const ih = img.naturalHeight || 1;
+                const r = Math.min(frameW / iw, frameH / ih);
+                const dw = Math.max(1, Math.floor(iw * r));
+                const dh = Math.max(1, Math.floor(ih * r));
+                const dx = fotoX + Math.floor((frameW - dw) / 2);
+                const dy = fotoY + Math.floor((frameH - dh) / 2);
+                doc.addImage(fotoPaciente, 'JPEG', dx, dy, dw, dh, undefined, 'FAST');
+                // Borde acoplado al tamaño real de la foto en verde (sin radio)
+                doc.setDrawColor(45, 106, 79);
+                doc.setLineWidth(1);
+                doc.rect(dx, dy, dw, dh);
+            } catch {}
+        } else {
+            // Marco placeholder con borde verde y texto (sin radio)
+            doc.setDrawColor(45, 106, 79);
+            doc.setLineWidth(1);
+            doc.rect(fotoX, fotoY, frameW, frameH);
+            doc.setFontSize(9);
+            doc.setTextColor(120);
+            doc.text('Sin Foto', fotoX + frameW / 2, fotoY + frameH / 2, { align: 'center' });
+            doc.setTextColor(0,0,0);
         }
         // Datos personales en una sola columna (vertical), letra más pequeña y tabulado
         doc.setFontSize(8);
@@ -1117,31 +1143,30 @@ const ConsultaPacientes = () => {
 
         const nombreCompleto = `${paciente.primer_nombre || ''} ${paciente.segundo_nombre || ''} ${paciente.otros_nombres || ''} ${paciente.primer_apellido || ''} ${paciente.segundo_apellido || ''} ${paciente.apellido_casada || ''}`.replace(/ +/g, ' ').trim();
 
-        const printPair = (label, value) => {
+        const printPair = (label, value, boldLabel = false) => {
             doc.setTextColor(verde);
+            if (boldLabel) doc.setFont(undefined, 'bold');
             doc.text(label, colX, y);
+            if (boldLabel) doc.setFont(undefined, 'normal');
             doc.setTextColor(0,0,0);
             doc.text(String(value ?? ''), colX + labelPad, y);
             y += lineH;
         };
 
-        printPair('Nombre:', nombreCompleto);
-        printPair('No. Afiliación:', `${paciente.no_afiliacion || ''}`);
-        printPair('DPI:', `${paciente.dpi || ''}`);
-        printPair('Fecha Nacimiento:', `${formatearFecha(paciente.fecha_nacimiento) || ''}`);
-        printPair('Edad:', `${calcularEdad(paciente.fecha_nacimiento)}`);
-        printPair('Sexo:', `${paciente.sexo || ''}`);
-        printPair('Fecha Ingreso:', `${formatearFecha(paciente.fecha_ingreso) || ''}`);
-        printPair('Estancia Programa:', `${calcularEstanciaPrograma(paciente.fecha_ingreso)}`);
-        printPair('Jornada:', `${paciente.jornada_descripcion || ''}`);
-        printPair('Sesiones Autorizadas:', `${paciente.sesiones_autorizadas_mes || ''}`);
-        printPair('Dirección:', `${paciente.direccion || ''}`);
+        printPair('Nombre:', nombreCompleto, true);
+        printPair('No. Afiliación:', `${paciente.no_afiliacion || ''}`, true);
+        printPair('DPI:', `${paciente.dpi || ''}`, true);
+        printPair('Fecha Nacimiento:', `${formatearFecha(paciente.fecha_nacimiento) || ''}`, true);
+        printPair('Edad:', `${calcularEdad(paciente.fecha_nacimiento)}`, true);
+        printPair('Sexo:', `${paciente.sexo || ''}`, true);
+        printPair('Fecha Ingreso:', `${formatearFecha(paciente.fecha_ingreso) || ''}`, true);
+        printPair('Estancia Programa:', `${calcularEstanciaPrograma(paciente.fecha_ingreso)}`, true);
+        printPair('Jornada:', `${paciente.jornada_descripcion || ''}`, true);
+        printPair('Sesiones Autorizadas:', `${paciente.sesiones_autorizadas_mes || ''}`, true);
+        printPair('Dirección:', `${paciente.direccion || ''}`, true);
 
-        // Observaciones bajo la lista
+        // Observaciones removidas del reporte
         const afterColsY = y + 2;
-        doc.setTextColor(verde); doc.text('Observaciones:', colX, afterColsY);
-        doc.setTextColor(0,0,0);
-        doc.text(`${paciente.observaciones || ''}`, colX + labelPad, afterColsY, { maxWidth: (pageWidth - 40) - (colX + labelPad) });
 
         // Secciones con soporte multi-página
         const pageHeight = doc.internal.pageSize.getHeight();
@@ -1156,7 +1181,7 @@ const ConsultaPacientes = () => {
                 const logoX = 40, logoY = 30;
                 doc.addImage(logoImg, 'PNG', logoX, logoY, logoW, logoH, undefined, 'FAST');
             }
-            doc.setFont('helvetica', 'bold');
+            doc.setFont(undefined, 'bold');
             doc.setFontSize(24);
             doc.setTextColor(verde);
             doc.text('Reporte de Paciente', pageWidth / 2, 70, { align: 'center' });
@@ -1167,19 +1192,13 @@ const ConsultaPacientes = () => {
                 const qrY = 25; // cerca del borde superior
                 doc.addImage(qrImgData, 'PNG', qrX, qrY, qrSize, qrSize, undefined, 'FAST');
             }
-            doc.setFont('helvetica', 'normal');
+            doc.setFont(undefined, 'normal');
             doc.setDrawColor(verde);
             doc.setLineWidth(1.6);
             doc.line(40, 95, pageWidth - 40, 95);
         };
         const drawPageFooter = () => {
-            doc.setDrawColor(rojo);
-            doc.setLineWidth(1);
-            doc.line(40, pageHeight - 60, pageWidth - 40, pageHeight - 60);
-            doc.setFontSize(10);
-            doc.setTextColor(rojo);
-            doc.text('Sistema de Gestión de Pacientes', pageWidth / 2, pageHeight - 40, { align: 'center' });
-            doc.setTextColor(100);
+            // No-op: el pie de página paginado se dibuja al final para todas las páginas
         };
         const addPage = () => {
             // cerrar la página actual con pie
@@ -1239,7 +1258,8 @@ const ConsultaPacientes = () => {
         const endSection = () => { ensureSpace(44); yCursor += 44; };
 
         // Tabla con encabezado, cebra y bordes por celda
-        const drawTable = (title, headers, rows, aligns = []) => {
+        const drawTable = (title, headers, rows, aligns = [], options = {}) => {
+            const { skipEndSpacing = false } = options;
             const tableWidth = rightX - leftX;
             const colCount = headers.length;
             const colWidth = tableWidth / colCount;
@@ -1322,42 +1342,57 @@ const ConsultaPacientes = () => {
                 yCursor += rowH;
             });
 
-            endSection();
+            if (!skipEndSpacing) endSection();
             return true;
         };
 
-        // Turnos: Afiliación, Paciente, Clínica, Fecha, Código Turno
+        // Turnos: Últimos 5 por fecha, mostrando ID, Clínica y Fecha
         try {
-            const turnosRows = (turnos || []).slice(0, 3).map(t => [
-                t.noafiliacion || '',
-                t.nombrepaciente || '',
+            const sortedTurnos = (turnos || []).slice().sort((a, b) => {
+                const da = a.fecha_turno ? new Date(a.fecha_turno).getTime() : 0;
+                const db = b.fecha_turno ? new Date(b.fecha_turno).getTime() : 0;
+                return db - da; // descendente
+            });
+            const turnosRows = sortedTurnos.slice(0, 5).map(t => [
+                t.id_turno_cod || t.id_turno || '',
                 t.nombre_clinica || '',
-                t.fecha_turno ? new Date(t.fecha_turno).toLocaleDateString('es-ES') : '',
-                t.id_turno_cod || t.id_turno || ''
+                t.fecha_turno ? new Date(t.fecha_turno).toLocaleDateString('es-ES') : ''
             ]);
-            if (turnosRows.length) drawTable('Turnos', ['Afiliación','Paciente','Clínica','Fecha','Código'], turnosRows, ['center','center','center','center','center']);
+            if (turnosRows.length) drawTable('Turnos', ['ID','Clínica','Fecha'], turnosRows, ['center','center','center']);
         } catch {}
 
-        // Faltistas: Afiliación, Nombre, Sexo, Fecha Falta, Clínica
+        // Faltistas: Últimos 5 por fecha, mostrando Fecha Falta, Clínica y Motivo
         try {
-            const faltasRows = (faltistas || []).slice(0, 3).map(f => [
-                f.noafiliacion || '',
-                [f.nombres||'', f.apellidos||''].filter(Boolean).join(' '),
-                f.sexo || '',
-                f.fechafalta || '',
-                f.clinica || ''
+            const sortedFaltas = (faltistas || []).slice().sort((a, b) => {
+                const da = a.fechafalta || a.fecha_falta || a.fecha || '';
+                const db = b.fechafalta || b.fecha_falta || b.fecha || '';
+                const ta = da ? new Date(da).getTime() : 0;
+                const tb = db ? new Date(db).getTime() : 0;
+                return tb - ta; // descendente
+            });
+            const faltasRows = sortedFaltas.slice(0, 5).map(f => [
+                (f.fechafalta || f.fecha_falta || '') ? new Date(f.fechafalta || f.fecha_falta).toLocaleDateString('es-ES') : '',
+                f.clinica || f.nombre_clinica || f.id_clinica || '',
+                f.motivo_falta || f.Motivo_falta || f.motivofalta || ''
             ]);
-            if (faltasRows.length) drawTable('Faltistas', ['Afiliación','Nombre','Sexo','Fecha Falta','Clínica'], faltasRows, ['center','center','center','center','center']);
+            if (faltasRows.length) drawTable('Faltistas', ['Fecha Falta','Clínica','Motivo'], faltasRows, ['center','center','left']);
         } catch {}
 
-        // Formularios: Número, Sesiones (A/R/NR), Periodo
+        // Formularios: Últimos 5 por fecha (fin o inicio), mostrando Número, Sesiones Autorizadas y Periodo
         try {
-            const formRows = (formularios || []).slice(0, 3).map(fm => [
+            const sortedForms = (formularios || []).slice().sort((a, b) => {
+                const da = a.fin_prest_servicios || a.inicio_prest_servicios || '';
+                const db = b.fin_prest_servicios || b.inicio_prest_servicios || '';
+                const ta = da ? new Date(da).getTime() : 0;
+                const tb = db ? new Date(db).getTime() : 0;
+                return tb - ta; // descendente
+            });
+            const formRows = sortedForms.slice(0, 5).map(fm => [
                 fm.numero_formulario || '',
-                `${fm.sesiones_autorizadas_mes ?? ''}/${fm.sesiones_realizadas_mes ?? ''}/${fm.sesiones_no_realizadas_mes ?? ''}`,
+                fm.sesiones_autorizadas_mes ?? '',
                 `${formatearFecha(fm.inicio_prest_servicios) || ''} - ${formatearFecha(fm.fin_prest_servicios) || ''}`
             ]);
-            if (formRows.length) drawTable('Formularios', ['Número','A/R/NR','Periodo'], formRows, ['center','center','center']);
+            if (formRows.length) drawTable('Formularios', ['Número','Autorizadas','Periodo'], formRows, ['center','center','center']);
         } catch {}
 
         // Referencias: Últimos 3 por fecha
@@ -1367,166 +1402,131 @@ const ConsultaPacientes = () => {
                 const db = b.fecha_referencia ? new Date(b.fecha_referencia).getTime() : (b.fecha_creacion ? new Date(b.fecha_creacion).getTime() : 0);
                 return db - da;
             });
-            const refRows = refSorted.slice(0, 3).map(r => [
+            const refRows = refSorted.slice(0, 5).map(r => [
                 r.id_referencia || '',
                 r.fecha_referencia ? new Date(r.fecha_referencia).toLocaleDateString('es-ES') : '',
                 r.especialidad_referencia || '',
                 r.motivo_traslado || '',
-                r.id_medico || ''
+                r.nombre_medico || r.id_medico || ''
             ]);
             if (refRows.length) drawTable('Referencias', ['ID','Fecha','Especialidad','Motivo','Médico'], refRows, ['center','center','center','center','center']);
         } catch {}
 
-        // (Eliminado resumen general de Laboratorios) – se mostrará únicamente el último laboratorio y sus parámetros
-
-        // Nutrición: ID, Motivo, Estado, (sin fecha en tabla), mostrar IMC
+        // Nutrición (unificada): mostrar solamente el último registro como pares Campo/Valor
         try {
-            const nutRows = (nutricion || []).slice(0, 1).map(n => [
-                n.id_informe || '',
-                n.motivo_consulta || '',
-                n.estado_nutricional || '',
-                n.imc ?? ''
-            ]);
-            if (nutRows.length) drawTable('Nutrición', ['ID','Motivo','Estado','IMC'], nutRows, ['center','center','center','center']);
-
-            // Comparativo Nutrición: valor actual vs último previo por campo
-            const pickNutDate = (it) => it.fecha_creacion || it.fecha || it.fecha_informe || '';
             if (Array.isArray(nutricion) && nutricion.length > 0) {
                 const latestNut = nutricion[0];
-                const fieldsNut = [
-                    { key: 'estado_nutricional', label: 'Estado Nutricional' },
-                    { key: 'imc', label: 'IMC' },
-                    { key: 'altura_cm', label: 'Altura (cm)' },
-                    { key: 'peso_kg', label: 'Peso (kg)' },
-                    { key: 'motivo_consulta', label: 'Motivo' },
-                    { key: 'observaciones', label: 'Observaciones' },
-                ];
-                const prevMapNut = new Map(); // key -> { valor, fecha }
-                // recorrer previos buscando el último valor registrado por campo
-                for (let i = 1; i < nutricion.length; i++) {
-                    const it = nutricion[i] || {};
-                    const f = pickNutDate(it);
-                    const fStr = f ? new Date(f).toLocaleDateString('es-ES') : '';
-                    for (const fdef of fieldsNut) {
-                        if (!prevMapNut.has(fdef.key) && it[fdef.key] != null) {
-                            prevMapNut.set(fdef.key, { valor: String(it[fdef.key]), fecha: fStr });
-                        }
-                    }
-                    if (prevMapNut.size === fieldsNut.length) break;
-                }
-                const compRowsNut = fieldsNut.map(({ key, label }) => {
-                    const actual = latestNut[key] != null ? String(latestNut[key]) : '';
-                    return [label, actual];
-                });
-                if (compRowsNut.some(r => String(r[1]) !== '')) {
-                    drawTable('Campos de Nutrición', ['Campo','Valor actual'], compRowsNut, ['center','center']);
-                }
-                // (Eliminado) Compacto: últimos previos por campo (Nutrición)
+                const nutRows = [
+                    ['ID Informe', latestNut.id_informe || ''],
+                    ['Fecha', latestNut.fecha_creacion ? new Date(latestNut.fecha_creacion).toLocaleDateString('es-ES') : ''],
+                    ['Usuario', latestNut.usuario_creacion || ''],
+                    ['Motivo', latestNut.motivo_consulta || ''],
+                    ['Estado Nutricional', latestNut.estado_nutricional || ''],
+                    ['IMC', latestNut.imc ?? ''],
+                    ['Altura (cm)', latestNut.altura_cm ?? ''],
+                    ['Peso (kg)', latestNut.peso_kg ?? ''],
+                    ['Observaciones', latestNut.observaciones || ''],
+                ].filter(r => String(r[1]) !== '');
+                if (nutRows.length) drawTable('Nutrición', ['Campo','Valor'], nutRows, ['center','left']);
             }
         } catch {}
 
-        // Psicología: Últimos 3 (por fecha), con salto de página si es necesario
+        // Psicología (unificada): mostrar solamente el último registro como pares Campo/Valor (sin KDQOL)
         try {
-            const psiSorted = (psicologia || []).slice().sort((a, b) => {
+            const psiSorted = (psicologia || []).slice().sort((a,b) => {
                 const fa = a.fecha_creacion || a.fecha || a.fecha_informe || '';
                 const fb = b.fecha_creacion || b.fecha || b.fecha_informe || '';
                 const da = fa ? new Date(fa).getTime() : 0;
                 const db = fb ? new Date(fb).getTime() : 0;
                 return db - da;
             });
-            const psiRows = psiSorted.slice(0, 1).map(p => [
-                p.id_informe || '',
-                (p.fecha_creacion || p.fecha || p.fecha_informe) ? new Date(p.fecha_creacion || p.fecha || p.fecha_informe).toLocaleDateString('es-ES') : '',
-                p.tipo_consulta || '',
-                p.tipo_atencion || '',
-                p.motivo_consulta || ''
-            ]);
-            if (psiRows.length) drawTable('Psicología', ['ID','Fecha','Tipo','Atención','Motivo'], psiRows, ['center','center','center','center','center']);
-
-            // Comparativo Psicología: valor actual vs último previo por campo
-            const pickPsiDate = (it) => it.fecha_creacion || it.fecha || it.fecha_informe || '';
             if (Array.isArray(psiSorted) && psiSorted.length > 0) {
                 const latestPsi = psiSorted[0];
-                const fieldsPsi = [
-                    { key: 'tipo_consulta', label: 'Tipo' },
-                    { key: 'tipo_atencion', label: 'Atención' },
-                    { key: 'kdqol', label: 'KDQOL' },
-                    { key: 'pronostico', label: 'Pronóstico' },
-                    { key: 'motivo_consulta', label: 'Motivo' },
-                    { key: 'observaciones', label: 'Observaciones' },
-                ];
-                const prevMapPsi = new Map(); // key -> { valor, fecha }
-                for (let i = 1; i < psiSorted.length; i++) {
-                    const it = psiSorted[i] || {};
-                    const f = pickPsiDate(it);
-                    const fStr = f ? new Date(f).toLocaleDateString('es-ES') : '';
-                    for (const fdef of fieldsPsi) {
-                        if (!prevMapPsi.has(fdef.key) && it[fdef.key] != null) {
-                            prevMapPsi.set(fdef.key, { valor: String(it[fdef.key]), fecha: fStr });
-                        }
-                    }
-                    if (prevMapPsi.size === fieldsPsi.length) break;
-                }
-                const compRowsPsi = fieldsPsi.map(({ key, label }) => {
-                    const actual = latestPsi[key] != null ? String(latestPsi[key]) : '';
-                    return [label, actual];
-                });
-                if (compRowsPsi.some(r => String(r[1]) !== '')) {
-                    drawTable('Campos de Psicología', ['Campo','Valor actual'], compRowsPsi, ['center','center']);
-                }
-                // KDQOL: si el último informe tiene datos, mostrar tabla de dimensiones
-                try {
-                    let kdqolObj = null;
-                    try {
-                        kdqolObj = typeof latestPsi.kdqol === 'string' ? JSON.parse(latestPsi.kdqol) : latestPsi.kdqol;
-                    } catch (_) { kdqolObj = null; }
-                    const dims = [
-                        { key: 'fisico_mental', label: 'Físico y Mental' },
-                        { key: 'enfermedad_renal', label: 'Enfermedad Renal' },
-                        { key: 'sintomas_problemas', label: 'Síntomas y Problemas' },
-                        { key: 'efectos_enfermedad', label: 'Efectos de la Enfermedad' },
-                        { key: 'vida_diaria', label: 'Vida Diaria' },
-                        // claves alternativas posibles
-                        { key: 'puntaje_fisico', label: 'Puntaje Físico' },
-                        { key: 'puntaje_mental', label: 'Puntaje Mental' },
-                        { key: 'puntaje_sintomas', label: 'Puntaje Síntomas' },
-                        { key: 'puntaje_carga', label: 'Puntaje Carga' },
-                        { key: 'puntaje_efectos', label: 'Puntaje Efectos' },
-                    ];
-                    const getNum = (v) => {
-                        const n = typeof v === 'string' ? parseFloat(v) : v;
-                        return isNaN(n) ? null : n;
-                    };
-                    const kdqolRows = [];
-                    let sum = 0, count = 0;
-                    const pushDim = (obj) => {
-                        dims.forEach(d => {
-                            const num = getNum(obj?.[d.key]);
-                            if (num != null) { kdqolRows.push([d.label, String(num)]); sum += num; count += 1; }
-                        });
-                    };
-                    // 1) Intentar desde objeto kdqol
-                    if (kdqolObj && typeof kdqolObj === 'object') {
-                        pushDim(kdqolObj);
-                    }
-                    // 2) Fallback: intentar desde campos directos en latestPsi si no se obtuvo nada
-                    if (!kdqolRows.length) {
-                        pushDim(latestPsi || {});
-                    }
-                    if (kdqolRows.length) {
-                        drawTable('KDQOL', ['Dimensión','Puntaje'], kdqolRows, ['center','center']);
-                        // Agregar promedio si fue posible calcularlo
-                        const promedio = count > 0 ? Math.round((sum / count) * 100) / 100 : null;
-                        if (promedio != null) {
-                            drawTable('Promedio KDQOL', ['Promedio'], [[String(promedio)]], ['center']);
-                        }
-                    }
-                } catch {}
-                // (Eliminado) Tabla 'Últimos campos previos (Psicología)'
+                const fechaPsi = latestPsi.fecha_creacion || latestPsi.fecha || latestPsi.fecha_informe || '';
+                const psiRows = [
+                    ['ID Informe', latestPsi.id_informe || ''],
+                    ['Fecha', fechaPsi ? new Date(fechaPsi).toLocaleDateString('es-ES') : ''],
+                    ['Tipo', latestPsi.tipo_consulta || ''],
+                    ['Atención', latestPsi.tipo_atencion || ''],
+                    ['Motivo', latestPsi.motivo_consulta || ''],
+                    ['Pronóstico', latestPsi.pronostico || ''],
+                    ['Observaciones', latestPsi.observaciones || ''],
+                ].filter(r => String(r[1]) !== '');
+                if (psiRows.length) drawTable('Psicología', ['Campo','Valor'], psiRows, ['center','left']);
             }
         } catch {}
 
-        // Laboratorio: Detalle del último registro con parámetros completos
+        // KDQOL: último registro (como antes), debajo de Psicología
+        try {
+            const psiSorted = (psicologia || []).slice().sort((a,b) => {
+                const fa = a.fecha_creacion || a.fecha || a.fecha_informe || '';
+                const fb = b.fecha_creacion || b.fecha || b.fecha_informe || '';
+                const da = fa ? new Date(fa).getTime() : 0;
+                const db = fb ? new Date(fb).getTime() : 0;
+                return db - da;
+            });
+            if (Array.isArray(psiSorted) && psiSorted.length > 0) {
+                const latestPsi = psiSorted[0];
+                let kdqolObj = null;
+                try {
+                    kdqolObj = typeof latestPsi.kdqol === 'string' ? JSON.parse(latestPsi.kdqol) : latestPsi.kdqol;
+                } catch (_) { kdqolObj = null; }
+                const dims = [
+                    { key: 'fisico_mental', label: 'Físico y Mental' },
+                    { key: 'enfermedad_renal', label: 'Enfermedad Renal' },
+                    { key: 'sintomas_problemas', label: 'Síntomas y Problemas' },
+                    { key: 'efectos_enfermedad', label: 'Efectos de la Enfermedad' },
+                    { key: 'vida_diaria', label: 'Vida Diaria' },
+                    // alternativas posibles en el payload
+                    { key: 'puntaje_fisico', label: 'Puntaje Físico' },
+                    { key: 'puntaje_mental', label: 'Puntaje Mental' },
+                    { key: 'puntaje_sintomas', label: 'Puntaje Síntomas' },
+                    { key: 'puntaje_carga', label: 'Puntaje Carga' },
+                    { key: 'puntaje_efectos', label: 'Puntaje Efectos' },
+                ];
+                const getNum = (v) => {
+                    const n = typeof v === 'string' ? parseFloat(v) : v;
+                    return isNaN(n) ? null : n;
+                };
+                const kdqolRows = [];
+                let sum = 0, count = 0;
+                const pushDim = (obj) => {
+                    dims.forEach(d => {
+                        const num = getNum(obj?.[d.key]);
+                        if (num != null) {
+                            kdqolRows.push([d.label, Number(num).toFixed(2)]);
+                            sum += num;
+                            count += 1;
+                        }
+                    });
+                };
+                if (kdqolObj && typeof kdqolObj === 'object') {
+                    pushDim(kdqolObj);
+                }
+                if (!kdqolRows.length) {
+                    pushDim(latestPsi || {});
+                }
+                if (kdqolRows.length) {
+                    // Dibujar tabla KDQOL sin espaciar al final, para colocar la nota inmediatamente debajo
+                    drawTable('KDQOL', ['Dimensión','Puntaje'], kdqolRows, ['center','center'], { skipEndSpacing: true });
+                    const promedioVal = count > 0 ? (sum / count) : null;
+                    if (promedioVal != null) {
+                        yCursor += 8; // separacion suficiente para no tapar el borde inferior de la tabla
+                        const note = `Nota: Promedio KDQOL: ${promedioVal.toFixed(2)}`;
+                        doc.setFont(undefined, 'bold');
+                        doc.setFontSize(10);
+                        doc.setTextColor(0, 0, 0);
+                        doc.text(note, leftX, yCursor); // alineado a la izquierda de la tabla
+                        yCursor += 12;
+                        doc.setFont(undefined, 'normal');
+                    }
+                    // Ahora sí cerrar la sección dejando el espacio estándar
+                    endSection();
+                }
+            }
+        } catch {}
+
+        // Laboratorio: último registro (Fecha, Periodo, Examen) + últimos parámetros del paciente
         try {
             const pickDate = (it) => it.fecha_laboratorio || it.fecha || it.fecha_creacion || '';
             const latest = (laboratorios || []).slice().sort((a,b) => {
@@ -1535,8 +1535,7 @@ const ConsultaPacientes = () => {
                 return db - da;
             })[0];
             if (latest) {
-                // Construir filas de parámetros: valor actual (de este laboratorio) + fecha del último previo
-                let paramRows = [];
+                // Cargar últimos parámetros del paciente (por parámetro)
                 let prevMap = new Map(); // parametro -> { valor, fecha }
                 try {
                     const afili = latest.no_afiliacion || latest.noafiliacion || '';
@@ -1552,46 +1551,22 @@ const ConsultaPacientes = () => {
                         }
                     }
                 } catch {}
-                if (Array.isArray(latest.parametros) && latest.parametros.length > 0) {
-                    paramRows = latest.parametros.map(p => {
-                        const nombre = String(p.parametro ?? '').trim();
-                        const valorActual = String(p.valor ?? '');
-                        const prev = prevMap.get(nombre) || { valor: '', fecha: '' };
-                        return [nombre, valorActual, prev.valor, prev.fecha];
-                    });
-                } else {
-                    // Fallback si no hay arreglo de parametros en el último laboratorio: construir desde entries
-                    const exclude = new Set(['id_laboratorio','idlaboratorio','no_afiliacion','noafiliacion','primer_nombre','primernombre','segundo_nombre','segundonombre','primer_apellido','primerapellido','segundo_apellido','segundoapellido','sexo','fecha_laboratorio','fecha','periodicidad','examen_realizado','causa_no_realizado','infeccion_acceso','complicacion_acceso','virologia','antigeno_hepatitis_c','antigeno_superficie','hiv','observacion','usuario_creacion','fecha_registro','idperlaboratorio','parametros']);
-                    const entries = Object.entries(latest).filter(([k,v]) => !exclude.has(k) && v !== null && v !== undefined && v !== '');
-                    const pretty = (s) => String(s).replace(/_/g,' ').replace(/\b\w/g, m => m.toUpperCase());
-                    paramRows = entries.map(([k,v]) => {
-                        const nombre = pretty(k);
-                        const valorActual = typeof v === 'boolean' ? (v ? 'Sí' : 'No') : String(v);
-                        const fechaPrev = prevMap.get(nombre) || '';
-                        return [nombre, valorActual, fechaPrev];
-                    });
-                }
-                // Encabezado breve del laboratorio
+                // Encabezado breve del último laboratorio
                 const miniRows = [[
-                    latest.no_afiliacion || '',
                     (pickDate(latest) ? new Date(pickDate(latest)).toLocaleDateString('es-ES') : ''),
                     latest.periodicidad || '',
                     latest.examen_realizado ? 'Sí' : 'No'
                 ]];
-                drawTable('Último Laboratorio Registrado', ['Afiliación','Fecha','Periodicidad','Examen'], miniRows, ['center','center','center','center']);
-                // Parámetros completos (Parámetro, Valor actual, Último valor previo, Fecha último previo)
-                if (paramRows.length) {
-                    drawTable('Parámetros de Laboratorio', ['Parámetro','Valor actual','Último valor previo','Fecha último previo'], paramRows, ['center','center','center','center']);
-                }
+                drawTable('Último Laboratorio Registrado', ['Fecha','Periodo','Examen'], miniRows, ['center','center','center']);
 
-                // Últimos parámetros previos por parámetro (vista compacta como en detalle)
+                // Detalle: últimos parámetros registrados del paciente
                 try {
                     const prevRows = Array.from(prevMap.entries())
                         .filter(([k, v]) => k && v && (v.valor !== undefined || v.fecha !== undefined))
                         .map(([k, v]) => [k, v.valor || '', v.fecha || ''])
                         .sort((a, b) => a[0].localeCompare(b[0], 'es'));
                     if (prevRows.length) {
-                        drawTable('Últimos parámetros previos por parámetro', ['Parámetro','Último valor previo','Fecha'], prevRows, ['center','center','center']);
+                        drawTable('Últimos parámetros del paciente', ['Parámetro','Valor','Fecha'], prevRows, ['center','center','center']);
                     }
                 } catch {}
             }
@@ -1599,14 +1574,37 @@ const ConsultaPacientes = () => {
 
         // QR ya se muestra en el encabezado de cada página
 
-        // Pie de página
-        doc.setDrawColor(rojo);
-        doc.setLineWidth(1);
-        doc.line(40, pageHeight - 60, pageWidth - 40, pageHeight - 60);
-        doc.setFontSize(10);
-        doc.setTextColor(rojo);
-        doc.text('Sistema de Gestión de Pacientes', pageWidth / 2, pageHeight - 40, { align: 'center' });
-        doc.setTextColor(100);
+        // Pie de página: paginación y fecha de generación en cada página
+        try {
+            const totalPages = (doc.getNumberOfPages ? doc.getNumberOfPages() : doc.internal.getNumberOfPages());
+            const gen = new Date();
+            const dd = String(gen.getDate()).padStart(2, '0');
+            const mm = String(gen.getMonth() + 1).padStart(2, '0');
+            const yyyy = gen.getFullYear();
+            const hh = String(gen.getHours()).padStart(2, '0');
+            const min = String(gen.getMinutes()).padStart(2, '0');
+            const genStr = `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+
+            for (let p = 1; p <= totalPages; p++) {
+                doc.setPage(p);
+                // línea divisoria
+                doc.setDrawColor(200);
+                doc.setLineWidth(0.5);
+                doc.line(40, pageHeight - 50, pageWidth - 40, pageHeight - 50);
+                // Fecha (izquierda)
+                doc.setFontSize(9);
+                doc.setTextColor(80);
+                doc.setFont(undefined, 'bold');
+                doc.text(`Generado: ${genStr}`, 40, pageHeight - 36);
+                // Título del sistema (centro)
+                doc.setTextColor(0, 128, 0);
+                doc.text('Sistema de Gestión de Pacientes', pageWidth / 2, pageHeight - 36, { align: 'center' });
+                // Página (derecha)
+                doc.setTextColor(80);
+                doc.text(`Página ${p} de ${totalPages}`, pageWidth - 40, pageHeight - 36, { align: 'right' });
+                doc.setFont(undefined, 'normal');
+            }
+        } catch {}
 
         doc.save(`reporte_paciente_${paciente.no_afiliacion}.pdf`);
     };
@@ -1771,6 +1769,8 @@ const ConsultaPacientes = () => {
                                                                     <div className="space-y-4 text-sm">
                                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                                             <div><span className="font-semibold">ID Informe:</span> {it.id_informe ?? ''}</div>
+                                                                            <div><span className="font-semibold">Fecha:</span> {formatearFecha(it.fecha_creacion) || ''}</div>
+                                                                            <div><span className="font-semibold">Usuario:</span> {it.usuario_creacion ?? ''}</div>
                                                                             <div><span className="font-semibold">IMC:</span> {it.imc ?? ''}</div>
                                                                             <div className="md:col-span-2"><span className="font-semibold">Motivo:</span> {it.motivo_consulta ?? ''}</div>
                                                                             <div><span className="font-semibold">Estado Nutricional:</span> {it.estado_nutricional ?? ''}</div>
@@ -2067,7 +2067,7 @@ const ConsultaPacientes = () => {
                                                             ))
                                                         ) : (
                                                             <tr>
-                                                                <td colSpan={8} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
+                                                                <td colSpan={6} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
                                                             </tr>
                                                         )}
                                                     </tbody>
@@ -2113,7 +2113,7 @@ const ConsultaPacientes = () => {
                                                             <th className="p-3 border dark:border-gray-600 font-semibold">ID Referencia</th>
                                                             <th className="p-3 border dark:border-gray-600 font-semibold">Fecha Referencia</th>
                                                             <th className="p-3 border dark:border-gray-600 font-semibold">Motivo Traslado</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">ID Médico</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Médico</th>
                                                             <th className="p-3 border dark:border-gray-600 font-semibold">Especialidad Referencia</th>
                                                         </tr>
                                                     </thead>
@@ -2124,7 +2124,7 @@ const ConsultaPacientes = () => {
                                                                     <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{r.id_referencia || ''}</td>
                                                                     <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{formatearFecha(r.fecha_referencia) || ''}</td>
                                                                     <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{r.motivo_traslado || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{r.id_medico || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{r.nombre_medico || r.id_medico || ''}</td>
                                                                     <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{r.especialidad_referencia || ''}</td>
                                                                 </tr>
                                                             ))
@@ -2179,6 +2179,8 @@ const ConsultaPacientes = () => {
                                                             <th className="p-3 border dark:border-gray-600 font-semibold">Altura (Cm)</th>
                                                             <th className="p-3 border dark:border-gray-600 font-semibold">Peso (kg)</th>
                                                             <th className="p-3 border dark:border-gray-600 font-semibold">IMC</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Fecha</th>
+                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Usuario</th>
                                                             <th className="p-3 border dark:border-gray-600 font-semibold">Acciones</th>
                                                         </tr>
                                                     </thead>
@@ -2193,6 +2195,8 @@ const ConsultaPacientes = () => {
                                                                     <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{n.altura_cm ?? ''}</td>
                                                                     <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{n.peso_kg ?? ''}</td>
                                                                     <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{n.imc ?? ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{formatearFecha(n.fecha_creacion) || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{n.usuario_creacion || ''}</td>
                                                                     <td className="p-3 border dark:border-gray-600">
                                                                         <button className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white" onClick={() => openNutDetail(n)}>Ver detalle</button>
                                                                     </td>
@@ -2200,7 +2204,7 @@ const ConsultaPacientes = () => {
                                                             ))
                                                         ) : (
                                                             <tr>
-                                                                <td colSpan={8} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
+                                                                <td colSpan={10} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
                                                             </tr>
                                                         )}
                                                     </tbody>
@@ -2434,13 +2438,12 @@ const ConsultaPacientes = () => {
                                                         <tr>
                                                             <th className="p-3 border dark:border-gray-600 font-semibold">Número Formulario</th>
                                                             <th className="p-3 border dark:border-gray-600 font-semibold">Sesiones Autorizadas (Mensuales)</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Sesiones Realizadas (Mensuales)</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Sesiones No Realizadas (Mensuales)</th>
                                                             <th className="p-3 border dark:border-gray-600 font-semibold">Inicio Prestaciones Servicios</th>
                                                             <th className="p-3 border dark:border-gray-600 font-semibold">Fin Prestaciones Servicios</th>
                                                             <th className="p-3 border dark:border-gray-600 font-semibold">ID Historial</th>
                                                             <th className="p-3 border dark:border-gray-600 font-semibold">Acciones</th>
                                                         </tr>
+
                                                     </thead>
                                                     <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
                                                         {formPageItems && formPageItems.length > 0 ? (
@@ -2448,8 +2451,6 @@ const ConsultaPacientes = () => {
                                                                 <tr key={f.id_historial || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
                                                                     <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.numero_formulario || ''}</td>
                                                                     <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.sesiones_autorizadas_mes ?? ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.sesiones_realizadas_mes ?? ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.sesiones_no_realizadas_mes ?? ''}</td>
                                                                     <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{formatearFecha(f.inicio_prest_servicios) || ''}</td>
                                                                     <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{formatearFecha(f.fin_prest_servicios) || ''}</td>
                                                                     <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.id_historial ?? ''}</td>
@@ -2460,7 +2461,7 @@ const ConsultaPacientes = () => {
                                                             ))
                                                         ) : (
                                                             <tr>
-                                                                <td colSpan={8} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
+                                                                <td colSpan={6} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
                                                             </tr>
                                                         )}
                                                     </tbody>

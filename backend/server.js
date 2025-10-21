@@ -226,54 +226,7 @@ app.get('/turnoLlamado', async (req, res) => {
     }
 });
 
-// /check-photo robusto (acepta con o sin extensión y usa resolveFotoPath)
-app.get('/check-photo/:id', async (req, res) => {
-    try {
-        const raw = String(req.params.id || '').trim();
-        const id = raw.replace(/\.[a-zA-Z0-9]+$/, ''); // si vino 123.jpg -> 123
-
-        // Lee desde DB la url_foto (si existe)
-        let dbRow = null;
-        try {
-            const r = await pool.query(
-                'SELECT url_foto FROM public.tbl_pacientes WHERE no_afiliacion = $1',
-                [id]
-            );
-            dbRow = r.rows?.[0] || null;
-        } catch (_) { }
-
-        const paciente = { urlfoto: dbRow?.url_foto || null };
-
-        // Usa helper para resolver la ruta real en /fotos (acepta .jpg/.jpeg/.png/.webp y nombres raros)
-        const fotoPath = resolveFotoPath(paciente, id);
-
-        // Soporte debug opcional
-        const wantDebug = 'debug' in req.query;
-
-        if (fotoPath) {
-            const filename = path.basename(fotoPath);
-            return res.json({
-                exists: true,
-                filename,
-                url: `/fotos/${filename}`,
-                ...(wantDebug ? { fotosDir, resolvedFrom: paciente.urlfoto || null, absolutePath: fotoPath } : {})
-            });
-        }
-
-        let sample = undefined;
-        if (wantDebug) {
-            try { sample = fs.readdirSync(fotosDir).slice(0, 50); } catch (_) { }
-        }
-
-        return res.json({
-            exists: false,
-            ...(wantDebug ? { fotosDir, dbUrl: paciente.urlfoto || null, lookedForId: id, sample } : {})
-        });
-    } catch (e) {
-        console.error('Error en /check-photo:', e);
-        return res.status(500).json({ exists: false, error: 'internal_error' });
-    }
-});
+// (Movido) /check-photo ahora vive en BackConsultaPacientes.js
 
 
 // Configuración de la base de datos
