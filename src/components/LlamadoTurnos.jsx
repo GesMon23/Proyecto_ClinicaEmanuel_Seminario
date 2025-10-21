@@ -216,7 +216,7 @@ const LlamadoTurnos = () => {
             
             const mensaje = new SpeechSynthesisUtterance(texto);
             
-            mensaje.rate = 1; 
+            mensaje.rate = 0.8; 
             mensaje.pitch = 1;  
             mensaje.volume = 1;  
             const voces = window.speechSynthesis.getVoices();
@@ -281,10 +281,11 @@ const LlamadoTurnos = () => {
                 }
             }));
             
-            // Crear el mensaje de voz
-            const mensajeVoz = `Paciente con el número de afiliación ${turnoConFoto.no_afiliacion}, código de turno ${turnoConFoto.id_turno_cod}, presentarse a la recepción para la clínica ${clinica}.`;
+            // Crear el mensaje de voz con el nombre del paciente y número de afiliación
+            const mensajeVoz = `Paciente ${turnoConFoto.nombrepaciente} con el número de afiliación ${turnoConFoto.no_afiliacion} presentarse en recepción para la clínica ${clinica}.`;
             hablar(mensajeVoz);
             
+            // Actualizar localStorage
             localStorage.setItem('clinicasData', JSON.stringify({
                 ...clinicasData,
                 [clinica]: {
@@ -311,7 +312,7 @@ const LlamadoTurnos = () => {
             }
             showSuccessModal('Turno llamado exitosamente');
         } catch (error) {
-            showErrorModal(`Error al llamar el turno: ${error.message}`);
+            showErrorModal(`No se encontró un turno para la clínica ${clinica}`);
         } finally {
             setFotoCargando(false);
         }
@@ -772,11 +773,11 @@ const LlamadoTurnos = () => {
                                         </div>
                                         <button 
                                             onClick={() => {
-                                                const mensajeVoz = `Paciente con el número de afiliación ${clinicasData[selectedClinica].turnoLlamado.no_afiliacion}, código de turno ${clinicasData[selectedClinica].turnoLlamado.id_turno_cod}, presentarse a la recepción para la clínica ${selectedClinica}.`;
+                                                const mensajeVoz = `Paciente ${clinicasData[selectedClinica].turnoLlamado.nombrepaciente} con el número de afiliación ${clinicasData[selectedClinica].turnoLlamado.no_afiliacion} presentarse en recepción para la clínica ${selectedClinica}.`;
                                                 if ('speechSynthesis' in window) {
                                                     window.speechSynthesis.cancel();
                                                     const mensaje = new SpeechSynthesisUtterance(mensajeVoz);
-                                                    mensaje.rate = 1;
+                                                    mensaje.rate = 0.8; // Velocidad 
                                                     mensaje.pitch = 1;
                                                     window.speechSynthesis.speak(mensaje);
                                                 }
