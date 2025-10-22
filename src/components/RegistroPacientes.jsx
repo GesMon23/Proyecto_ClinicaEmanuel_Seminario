@@ -460,8 +460,6 @@ const RegistroPacientes = () => {
                       name="noAfiliacion"
                       value={formData.noAfiliacion}
                       onChange={handleInputChange}
-                      inputMode="numeric"
-                      pattern="\d*"
                       required
                       placeholder="Ingrese el número de afiliación"
                       className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-gray-600 dark:bg-slate-800 dark:text-white"
@@ -514,8 +512,6 @@ const RegistroPacientes = () => {
                       name="noPacienteProveedor"
                       value={formData.noPacienteProveedor}
                       onChange={handleInputChange}
-                      inputMode="numeric"
-                      pattern="\d*"
                       required
                       placeholder="Ingrese el número de paciente proveedor"
                       className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-gray-600 dark:bg-slate-800 dark:text-white"

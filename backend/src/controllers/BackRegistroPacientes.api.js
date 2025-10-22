@@ -117,13 +117,16 @@ router.post('/pacientes', async (req, res) => {
     if (noaf && (b.photo || b.imagenBase64)) {
       try {
         const raw = String(b.photo || b.imagenBase64);
-        let base64, ext = 'jpg';
-        const m = raw.match(/^data:image\/[\w+.-]+;base64,(.+)$/i);
+        let base64;
+        let ext = 'jpg';
+        // data URL esperada: data:image/{ext};base64,{datos}
+        const m = raw.match(/^data:image\/(png|jpeg|jpg|webp);base64,(.+)$/i);
         if (m) {
           ext = m[1].toLowerCase();
           if (ext === 'jpeg') ext = 'jpg';
           base64 = m[2];
         } else {
+          // Si no viene con prefijo data:, asumir raw base64 y usar jpg por defecto
           base64 = raw;
         }
         if (!['jpg', 'jpeg', 'png', 'webp'].includes(ext)) ext = 'jpg';
