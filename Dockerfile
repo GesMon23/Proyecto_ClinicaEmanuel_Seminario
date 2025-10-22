@@ -6,8 +6,6 @@ COPY package*.json ./
 
 RUN npm install --force
 
-RUN npm run dev 
-
 RUN npm ci --force
 
 COPY . .
