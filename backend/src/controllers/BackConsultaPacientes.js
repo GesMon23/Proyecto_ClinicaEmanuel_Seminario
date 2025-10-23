@@ -6,12 +6,27 @@ const path = require('path');
 const PDFDocument = require('pdfkit');
 const QRCode = require('qrcode');
 
-router.get('/departamentos', async (req, res) => {
+router.get('/departamentos', async (_req, res) => {
     try {
-        const result = await pool.query('SELECT * from FN_mostrar_departamentos()');
-        res.json(result.rows);
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            const cur = 'cur_cat_deptos';
+            await client.query('CALL public.sp_catalogo_departamentos($1)', [cur]);
+            const r = await client.query(`FETCH ALL FROM "${cur}"`);
+            await client.query('COMMIT');
+            res.json(r.rows || []);
+        } catch (e) {
+            try { await client.query('ROLLBACK'); } catch (_) {}
+            console.error('Error SP sp_catalogo_departamentos:', e);
+            res.status(500).json({ error: 'Error al obtener departamentos.' });
+        } finally {
+            client.release();
+        }
     } catch (error) {
         res.status(500).json({ error: 'Error al obtener departamentos.' });
+    }
+});
 
 // Laboratorios por número de afiliación (historial completo) - normalizado
 router.get('/laboratorios/:noafiliacion', async (req, res) => {
@@ -57,15 +72,17 @@ router.get('/laboratorios/dpi/:dpi', async (req, res) => {
     const client = await pool.connect();
     try {
         const dpi = req.params.dpi;
-        const p = await pool.query('SELECT no_afiliacion FROM tbl_pacientes WHERE dpi = $1', [dpi]);
-        if (!p.rows.length) return res.json([]);
-        const noafiliacion = p.rows[0].no_afiliacion;
         await client.query('BEGIN');
+        const curRes = 'cur_resolve_af';
+        await client.query('CALL public.sp_resolver_no_afiliacion_por_dpi($1,$2)', [dpi, curRes]);
+        const rRes = await client.query(`FETCH ALL FROM "${curRes}"`);
+        const noafiliacion = rRes.rows?.[0]?.no_afiliacion || null;
+        if (!noafiliacion) {
+            await client.query('COMMIT');
+            return res.json([]);
+        }
         const cursorName = 'cur_lab_historial_dpi_consulta_pac';
-        await client.query('CALL public.sp_laboratorios_historial_por_afiliacion($1,$2)', [
-            noafiliacion,
-            cursorName,
-        ]);
+        await client.query('CALL public.sp_laboratorios_historial_por_afiliacion($1,$2)', [ noafiliacion, cursorName ]);
         const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
         await client.query('COMMIT');
         const rows = (fetchRes.rows || []).map(r => ({
@@ -93,30 +110,27 @@ router.get('/laboratorios/dpi/:dpi', async (req, res) => {
         client.release();
     }
 });
-    }
-});
+ 
 
 // Listar turnos por número de afiliación (solo los del paciente indicado, del día actual)
 router.get('/turnos/:noafiliacion', async (req, res) => {
     try {
         const noafiliacion = req.params.noafiliacion;
-        const query = `
-            SELECT 
-                pac.no_afiliacion as noafiliacion,
-                pac.primer_nombre || ' ' || COALESCE(pac.segundo_nombre, '') || ' ' || 
-                pac.primer_apellido || ' ' || COALESCE(pac.segundo_apellido, '') AS nombrepaciente,
-                tur.id_turno,
-                cli.descripcion AS nombre_clinica,
-                tur.fecha_turno,
-                tur.id_turno_cod
-            FROM tbl_turnos tur
-            INNER JOIN tbl_pacientes pac ON tur.no_afiliacion = pac.no_afiliacion
-            INNER JOIN tbl_clinica cli ON tur.id_clinica = cli.id_clinica
-            WHERE pac.no_afiliacion = $1
-            ORDER BY tur.fecha_turno DESC
-        `;
-        const result = await pool.query(query, [noafiliacion]);
-        return res.json(result.rows || []);
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            const cur = 'cur_turnos_pac';
+            await client.query('CALL public.sp_consulta_turnos_por_afiliacion($1,$2)', [noafiliacion, cur]);
+            const r = await client.query(`FETCH ALL FROM "${cur}"`);
+            await client.query('COMMIT');
+            return res.json(r.rows || []);
+        } catch (e) {
+            try { await client.query('ROLLBACK'); } catch (_) {}
+            console.error('Error SP sp_consulta_turnos_por_afiliacion:', e);
+            return res.status(500).json({ error: 'Error al obtener turnos del paciente' });
+        } finally {
+            client.release();
+        }
     } catch (error) {
         console.error('Error al obtener turnos del paciente:', error);
         return res.status(500).json({ error: 'Error al obtener turnos del paciente', detalle: error.message });
@@ -130,15 +144,28 @@ router.post('/historial/reingresos', async (req, res) => {
         if (!no_afiliacion || !numero_formulario) {
             return res.status(400).json({ error: 'no_afiliacion y numero_formulario son obligatorios' });
         }
-        const insert = `
-            INSERT INTO tbl_reingresos (
-                no_afiliacion, numero_formulario, fecha_reingreso, observaciones, usuario_creacion, fecha_creacion
-            ) VALUES (
-                $1, $2, $3, $4, $5, NOW()
-            ) RETURNING no_afiliacion, numero_formulario, fecha_reingreso, observaciones, usuario_creacion, fecha_creacion
-        `;
-        const result = await pool.query(insert, [no_afiliacion, numero_formulario, fecha_reingreso || null, observaciones || null, usuario_creacion || 'sistema']);
-        return res.status(201).json(result.rows[0]);
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            const cur = 'cur_ins_reingreso';
+            await client.query('CALL public.sp_reingreso_crear($1,$2,$3,$4,$5,$6)', [
+                no_afiliacion,
+                numero_formulario,
+                fecha_reingreso || null,
+                observaciones || null,
+                usuario_creacion || 'sistema',
+                cur
+            ]);
+            const r = await client.query(`FETCH ALL FROM "${cur}"`);
+            await client.query('COMMIT');
+            return res.status(201).json(r.rows?.[0] || {});
+        } catch (e) {
+            try { await client.query('ROLLBACK'); } catch (_) {}
+            console.error('Error SP sp_reingreso_crear:', e);
+            return res.status(500).json({ error: 'Error al crear reingreso' });
+        } finally {
+            client.release();
+        }
     } catch (error) {
         console.error('Error al crear reingreso:', error);
         return res.status(500).json({ error: 'Error al crear reingreso', detalle: error.message });
@@ -163,28 +190,31 @@ router.post('/historial/formularios', async (req, res) => {
             return res.status(400).json({ error: 'no_afiliacion y numero_formulario son obligatorios' });
         }
 
-        const insert = `
-            INSERT INTO tbl_historial_formularios (
-                no_afiliacion, numero_formulario, sesiones_autorizadas_mes, sesiones_realizadas_mes, sesiones_no_realizadas_mes,
-                usuario_creacion, fecha_creacion, inicio_prest_servicios, fin_prest_servicios
-            ) VALUES (
-                $1, $2, $3, $4, $5, $6, NOW(), $7, $8
-            ) RETURNING id_historial, no_afiliacion, numero_formulario, sesiones_autorizadas_mes, sesiones_realizadas_mes, sesiones_no_realizadas_mes,
-                      usuario_creacion, fecha_creacion, inicio_prest_servicios, fin_prest_servicios
-        `;
-
-        const result = await pool.query(insert, [
-            no_afiliacion,
-            numero_formulario,
-            sesiones_autorizadas_mes || null,
-            sesiones_realizadas_mes || null,
-            sesiones_no_realizadas_mes || null,
-            usuario_creacion || 'sistema',
-            inicio_prest_servicios || null,
-            fin_prest_servicios || null
-        ]);
-
-        return res.status(201).json(result.rows[0]);
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            const cur = 'cur_ins_hist_form';
+            await client.query('CALL public.sp_historial_formulario_crear($1,$2,$3,$4,$5,$6,$7,$8,$9)', [
+                no_afiliacion,
+                numero_formulario,
+                sesiones_autorizadas_mes || null,
+                sesiones_realizadas_mes || null,
+                sesiones_no_realizadas_mes || null,
+                usuario_creacion || 'sistema',
+                inicio_prest_servicios || null,
+                fin_prest_servicios || null,
+                cur
+            ]);
+            const r = await client.query(`FETCH ALL FROM "${cur}"`);
+            await client.query('COMMIT');
+            return res.status(201).json(r.rows?.[0] || {});
+        } catch (e) {
+            try { await client.query('ROLLBACK'); } catch (_) {}
+            console.error('Error SP sp_historial_formulario_crear:', e);
+            return res.status(500).json({ error: 'Error al crear historial de formulario' });
+        } finally {
+            client.release();
+        }
     } catch (error) {
         console.error('Error al crear historial de formulario:', error);
         return res.status(500).json({ error: 'Error al crear historial de formulario', detalle: error.message });
@@ -198,22 +228,29 @@ router.post('/historial/egresos', async (req, res) => {
         if (!no_afiliacion || !id_causa_egreso) {
             return res.status(400).json({ error: 'no_afiliacion e id_causa_egreso son obligatorios' });
         }
-        const insert = `
-            INSERT INTO tbl_egresos (
-                no_afiliacion, id_causa_egreso, descripcion, fecha_egreso, observaciones, usuario_creacion, fecha_creacion
-            ) VALUES (
-                $1, $2, $3, $4, $5, $6, NOW()
-            ) RETURNING no_afiliacion, id_causa_egreso, descripcion, fecha_egreso, observaciones, usuario_creacion, fecha_creacion
-        `;
-        const result = await pool.query(insert, [
-            no_afiliacion,
-            id_causa_egreso,
-            descripcion || null,
-            fecha_egreso || null,
-            observaciones || null,
-            usuario_creacion || 'sistema'
-        ]);
-        return res.status(201).json(result.rows[0]);
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            const cur = 'cur_ins_egreso';
+            await client.query('CALL public.sp_egreso_crear($1,$2,$3,$4,$5,$6,$7)', [
+                no_afiliacion,
+                id_causa_egreso,
+                descripcion || null,
+                fecha_egreso || null,
+                observaciones || null,
+                usuario_creacion || 'sistema',
+                cur
+            ]);
+            const r = await client.query(`FETCH ALL FROM "${cur}"`);
+            await client.query('COMMIT');
+            return res.status(201).json(r.rows?.[0] || {});
+        } catch (e) {
+            try { await client.query('ROLLBACK'); } catch (_) {}
+            console.error('Error SP sp_egreso_crear:', e);
+            return res.status(500).json({ error: 'Error al crear egreso' });
+        } finally {
+            client.release();
+        }
     } catch (error) {
         console.error('Error al crear egreso:', error);
         return res.status(500).json({ error: 'Error al crear egreso', detalle: error.message });
@@ -222,29 +259,68 @@ router.post('/historial/egresos', async (req, res) => {
 //MODIFICAR
 
 // Endpoint para obtener los estados de paciente
-router.get('/estados-paciente', async (req, res) => {
+router.get('/estados-paciente', async (_req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM FN_mostrar_estados_paciente()');
-        res.json(result.rows);
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            const cur = 'cur_cat_estados';
+            await client.query('CALL public.sp_catalogo_estados_paciente($1)', [cur]);
+            const r = await client.query(`FETCH ALL FROM "${cur}"`);
+            await client.query('COMMIT');
+            res.json(r.rows || []);
+        } catch (e) {
+            try { await client.query('ROLLBACK'); } catch (_) {}
+            console.error('Error SP sp_catalogo_estados_paciente:', e);
+            res.status(500).json({ error: 'Error al obtener los estados de paciente.' });
+        } finally {
+            client.release();
+        }
     } catch (error) {
-        res.status(500).json({ error: 'Error al obtener los estados de paciente.', detalle: error.message });
+        res.status(500).json({ error: 'Error al obtener los estados de paciente.' });
     }
 });
 
-router.get('/accesos-vasculares', async (req, res) => {
+router.get('/accesos-vasculares', async (_req, res) => {
     try {
-        const result = await pool.query('SELECT * from FN_mostrar_accesos_vascular()');
-        res.json(result.rows);
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            const cur = 'cur_cat_accesos';
+            await client.query('CALL public.sp_catalogo_accesos_vascular($1)', [cur]);
+            const r = await client.query(`FETCH ALL FROM "${cur}"`);
+            await client.query('COMMIT');
+            res.json(r.rows || []);
+        } catch (e) {
+            try { await client.query('ROLLBACK'); } catch (_) {}
+            console.error('Error SP sp_catalogo_accesos_vascular:', e);
+            res.status(500).json({ error: 'Error al obtener accesos vasculares.' });
+        } finally {
+            client.release();
+        }
     } catch (error) {
         res.status(500).json({ error: 'Error al obtener accesos vasculares.' });
     }
 });
 
 // Endpoint para obtener jornadas
-router.get('/jornadas', async (req, res) => {
+router.get('/jornadas', async (_req, res) => {
     try {
-        const result = await pool.query('SELECT * from FN_mostrar_jornadas()');
-        res.json(result.rows);
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            const cur = 'cur_cat_jornadas';
+            await client.query('CALL public.sp_catalogo_jornadas($1)', [cur]);
+            const r = await client.query(`FETCH ALL FROM "${cur}"`);
+            await client.query('COMMIT');
+            res.json(r.rows || []);
+        } catch (e) {
+            try { await client.query('ROLLBACK'); } catch (_) {}
+            console.error('Error SP sp_catalogo_jornadas:', e);
+            res.status(500).json({ error: 'Error al obtener jornadas.' });
+        } finally {
+            client.release();
+        }
     } catch (error) {
         res.status(500).json({ error: 'Error al obtener jornadas.' });
     }
@@ -252,25 +328,22 @@ router.get('/jornadas', async (req, res) => {
 
 router.get('/pacientes/:noafiliacion', async (req, res) => {
     try {
-        const query = `
-            SELECT 
-                p.*, 
-                d.nombre AS departamento_nombre,
-                e.descripcion AS estado_descripcion,
-                a.descripcion AS acceso_descripcion,
-                j.descripcion AS jornada_descripcion
-            FROM tbl_pacientes p
-            LEFT JOIN tbl_departamento d ON p.id_departamento = d.id_departamento
-            LEFT JOIN tbl_estados_paciente e ON p.id_estado = e.id_estado
-            LEFT JOIN tbl_acceso_vascular a ON p.id_acceso = a.id_acceso
-            LEFT JOIN tbl_jornadas j ON p.id_jornada = j.id_jornada
-            WHERE p.no_afiliacion = $1
-        `;
-        const result = await pool.query(query, [req.params.noafiliacion]);
-        if (!result.rows.length) {
-            return res.status(404).json({ error: 'Paciente no encontrado.' });
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            const cur = 'cur_pac_af';
+            await client.query('CALL public.sp_paciente_por_afiliacion($1,$2)', [req.params.noafiliacion, cur]);
+            const r = await client.query(`FETCH ALL FROM "${cur}"`);
+            await client.query('COMMIT');
+            if (!r.rows?.length) return res.status(404).json({ error: 'Paciente no encontrado.' });
+            return res.json(r.rows[0]);
+        } catch (e) {
+            try { await client.query('ROLLBACK'); } catch (_) {}
+            console.error('Error SP sp_paciente_por_afiliacion:', e);
+            return res.status(500).json({ error: 'Error al obtener paciente.' });
+        } finally {
+            client.release();
         }
-        res.json(result.rows[0]);
     } catch (error) {
         console.error('Error al obtener paciente:', error);
         res.status(500).json({ error: 'Error al obtener paciente.', detalle: error.message });
@@ -280,25 +353,22 @@ router.get('/pacientes/:noafiliacion', async (req, res) => {
 // Buscar paciente por DPI
 router.get('/pacientes/dpi/:dpi', async (req, res) => {
     try {
-        const query = `
-            SELECT 
-                p.*, 
-                d.nombre AS departamento_nombre,
-                e.descripcion AS estado_descripcion,
-                a.descripcion AS acceso_descripcion,
-                j.descripcion AS jornada_descripcion
-            FROM tbl_pacientes p
-            LEFT JOIN tbl_departamento d ON p.id_departamento = d.id_departamento
-            LEFT JOIN tbl_estados_paciente e ON p.id_estado = e.id_estado
-            LEFT JOIN tbl_acceso_vascular a ON p.id_acceso = a.id_acceso
-            LEFT JOIN tbl_jornadas j ON p.id_jornada = j.id_jornada
-            WHERE p.dpi = $1
-        `;
-        const result = await pool.query(query, [req.params.dpi]);
-        if (!result.rows.length) {
-            return res.status(404).json({ error: 'Paciente no encontrado.' });
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            const cur = 'cur_pac_dpi';
+            await client.query('CALL public.sp_paciente_por_dpi($1,$2)', [req.params.dpi, cur]);
+            const r = await client.query(`FETCH ALL FROM "${cur}"`);
+            await client.query('COMMIT');
+            if (!r.rows?.length) return res.status(404).json({ error: 'Paciente no encontrado.' });
+            return res.json(r.rows[0]);
+        } catch (e) {
+            try { await client.query('ROLLBACK'); } catch (_) {}
+            console.error('Error SP sp_paciente_por_dpi:', e);
+            return res.status(500).json({ error: 'Error al buscar paciente por DPI.' });
+        } finally {
+            client.release();
         }
-        res.json(result.rows[0]);
     } catch (error) {
         console.error('Error al buscar paciente por DPI:', error);
         res.status(500).json({ error: 'Error al buscar paciente por DPI.', detalle: error.message });
@@ -308,78 +378,21 @@ router.get('/pacientes/dpi/:dpi', async (req, res) => {
 // Historial básico por paciente (por ahora basado en la fila actual de paciente)
 router.get('/historial/:noafiliacion', async (req, res) => {
     try {
-        const query = `
-            WITH formularios AS (
-                SELECT 
-                    hf.no_afiliacion,
-                    hf.numero_formulario AS no_formulario,
-                    COALESCE(hf.inicio_prest_servicios::timestamp, hf.fin_prest_servicios::timestamp, hf.fecha_creacion) AS fecha,
-                    CASE 
-                        WHEN ROW_NUMBER() OVER (PARTITION BY hf.no_afiliacion ORDER BY COALESCE(hf.inicio_prest_servicios::timestamp, hf.fin_prest_servicios::timestamp, hf.fecha_creacion) ASC) = 1
-                            THEN 'Nuevo Ingreso'
-                        ELSE 'Activo'
-                    END AS estado,
-                    NULL::text AS observaciones,
-                    CASE 
-                        WHEN hf.inicio_prest_servicios IS NOT NULL OR hf.fin_prest_servicios IS NOT NULL THEN 
-                            COALESCE(to_char(hf.inicio_prest_servicios, 'DD/MM/YYYY'), '') || ' - ' || COALESCE(to_char(hf.fin_prest_servicios, 'DD/MM/YYYY'), '')
-                        ELSE NULL
-                    END AS periodo,
-                    NULL::text AS causa_egreso,
-                    'Registro de formulario' AS descripcion
-                FROM tbl_historial_formularios hf
-                WHERE hf.no_afiliacion = $1
-            )
-            SELECT no_formulario, estado, fecha, observaciones, periodo, causa_egreso, descripcion
-            FROM (
-                -- Formularios: primero definimos estado por ranking de antigüedad
-                SELECT 
-                    f.no_formulario,
-                    f.estado,
-                    f.fecha,
-                    f.observaciones,
-                    f.periodo,
-                    f.causa_egreso,
-                    f.descripcion
-                FROM formularios f
-
-                UNION ALL
-
-                -- Reingresos
-                SELECT 
-                    r.numero_formulario              AS no_formulario,
-                    'Reingreso'                      AS estado,
-                    COALESCE(r.fecha_reingreso::timestamp, r.fecha_creacion) AS fecha,
-                    r.observaciones                  AS observaciones,
-                    NULL::text                       AS periodo,
-                    NULL::text                       AS causa_egreso,
-                    'Reingreso del paciente'         AS descripcion
-                FROM tbl_reingresos r
-                WHERE r.no_afiliacion = $1
-
-                UNION ALL
-
-                -- Egresos
-                SELECT 
-                    NULL::text                       AS no_formulario,
-                    CASE WHEN LOWER(COALESCE(ce.descripcion, '')) = 'fallecido' THEN 'Fallecido' ELSE 'Egresado' END AS estado,
-                    COALESCE(e.fecha_egreso::timestamp, e.fecha_creacion) AS fecha,
-                    e.observaciones                  AS observaciones,
-                    NULL::text                       AS periodo,
-                    ce.descripcion                   AS causa_egreso,
-                    e.descripcion                    AS descripcion
-                FROM tbl_egresos e
-                LEFT JOIN tbl_causa_egreso ce ON ce.id_causa = e.id_causa_egreso
-                WHERE e.no_afiliacion = $1
-            ) t
-            ORDER BY t.fecha ASC
-        `;
-        const result = await pool.query(query, [req.params.noafiliacion]);
-        // Devolver como lista para facilitar múltiples filas en el futuro
-        if (!result.rows.length) {
-            return res.json([]);
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            const cur = 'cur_hist_pac';
+            await client.query('CALL public.sp_historial_paciente($1,$2)', [req.params.noafiliacion, cur]);
+            const r = await client.query(`FETCH ALL FROM "${cur}"`);
+            await client.query('COMMIT');
+            return res.json(r.rows || []);
+        } catch (e) {
+            try { await client.query('ROLLBACK'); } catch (_) {}
+            console.error('Error SP sp_historial_paciente:', e);
+            return res.status(500).json({ error: 'Error al obtener historial.' });
+        } finally {
+            client.release();
         }
-        return res.json(result.rows);
     } catch (error) {
         console.error('Error al obtener historial:', error);
         res.status(500).json({ error: 'Error al obtener historial.', detalle: error.message });
@@ -390,23 +403,21 @@ router.get('/historial/:noafiliacion', async (req, res) => {
 router.get('/referencias/:noafiliacion', async (req, res) => {
     try {
         const noafiliacion = req.params.noafiliacion;
-        const query = `
-            SELECT 
-                r.id_referencia,
-                r.no_afiliacion,
-                r.fecha_referencia,
-                r.motivo_traslado,
-                r.id_medico,
-                m.nombre_medico AS nombre_medico,
-                r.especialidad_referencia
-            FROM public.tbl_referencias r
-            LEFT JOIN public.tbl_medicos m ON m.id_medico = r.id_medico
-            WHERE r.no_afiliacion = $1
-              AND (r.fecha_eliminacion IS NULL)
-            ORDER BY r.fecha_referencia DESC NULLS LAST, r.fecha_creacion DESC NULLS LAST
-        `;
-        const result = await pool.query(query, [noafiliacion]);
-        return res.json(result.rows || []);
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            const cur = 'cur_ref_pac';
+            await client.query('CALL public.sp_referencias_por_afiliacion($1,$2)', [noafiliacion, cur]);
+            const r = await client.query(`FETCH ALL FROM "${cur}"`);
+            await client.query('COMMIT');
+            return res.json(r.rows || []);
+        } catch (e) {
+            try { await client.query('ROLLBACK'); } catch (_) {}
+            console.error('Error SP sp_referencias_por_afiliacion:', e);
+            return res.status(500).json({ error: 'Error al obtener referencias' });
+        } finally {
+            client.release();
+        }
     } catch (error) {
         console.error('Error al obtener referencias:', error);
         return res.status(500).json({ error: 'Error al obtener referencias', detalle: error.message });
@@ -417,25 +428,21 @@ router.get('/referencias/:noafiliacion', async (req, res) => {
 router.get('/nutricion/:noafiliacion', async (req, res) => {
     try {
         const noafiliacion = req.params.noafiliacion;
-        const query = `
-            SELECT 
-                n.id_informe,
-                n.no_afiliacion,
-                n.motivo_consulta,
-                n.estado_nutricional,
-                n.observaciones,
-                n.usuario_creacion,
-                n.fecha_creacion,
-                n.altura_cm,
-                n.peso_kg,
-                n.imc
-            FROM public.tbl_informe_nutricion n
-            WHERE n.no_afiliacion = $1
-              AND (n.fecha_eliminacion IS NULL)
-            ORDER BY n.fecha_creacion DESC NULLS LAST
-        `;
-        const result = await pool.query(query, [noafiliacion]);
-        return res.json(result.rows || []);
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            const cur = 'cur_nutri_pac';
+            await client.query('CALL public.sp_nutricion_por_afiliacion($1,$2)', [noafiliacion, cur]);
+            const r = await client.query(`FETCH ALL FROM "${cur}"`);
+            await client.query('COMMIT');
+            return res.json(r.rows || []);
+        } catch (e) {
+            try { await client.query('ROLLBACK'); } catch (_) {}
+            console.error('Error SP sp_nutricion_por_afiliacion:', e);
+            return res.status(500).json({ error: 'Error al obtener informes de nutrición' });
+        } finally {
+            client.release();
+        }
     } catch (error) {
         console.error('Error al obtener informes de nutrición:', error);
         return res.status(500).json({ error: 'Error al obtener informes de nutrición', detalle: error.message });
@@ -446,23 +453,21 @@ router.get('/nutricion/:noafiliacion', async (req, res) => {
 router.get('/psicologia/:noafiliacion', async (req, res) => {
     try {
         const noafiliacion = req.params.noafiliacion;
-        const query = `
-            SELECT 
-                p.id_informe,
-                p.no_afiliacion,
-                p.motivo_consulta,
-                p.tipo_consulta,
-                p.observaciones,
-                p.tipo_atencion,
-                p.pronostico,
-                p.kdqol
-            FROM public.tbl_informes_psicologia p
-            WHERE p.no_afiliacion = $1
-              AND (p.fecha_eliminacion IS NULL)
-            ORDER BY p.fecha_creacion DESC NULLS LAST
-        `;
-        const result = await pool.query(query, [noafiliacion]);
-        return res.json(result.rows || []);
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            const cur = 'cur_psico_pac';
+            await client.query('CALL public.sp_psicologia_por_afiliacion($1,$2)', [noafiliacion, cur]);
+            const r = await client.query(`FETCH ALL FROM "${cur}"`);
+            await client.query('COMMIT');
+            return res.json(r.rows || []);
+        } catch (e) {
+            try { await client.query('ROLLBACK'); } catch (_) {}
+            console.error('Error SP sp_psicologia_por_afiliacion:', e);
+            return res.status(500).json({ error: 'Error al obtener informes de psicología' });
+        } finally {
+            client.release();
+        }
     } catch (error) {
         console.error('Error al obtener informes de psicología:', error);
         return res.status(500).json({ error: 'Error al obtener informes de psicología', detalle: error.message });
@@ -473,22 +478,21 @@ router.get('/psicologia/:noafiliacion', async (req, res) => {
 router.get('/formularios/:noafiliacion', async (req, res) => {
     try {
         const noafiliacion = req.params.noafiliacion;
-        const query = `
-            SELECT 
-                hf.numero_formulario,
-                hf.sesiones_autorizadas_mes,
-                hf.sesiones_realizadas_mes,
-                hf.sesiones_no_realizadas_mes,
-                hf.inicio_prest_servicios,
-                hf.fin_prest_servicios,
-                hf.id_historial
-            FROM public.tbl_historial_formularios hf
-            WHERE hf.no_afiliacion = $1
-              AND (hf.fecha_eliminacion IS NULL)
-            ORDER BY COALESCE(hf.inicio_prest_servicios, hf.fecha_creacion) DESC NULLS LAST, hf.fecha_creacion DESC NULLS LAST
-        `;
-        const result = await pool.query(query, [noafiliacion]);
-        return res.json(result.rows || []);
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            const cur = 'cur_form_pac';
+            await client.query('CALL public.sp_formularios_por_afiliacion($1,$2)', [noafiliacion, cur]);
+            const r = await client.query(`FETCH ALL FROM "${cur}"`);
+            await client.query('COMMIT');
+            return res.json(r.rows || []);
+        } catch (e) {
+            try { await client.query('ROLLBACK'); } catch (_) {}
+            console.error('Error SP sp_formularios_por_afiliacion:', e);
+            return res.status(500).json({ error: 'Error al obtener formularios' });
+        } finally {
+            client.release();
+        }
     } catch (error) {
         console.error('Error al obtener formularios:', error);
         return res.status(500).json({ error: 'Error al obtener formularios', detalle: error.message });
@@ -499,19 +503,21 @@ router.get('/formularios/:noafiliacion', async (req, res) => {
 router.get('/faltistas/:noafiliacion', async (req, res) => {
     try {
         const noafiliacion = req.params.noafiliacion;
-        const query = `
-            SELECT 
-                f.no_afiliacion AS noafiliacion,
-                c.descripcion AS clinica,
-                f.fecha_falta   AS fechafalta,
-                f.motivo_falta  AS motivo_falta
-            FROM public.tbl_faltistas f
-            INNER JOIN public.tbl_clinica c ON c.id_clinica = f.id_clinica
-            WHERE f.no_afiliacion = $1
-            ORDER BY f.fecha_falta DESC
-        `;
-        const { rows } = await pool.query(query, [noafiliacion]);
-        return res.json(rows || []);
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            const cur = 'cur_falt_pac';
+            await client.query('CALL public.sp_faltistas_por_afiliacion($1,$2)', [noafiliacion, cur]);
+            const r = await client.query(`FETCH ALL FROM "${cur}"`);
+            await client.query('COMMIT');
+            return res.json(r.rows || []);
+        } catch (e) {
+            try { await client.query('ROLLBACK'); } catch (_) {}
+            console.error('Error SP sp_faltistas_por_afiliacion:', e);
+            return res.status(500).json({ error: 'Error al obtener faltistas del paciente' });
+        } finally {
+            client.release();
+        }
     } catch (error) {
         console.error('Error al obtener faltistas del paciente:', error);
         return res.status(500).json({ error: 'Error al obtener faltistas del paciente' });
@@ -522,22 +528,29 @@ router.get('/faltistas/:noafiliacion', async (req, res) => {
 router.get('/faltistas/dpi/:dpi', async (req, res) => {
     try {
         const dpi = req.params.dpi;
-        const p = await pool.query('SELECT no_afiliacion FROM tbl_pacientes WHERE dpi = $1', [dpi]);
-        if (!p.rows.length) return res.json([]);
-        const noafiliacion = p.rows[0].no_afiliacion;
-        const query = `
-            SELECT 
-                f.no_afiliacion AS noafiliacion,
-                c.descripcion AS clinica,
-                f.fecha_falta   AS fechafalta,
-                f.motivo_falta  AS motivo_falta
-            FROM public.tbl_faltistas f
-            INNER JOIN public.tbl_clinica c ON c.id_clinica = f.id_clinica
-            WHERE f.no_afiliacion = $1
-            ORDER BY f.fecha_falta DESC
-        `;
-        const { rows } = await pool.query(query, [noafiliacion]);
-        return res.json(rows || []);
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            const curRes = 'cur_resolve_af_falt';
+            await client.query('CALL public.sp_resolver_no_afiliacion_por_dpi($1,$2)', [dpi, curRes]);
+            const rRes = await client.query(`FETCH ALL FROM "${curRes}"`);
+            const noafiliacion = rRes.rows?.[0]?.no_afiliacion || null;
+            if (!noafiliacion) {
+                await client.query('COMMIT');
+                return res.json([]);
+            }
+            const cur = 'cur_falt_pac_dpi';
+            await client.query('CALL public.sp_faltistas_por_afiliacion($1,$2)', [noafiliacion, cur]);
+            const r = await client.query(`FETCH ALL FROM "${cur}"`);
+            await client.query('COMMIT');
+            return res.json(r.rows || []);
+        } catch (e) {
+            try { await client.query('ROLLBACK'); } catch (_) {}
+            console.error('Error SP sp_faltistas_por_afiliacion (dpi):', e);
+            return res.status(500).json({ error: 'Error al obtener faltistas por DPI' });
+        } finally {
+            client.release();
+        }
     } catch (error) {
         console.error('Error al obtener faltistas por DPI:', error);
         return res.status(500).json({ error: 'Error al obtener faltistas por DPI' });
@@ -572,19 +585,24 @@ function resolveFotoPathLocal(paciente, noafiliacion) {
 router.get('/check-photo/:id', async (req, res) => {
     try {
         const raw = String(req.params.id || '').trim();
-        const id = raw.replace(/\.[a-zA-Z0-9]+$/, ''); // ej: 123.jpg -> 123
+        const id = raw.replace(/\.[a-zA-Z0-9]+$/, '');
 
-        // Lee desde DB la url_foto (si existe)
-        let dbRow = null;
+        const client = await pool.connect();
+        let urlFoto = null;
         try {
-            const r = await pool.query(
-                'SELECT url_foto FROM public.tbl_pacientes WHERE no_afiliacion = $1',
-                [id]
-            );
-            dbRow = r.rows?.[0] || null;
-        } catch (_) { }
+            await client.query('BEGIN');
+            const cur = 'cur_pac_url_foto';
+            await client.query('CALL public.sp_paciente_url_foto($1,$2)', [id, cur]);
+            const r = await client.query(`FETCH ALL FROM "${cur}"`);
+            await client.query('COMMIT');
+            urlFoto = r.rows?.[0]?.url_foto || null;
+        } catch (e) {
+            try { await client.query('ROLLBACK'); } catch (_) {}
+        } finally {
+            client.release();
+        }
 
-        const paciente = { urlfoto: dbRow?.url_foto || null };
+        const paciente = { urlfoto: urlFoto };
         const fotoPath = resolveFotoPathLocal(paciente, id);
 
         const wantDebug = 'debug' in req.query;

@@ -230,7 +230,7 @@ const ConsultaPacientes = () => {
     React.useEffect(() => { setPageLaboratorios(1); }, [searchLaboratorios]);
 
     // Derivados: filtrados, paginados y total de páginas por sección
-    const histFiltered = React.useMemo(() => filterItems(historial, searchHistorial, ['estado','no_formulario','descripcion','observaciones','causa_egreso','periodo']), [historial, searchHistorial]);
+    const histFiltered = React.useMemo(() => filterItems(historial, searchHistorial, ['numero_gestion','estado','no_formulario','descripcion','observaciones','causa_egreso','periodo']), [historial, searchHistorial]);
     const histTotalPages = Math.max(1, Math.ceil(histFiltered.length / pageSizeHistorial));
     const histPageItems = React.useMemo(() => histFiltered.slice((pageHistorial - 1) * pageSizeHistorial, pageHistorial * pageSizeHistorial), [histFiltered, pageHistorial, pageSizeHistorial]);
 
@@ -612,8 +612,8 @@ const ConsultaPacientes = () => {
         const segundoNombre = it.segundo_nombre ?? it.segundonombre ?? '';
         const primerApellido = it.primer_apellido ?? it.primerapellido ?? '';
         const segundoApellido = it.segundo_apellido ?? it.segundoapellido ?? '';
-        const sexo = it.sexo ?? '';
         const paciente = [primerNombre, segundoNombre, primerApellido, segundoApellido].filter(Boolean).join(' ');
+        const sexo = it.sexo ?? '';
         const fecha = it.fecha_laboratorio ? new Date(it.fecha_laboratorio).toLocaleDateString() : (it.fecha ? new Date(it.fecha).toLocaleDateString() : '');
 
         const excludeKeys = new Set([
@@ -622,21 +622,37 @@ const ConsultaPacientes = () => {
         const entries = Object.entries(it || {}).filter(([k,v]) => !excludeKeys.has(k) && v !== null && v !== undefined && v !== '');
         const pretty = (s) => String(s).replace(/_/g,' ').replace(/\b\w/g, m => m.toUpperCase());
         let paramRows = '';
-        if (Array.isArray(it.parametros) && it.parametros.length > 0) {
-          paramRows = it.parametros.map((p) => `
-            <tr>
-              <td>${p.parametro ?? ''}</td>
-              <td>${p.valor ?? ''}</td>
-            </tr>
-          `).join('');
-        } else {
-          paramRows = entries.map(([k,v]) => `
-            <tr>
-              <td>${pretty(k)}</td>
-              <td>${typeof v === 'boolean' ? (v ? 'Sí' : 'No') : v}</td>
-            </tr>
-          `).join('');
+        if (it.examen_realizado) {
+          if (Array.isArray(it.parametros) && it.parametros.length > 0) {
+            paramRows = it.parametros.map((p) => `
+              <tr>
+                <td>${p.parametro ?? ''}</td>
+                <td>${p.valor ?? ''}</td>
+              </tr>
+            `).join('');
+          } else {
+            paramRows = entries.map(([k,v]) => `
+              <tr>
+                <td>${pretty(k)}</td>
+                <td>${typeof v === 'boolean' ? (v ? 'Sí' : 'No') : v}</td>
+              </tr>
+            `).join('');
+          }
         }
+        const paramsSection = it.examen_realizado ? `
+            <h2>Parámetros</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Parámetro</th>
+                  <th>Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${paramRows || '<tr><td colspan="2">—</td></tr>'}
+              </tbody>
+            </table>
+        ` : '';
 
         const html = `
           <html>
@@ -685,18 +701,7 @@ const ConsultaPacientes = () => {
             </div>
             <h2>Observaciones</h2>
             <div class="box">${(it.observacion || '—').toString().replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-            <h2>Parámetros</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Parámetro</th>
-                  <th>Valor</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${paramRows || '<tr><td colspan="2">—</td></tr>'}
-              </tbody>
-            </table>
+            ${paramsSection}
             <h2>Últimos parámetros previos</h2>
             <table>
               <thead>
@@ -1494,7 +1499,7 @@ const ConsultaPacientes = () => {
                     dims.forEach(d => {
                         const num = getNum(obj?.[d.key]);
                         if (num != null) {
-                            kdqolRows.push([d.label, Number(num).toFixed(2)]);
+                            kdqolRows.push({ label: d.label, value: num });
                             sum += num;
                             count += 1;
                         }
@@ -2064,7 +2069,7 @@ const ConsultaPacientes = () => {
                                                         {histPageItems && histPageItems.length > 0 ? (
                                                             histPageItems.map((h, idx) => (
                                                                 <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{(pageHistorial - 1) * pageSizeHistorial + idx + 1}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{h.numero_gestion ?? ((pageHistorial - 1) * pageSizeHistorial + idx + 1)}</td>
                                                                     <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{h.estado || ''}</td>
                                                                     <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{h.no_formulario || ''}</td>
                                                                     <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{formatearFecha(h.fecha) || ''}</td>
@@ -2076,7 +2081,7 @@ const ConsultaPacientes = () => {
                                                             ))
                                                         ) : (
                                                             <tr>
-                                                                <td colSpan={6} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
+                                                                <td colSpan={8} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
                                                             </tr>
                                                         )}
                                                     </tbody>
@@ -2352,7 +2357,22 @@ const ConsultaPacientes = () => {
                                                                         if (num != null) { rows.push({ label: d.label, value: num }); s += num; c += 1; }
                                                                     });
                                                                 }
-                                                                const prom = c > 0 ? Math.round((s / c) * 100) / 100 : null;
+                                                                const promedio = c > 0 ? Math.round((s / c) * 100) / 100 : null;
+                                                                const kdqolMetaHtml = kdqolObj ? `<div class="meta" style="color:#64748b; font-size:12px; margin:4px 0 8px;">ID KDQOL: ${kdqolObj.id_kdqol ?? '—'} | Fecha aplicación: ${kdqolObj.fecha_aplicacion ? new Date(kdqolObj.fecha_aplicacion).toLocaleString() : '—'}</div>` : '';
+                                                                const kdqolTableHtml = rows.length > 0 ? `
+                                                                  <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                                                                    <thead>
+                                                                      <tr>
+                                                                        <th style="text-align:left; border:1px solid #e5e7eb; padding:6px 8px; background:#f1f5f9;">Dimensión</th>
+                                                                        <th style="text-align:left; border:1px solid #e5e7eb; padding:6px 8px; background:#f1f5f9;">Puntaje</th>
+                                                                      </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                      ${rows.map(r => `<tr><td style='border:1px solid #e5e7eb; padding:6px 8px;'>${r.label}</td><td style='border:1px solid #e5e7eb; padding:6px 8px;'>${r.value}</td></tr>`).join('')}
+                                                                    </tbody>
+                                                                  </table>
+                                                                  ${promedio != null ? `<div style="margin-top:8px;"><span class='label'>Promedio KDQOL:</span> ${promedio}</div>` : ''}
+                                                                ` : `<div class="box">—</div>`;
                                                                 return (
                                                                     <div className="space-y-4 text-sm">
                                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2399,7 +2419,7 @@ const ConsultaPacientes = () => {
                                                                                             ))}
                                                                                         </tbody>
                                                                                     </table>
-                                                                                    <div className="mt-2"><span className="font-semibold">Promedio KDQOL:</span> {prom != null ? prom : '—'}</div>
+                                                                                    <div className="mt-2"><span className="font-semibold">Promedio KDQOL:</span> {promedio != null ? promedio : '—'}</div>
                                                                                 </div>
                                                                             ) : (
                                                                                 <div className="mt-1 p-2 rounded bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-200">—</div>
@@ -2849,38 +2869,40 @@ const ConsultaPacientes = () => {
                                                                             <span className="font-semibold">Observaciones:</span>
                                                                             <div className="mt-1 p-2 rounded bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-200">{it.observacion || '—'}</div>
                                                                         </div>
-                                                                        <div>
-                                                                            <span className="font-semibold">Parámetros:</span>
-                                                                            <div className="mt-2 overflow-x-auto">
-                                                                                <table className="min-w-full border border-slate-200 dark:border-slate-700 text-xs">
-                                                                                    <thead>
-                                                                                        <tr className="bg-slate-100 dark:bg-slate-700">
-                                                                                            <th className="px-2 py-1 text-left">Parámetro</th>
-                                                                                            <th className="px-2 py-1 text-left">Valor</th>
-                                                                                        </tr>
-                                                                                    </thead>
-                                                                                    <tbody>
-                                                                                        {(parametros.length > 0) ? (
-                                                                                            parametros.map((p, i) => (
-                                                                                                <tr key={`${p.idparametro || i}-${p.parametro}`} className="border-t border-slate-200 dark:border-slate-700">
-                                                                                                    <td className="px-2 py-1">{p.parametro ?? ''}</td>
-                                                                                                    <td className="px-2 py-1">{p.valor ?? ''}</td>
+                                                                        {it.examen_realizado && (
+                                                                            <div>
+                                                                                <span className="font-semibold">Parámetros:</span>
+                                                                                <div className="mt-2 overflow-x-auto">
+                                                                                    <table className="min-w-full border border-slate-200 dark:border-slate-700 text-xs">
+                                                                                        <thead>
+                                                                                            <tr className="bg-slate-100 dark:bg-slate-700">
+                                                                                                <th className="px-2 py-1 text-left">Parámetro</th>
+                                                                                                <th className="px-2 py-1 text-left">Valor</th>
+                                                                                            </tr>
+                                                                                        </thead>
+                                                                                        <tbody>
+                                                                                            {(parametros.length > 0) ? (
+                                                                                                parametros.map((p, i) => (
+                                                                                                    <tr key={`${p.idparametro || i}-${p.parametro}`} className="border-t border-slate-200 dark:border-slate-700">
+                                                                                                        <td className="px-2 py-1">{p.parametro ?? ''}</td>
+                                                                                                        <td className="px-2 py-1">{p.valor ?? ''}</td>
+                                                                                                    </tr>
+                                                                                                ))
+                                                                                            ) : entries.length === 0 ? (
+                                                                                                <tr>
+                                                                                                    <td className="px-2 py-1" colSpan={2}>—</td>
                                                                                                 </tr>
-                                                                                            ))
-                                                                                        ) : entries.length === 0 ? (
-                                                                                            <tr>
-                                                                                                <td className="px-2 py-1" colSpan={2}>—</td>
-                                                                                            </tr>
-                                                                                        ) : entries.map(([k,v]) => (
-                                                                                            <tr key={k} className="border-t border-slate-200 dark:border-slate-700">
-                                                                                                <td className="px-2 py-1">{pretty(k)}</td>
-                                                                                                <td className="px-2 py-1">{typeof v === 'boolean' ? (v ? 'Sí' : 'No') : String(v)}</td>
-                                                                                            </tr>
-                                                                                        ))}
-                                                                                    </tbody>
-                                                                                </table>
+                                                                                            ) : entries.map(([k,v]) => (
+                                                                                                <tr key={k} className="border-t border-slate-200 dark:border-slate-700">
+                                                                                                    <td className="px-2 py-1">{pretty(k)}</td>
+                                                                                                    <td className="px-2 py-1">{typeof v === 'boolean' ? (v ? 'Sí' : 'No') : String(v)}</td>
+                                                                                                </tr>
+                                                                                            ))}
+                                                                                        </tbody>
+                                                                                    </table>
+                                                                                </div>
                                                                             </div>
-                                                                        </div>
+                                                                        )}
                                                                         <div>
                                                                             <span className="font-semibold">Últimos parámetros previos:</span>
                                                                             <div className="mt-2">
