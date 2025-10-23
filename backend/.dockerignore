@@ -1,0 +1,25 @@
+# Dependencias y caches
+node_modules
+npm-debug.log
+.yarn
+.pnpm-store
+
+# Control de versiones / editor
+.git
+.gitignore
+.vscode
+.idea
+
+# Archivos locales / build
+.env
+.env.*
+logs
+*.log
+tmp
+coverage
+dist
+
+# Otros
+Dockerfile
+docker-compose.yml
+*.md
