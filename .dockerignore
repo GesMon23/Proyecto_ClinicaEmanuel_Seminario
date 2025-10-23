@@ -1,0 +1,22 @@
+# Dependencias
+node_modules
+
+# Control de versiones / editor
+.git
+.gitignore
+.vscode
+.idea
+
+# Builds locales
+dist
+build
+
+# Variables locales / otros
+.env
+.env.*
+*.log
+.DS_Store
+
+# Otros
+Dockerfile
+docker-compose.yml

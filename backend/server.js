@@ -14,11 +14,19 @@ const nz = (v) => (v === undefined || v === null || v === '' ? null : v);
 
 // Configuración de CORS y JSON body parsing
 const allowedOrigins = new Set([
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
+  // prod
+  'http://172.235.145.142',
+  'http://clinicaemanuel.com.gt',
+
+  // si a veces lo sirves en 3000:
+  'http://172.235.145.142:3000',
+  'http://clinicaemanuel.com.gt:3000',
+
+  // desarrollo local
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
 ]);
+
 app.use(cors({
     origin: (origin, callback) => {
         // Permitir tools como curl/postman (sin origin) y los orígenes de la lista
