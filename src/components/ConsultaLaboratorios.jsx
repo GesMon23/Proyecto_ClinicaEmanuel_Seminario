@@ -52,21 +52,38 @@ const ConsultaLaboratorios = () => {
     const entries = Object.entries(it || {}).filter(([k,v]) => !excludeKeys.has(k) && v !== null && v !== undefined && v !== '');
     const pretty = (s) => String(s).replace(/_/g,' ').replace(/\b\w/g, m => m.toUpperCase());
     let paramRows = '';
-    if (Array.isArray(it.parametros) && it.parametros.length > 0) {
-      paramRows = it.parametros.map((p, idx) => `
-        <tr>
-          <td>${p.parametro ?? ''}</td>
-          <td>${p.valor ?? ''}</td>
-        </tr>
-      `).join('');
-    } else {
-      paramRows = entries.map(([k,v]) => `
-        <tr>
-          <td>${pretty(k)}</td>
-          <td>${typeof v === 'boolean' ? (v ? 'Sí' : 'No') : v}</td>
-        </tr>
-      `).join('');
+    if (it.examen_realizado) {
+      if (Array.isArray(it.parametros) && it.parametros.length > 0) {
+        paramRows = it.parametros.map((p, idx) => `
+          <tr>
+            <td>${p.parametro ?? ''}</td>
+            <td>${p.valor ?? ''}</td>
+          </tr>
+        `).join('');
+      } else {
+        paramRows = entries.map(([k,v]) => `
+          <tr>
+            <td>${pretty(k)}</td>
+            <td>${typeof v === 'boolean' ? (v ? 'Sí' : 'No') : v}</td>
+          </tr>
+        `).join('');
+      }
     }
+
+    const paramsSection = it.examen_realizado ? `
+        <h2>Parámetros</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Parámetro</th>
+              <th>Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${paramRows || '<tr><td colspan="2">—</td></tr>'}
+          </tbody>
+        </table>
+    ` : '';
 
     // Construir filas para "Últimos parámetros previos"
     const ultimosData = Array.isArray(ultimos?.data) ? ultimos.data : [];
@@ -127,18 +144,7 @@ const ConsultaLaboratorios = () => {
         </div>
         <h2>Observaciones</h2>
         <div class="box">${(it.observacion || '—').toString().replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-        <h2>Parámetros</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Parámetro</th>
-              <th>Valor</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${paramRows || '<tr><td colspan="2">—</td></tr>'}
-          </tbody>
-        </table>
+        ${paramsSection}
         <h2>Últimos parámetros previos</h2>
         <table>
           <thead>
@@ -569,38 +575,40 @@ const ConsultaLaboratorios = () => {
                         {it.observacion || '—'}
                       </div>
                     </div>
-                    <div>
-                      <span className="font-semibold">Parámetros:</span>
-                      <div className="mt-2 overflow-x-auto">
-                        <table className="min-w-full border border-slate-200 dark:border-slate-700 text-xs">
-                          <thead>
-                            <tr className="bg-slate-100 dark:bg-slate-700">
-                              <th className="px-2 py-1 text-left">Parámetro</th>
-                              <th className="px-2 py-1 text-left">Valor</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {(parametros.length > 0) ? (
-                              parametros.map(p => (
-                                <tr key={`${p.idparametro}-${p.parametro}`} className="border-t border-slate-200 dark:border-slate-700">
-                                  <td className="px-2 py-1">{p.parametro ?? ''}</td>
-                                  <td className="px-2 py-1">{p.valor ?? ''}</td>
+                    {it.examen_realizado && (
+                      <div>
+                        <span className="font-semibold">Parámetros:</span>
+                        <div className="mt-2 overflow-x-auto">
+                          <table className="min-w-full border border-slate-200 dark:border-slate-700 text-xs">
+                            <thead>
+                              <tr className="bg-slate-100 dark:bg-slate-700">
+                                <th className="px-2 py-1 text-left">Parámetro</th>
+                                <th className="px-2 py-1 text-left">Valor</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(parametros.length > 0) ? (
+                                parametros.map(p => (
+                                  <tr key={`${p.idparametro}-${p.parametro}`} className="border-t border-slate-200 dark:border-slate-700">
+                                    <td className="px-2 py-1">{p.parametro ?? ''}</td>
+                                    <td className="px-2 py-1">{p.valor ?? ''}</td>
+                                  </tr>
+                                ))
+                              ) : entries.length === 0 ? (
+                                <tr>
+                                  <td className="px-2 py-1" colSpan={2}>—</td>
                                 </tr>
-                              ))
-                            ) : entries.length === 0 ? (
-                              <tr>
-                                <td className="px-2 py-1" colSpan={2}>—</td>
-                              </tr>
-                            ) : entries.map(([k,v]) => (
-                              <tr key={k} className="border-t border-slate-200 dark:border-slate-700">
-                                <td className="px-2 py-1">{pretty(k)}</td>
-                                <td className="px-2 py-1">{typeof v === 'boolean' ? (v ? 'Sí' : 'No') : String(v)}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                              ) : entries.map(([k,v]) => (
+                                <tr key={k} className="border-t border-slate-200 dark:border-slate-700">
+                                  <td className="px-2 py-1">{pretty(k)}</td>
+                                  <td className="px-2 py-1">{typeof v === 'boolean' ? (v ? 'Sí' : 'No') : String(v)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
-                    </div>
+                    )}
                     <div>
                       <span className="font-semibold">Últimos parámetros previos:</span>
                       <div className="mt-2">
