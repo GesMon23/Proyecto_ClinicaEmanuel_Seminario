@@ -58,7 +58,7 @@ router.get('/Aaccesos-vascular', async (req, res) => {
         res.status(500).json({ error: 'Error al obtener accesos vasculares.' });
   }
 });
-
+//Cambios
 // Endpoint para obtener jornadas
 router.get('/Ajornada', async (req, res) => {
   try {
