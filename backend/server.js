@@ -118,6 +118,8 @@ app.use('/fotos', express.static(fotosDir));
 // app.use(updateMasivoPacientesRouter);
 // Usar router de login/roles (centralizado en BackLogin.js)
 app.use(backLoginRouter);
+// Exponer también bajo prefijo /api para el frontend que usa baseURL '/api'
+app.use('/api', backLoginRouter);
 // Usar router de registro de formularios
 app.use(backRegistroFormulariosRouter);
 // Usar router de registro de empleados
