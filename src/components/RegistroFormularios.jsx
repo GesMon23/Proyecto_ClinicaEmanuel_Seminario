@@ -486,7 +486,7 @@ const RegistroFormularios = () => {
                 }}>
                   <img
                     alt="Foto del paciente"
-                    src={p.urlfoto ? `http://localhost:3001/fotos/${p.urlfoto.split(/[\\\/]/).pop()}?${Date.now()}` : require("assets/img/default-avatar.png")}
+                    src={p.urlfoto ? `/fotos/${p.urlfoto.split(/[\\\/]/).pop()}?${Date.now()}` : require("assets/img/default-avatar.png")}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     onError={e => {
                       e.target.onerror = null;

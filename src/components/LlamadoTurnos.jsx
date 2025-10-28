@@ -715,9 +715,10 @@ const LlamadoTurnos = () => {
                                             <div className="w-36 h-36 rounded-xl overflow-hidden border-4 border-green-100 dark:border-green-900 bg-gray-100 dark:bg-slate-700 flex-shrink-0 relative transition-transform duration-300 group-hover:scale-105">
                                                 {clinicasData[selectedClinica].turnoLlamado.url_foto ? (
                                                     <img 
-                                                        src={`http://localhost:3001${clinicasData[selectedClinica].turnoLlamado.url_foto}`} 
+                                                        src={`${clinicasData[selectedClinica].turnoLlamado.url_foto}`} 
                                                         alt="Foto del paciente" 
                                                         className="w-full h-full object-cover"
+
                                                         onError={(e) => {
                                                             e.target.onerror = null;
                                                             e.target.src = 'https://ui-avatars.com/api/?name=' + 

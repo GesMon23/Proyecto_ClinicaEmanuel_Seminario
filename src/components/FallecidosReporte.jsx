@@ -113,7 +113,7 @@ const FallecidosReporte = () => {
         if (filtros.accesovascular) params.append('accesovascular', filtros.accesovascular);
         if (filtros.sexo) params.append('sexo', filtros.sexo);
         if (filtros.departamento) params.append('departamento', filtros.departamento);
-        window.open(`http://localhost:3001/api/fallecidos/excel?${params.toString()}`);
+        window.open(`/api/fallecidos/excel?${params.toString()}`);
         showSuccessModal('Exportación a Excel iniciada. Si no se descarga, revise el bloqueador de ventanas emergentes.');
     };
 

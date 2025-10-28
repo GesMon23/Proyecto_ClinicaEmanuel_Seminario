@@ -687,7 +687,7 @@ const ActualizacionPacientes = () => {
                       formData.urlfoto
                         ? formData.urlfoto
                         : formData.url_foto
-                          ? `http://localhost:3001${formData.url_foto}`
+                          ? `${formData.url_foto}`
                           : defaultAvatar
                     }
                     className="w-full h-full object-cover"

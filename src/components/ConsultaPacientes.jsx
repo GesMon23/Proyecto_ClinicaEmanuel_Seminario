@@ -1617,7 +1617,7 @@ const ConsultaPacientes = () => {
     // Botón para descargar carné
     const handleDescargarCarnet = async () => {
         if (!paciente || !paciente.no_afiliacion) return;
-        const directUrl = `http://localhost:3001/carnet/forzar/${encodeURIComponent(paciente.no_afiliacion)}`;
+        const directUrl = `/carnet/forzar/${encodeURIComponent(paciente.no_afiliacion)}`;
         try {
             // Intento 1: descarga directa por enlace (más compatible y evita CORS/Blob issues)
             const a = document.createElement('a');
@@ -1759,7 +1759,7 @@ const ConsultaPacientes = () => {
                                         ) : (
                                             <img
                                                 alt="Foto del paciente"
-                                                src={paciente.url_foto ? `http://localhost:3001/fotos/${paciente.url_foto}?${Date.now()}` : avatarDefault}
+                                                src={paciente.url_foto ? `/fotos/${paciente.url_foto}?${Date.now()}` : avatarDefault}
                                                 className="w-full h-full object-cover"
                                                 onError={(e) => {
                                                     e.target.onerror = null;
@@ -2981,7 +2981,7 @@ async function getLogoBase64() {
 async function getFotoPacienteBase64(paciente) {
     if (!paciente.url_foto) return null;
     try {
-        const url = `http://localhost:3001/fotos/${paciente.url_foto.split(/[\\\/]/).pop()}`;
+        const url = `/fotos/${paciente.url_foto.split(/[\\\/]/).pop()}`;
         const response = await fetch(url);
         const blob = await response.blob();
         return await new Promise((resolve) => {
