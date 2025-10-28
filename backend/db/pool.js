@@ -3,7 +3,7 @@ const { Pool } = require('pg');
 // Único pool compartido en toda la app
 // Config utilizable con variables de entorno o valores por defecto de desarrollo
 const pool = new Pool({
-  host: process.env.PGHOST || '172.235.135.155',
+  host: process.env.PGHOST || '172.235.145.142',
   database: process.env.PGDATABASE || 'seminarioclinic',
   user: process.env.PGUSER || 'seminario',
   password: process.env.PGPASSWORD || 'seminario2025',
