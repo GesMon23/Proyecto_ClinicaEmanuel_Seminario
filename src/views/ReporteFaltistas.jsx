@@ -37,7 +37,7 @@ const ReporteFaltistas = () => {
       if (filtros.departamento) params.append('departamento', filtros.departamento);
       if (filtros.clinica) params.append('clinica', filtros.clinica);
       if (filtros.noafiliacion) params.append('noafiliacion', filtros.noafiliacion);
-      const res = await fetch(`http://localhost:3001/api/faltistas?${params.toString()}`);
+      const res = await fetch(`/api/faltistas?${params.toString()}`);
       const data = await res.json();
       setTodosFaltistas(data);
       setFaltistas(Array.isArray(data) ? data : []);
@@ -67,7 +67,7 @@ const ReporteFaltistas = () => {
   useEffect(() => {
     const cargarCatalogos = async () => {
       try {
-        const res = await fetch('http://localhost:3001/api/faltistas/catalogos');
+        const res = await fetch('/api/faltistas/catalogos');
         const data = await res.json();
         setCatalogos({
           clinicas: Array.isArray(data?.clinicas) ? data.clinicas : [],
@@ -229,7 +229,7 @@ const ReporteFaltistas = () => {
                     if (filtros.departamento) params.append('departamento', filtros.departamento);
                     if (filtros.clinica) params.append('clinica', filtros.clinica);
                     if (filtros.noafiliacion) params.append('noafiliacion', filtros.noafiliacion);
-                    window.open(`http://localhost:3001/api/faltistas/excel?${params.toString()}`);
+                    window.open(`/api/faltistas/excel?${params.toString()}`);
                   }}
                   disabled={faltistas.length===0}
                   className={`px-4 py-2 font-medium rounded border flex items-center gap-2 ${faltistas.length===0?'bg-gray-300 text-white cursor-not-allowed border-gray-400':'bg-[#107C41] hover:bg-[#0E6A39] text-white border-[#0E6A39]'}`}

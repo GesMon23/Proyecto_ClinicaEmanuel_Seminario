@@ -14,9 +14,11 @@ const nz = (v) => (v === undefined || v === null || v === '' ? null : v);
 
 // Configuración de CORS y JSON body parsing
 const allowedOrigins = new Set([
-  // prod
+  // prod (HTTP y HTTPS)
   'http://172.235.145.142',
+  'https://172.235.145.142',
   'http://clinicaemanuel.com.gt',
+  'https://clinicaemanuel.com.gt',
 
   // si a veces lo sirves en 3000:
   'http://172.235.145.142:3000',

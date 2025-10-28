@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Form, Button, Table, Row, Col, Card } from "react-bootstrap";
 import logoClinica from '@/assets/logoClinica2.png';
 import axios from "axios";
+import api from '@/config/api';
 
 // Eliminar array local de estados, ahora vendrán de la API
 
@@ -97,7 +98,7 @@ function PacientesReporte() {
   useEffect(() => {
     const cargarCatalogos = async () => {
       try {
-        const res = await axios.get("http://localhost:3001/api/pacientes/catalogos");
+        const res = await api.get('/pacientes/catalogos');
         setCatalogos(res.data || { estados: [], jornadas: [], accesos: [], departamentos: [], sexos: [] });
       } catch (err) {
         console.error("Error cargando catálogos", err);
@@ -118,7 +119,7 @@ function PacientesReporte() {
     if (filtros.Sexo) params.append('sexo', filtros.Sexo);
     if (filtros.Departamento) params.append('departamento', filtros.Departamento);
     if (filtros.Numeroformulario) params.append('numeroformulario', filtros.Numeroformulario);
-    window.open(`http://localhost:3001/api/pacientes/excel?${params.toString()}`);
+    window.open(`/api/pacientes/excel?${params.toString()}`);
   };
   // Renderiza el select de estados
   // ...otros componentes y filtros...
@@ -284,7 +285,7 @@ function PacientesReporte() {
       if (filtros.Sexo) params.sexo = filtros.Sexo;
       if (filtros.Departamento) params.departamento = filtros.Departamento;
       if (filtros.Numeroformulario) params.numeroformulario = filtros.Numeroformulario;
-      const res = await axios.get("http://localhost:3001/api/pacientes", { params });
+      const res = await api.get('/pacientes', { params });
       setPacientes(res.data);
     } catch (error) {
       setPacientes([]);
