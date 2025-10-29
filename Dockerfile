@@ -1,25 +1,27 @@
-# --- build de frontend ---
+# ---------- FASE 1: BUILD ----------
 FROM node:20-alpine AS build
 WORKDIR /app
 
 COPY package*.json ./
-# si usas peer deps relajadas:
 ENV npm_config_legacy_peer_deps=true
 RUN npm ci --no-audit --no-fund
 
 COPY . .
-# Para React/Vite/CRA el output suele ser ./build
-# (si tu script genera ./dist, cambia la línea de COPY más abajo a /app/dist)
-RUN npm run build
 
-# --- nginx para servir estáticos + proxy /api ---
+# Normaliza artefactos a /_out (valen build/ o dist/)
+RUN set -eux; \
+    npm run build; \
+    mkdir -p /_out; \
+    if [ -d ./build ]; then cp -a ./build/. /_out/; \
+    elif [ -d ./dist ]; then cp -a ./dist/. /_out/; \
+    else echo "No existe build/ ni dist/"; ls -la; exit 1; fi; \
+    ls -la /_out
+
+# ---------- FASE 2: NGINX ----------
 FROM nginx:alpine
-# quita default
 RUN rm -f /etc/nginx/conf.d/default.conf
-# tu config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-# OJO: copiamos ./build (no dist)
-COPY --from=build /app/build /usr/share/nginx/html
+COPY --from=build /_out /usr/share/nginx/html
 
 EXPOSE 80 443
 CMD ["nginx","-g","daemon off;"]
