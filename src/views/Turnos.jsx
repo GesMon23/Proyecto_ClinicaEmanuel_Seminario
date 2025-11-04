@@ -36,7 +36,7 @@ function Turnos() {
                         }`} 
                         onClick={() => setTab('asignar')}
                     >
-                        Asignar
+                        Faltas
                     </button>
 
                     <button 
@@ -67,7 +67,7 @@ function Turnos() {
                                 ? 'bg-green-800 text-white' 
                                 : 'bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-white hover:bg-blue-100 dark:hover:bg-slate-600'
                         }`} 
-                        onClick={() => setTab('turnosTV')}
+                        onClick={() => window.open('/turnos-tv', '_blank')}
                     >
                         Turnos TV
                     </button>

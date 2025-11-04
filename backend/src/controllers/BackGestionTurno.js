@@ -1,9 +1,3 @@
-
-// [4:54 p.m., 14/9/2025] Gesler Monzon: tipo
-// 20259HEM1
-// [4:54 p.m., 14/9/2025] Gesler Monzon: 2025-9-HEM-1
-// Año-Mes-Clinica-Correlativo
-// Router de Login/Roles
 const express = require('express');
 const pool = require('../../db/pool');
 const fs = require('fs');
