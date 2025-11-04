@@ -17,6 +17,7 @@ import Nutricion from "@/views/Nutricion.jsx";
 import Psicologia from "@/views/Psicologia.jsx";
 import AdminResetUser from "@/pages/AdminResetUser.jsx";
 import DashboardsInteractivos from "@/views/DashboardsInteractivos.jsx";
+import TurnosTVPage from "@/routes/turnos-tv/page";
 function App() {
     const router = createBrowserRouter([
         {
@@ -132,6 +133,10 @@ function App() {
                     element: <h1 className="title">Serrar Sesion</h1>,
                 }
             ],
+        },
+        {
+            path: "/turnos-tv",
+            element: <TurnosTVPage />,
         },
     ]);
 

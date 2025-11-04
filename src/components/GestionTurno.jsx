@@ -117,6 +117,10 @@ const GestionTurno = () => {
         const response = await api.get("/GclinicasT");
         setClinicas(response.data);
       } catch (error) {
+        console.error("Error al cargar clínicas:", error);
+        console.error("Error al cargar clínicas:", error.response.data);
+        console.error("Error al cargar clínicas:", error.response.status);
+        console.error("Error al cargar clínicas:", error.response.headers);
         showErrorModal("Error al cargar clínicas");
       }
     };

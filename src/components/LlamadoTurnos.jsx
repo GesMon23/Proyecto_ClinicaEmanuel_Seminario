@@ -194,7 +194,7 @@ const LlamadoTurnos = () => {
 
     const fetchClinicas = async () => {
         try {
-            const response = await api.get('/clinicas');
+            const response = await api.get('/GclinicasT');
             if (response.data && response.data.length > 0) {
                 setClinicas(response.data);
                 // Establecer la primera clínica como seleccionada si no hay ninguna seleccionada
@@ -203,7 +203,9 @@ const LlamadoTurnos = () => {
                 }
             }
         } catch (error) {
-            console.error('Error al cargar las clínicas:', error);
+            console.error('Error al cargar las clínicas:', error.response.data);
+            console.error('Error al cargar las clínicas:', error.response.status);
+            console.error('Error al cargar las clínicas:', error.response.headers);
             showErrorModal('Error al cargar las clínicas');
         }
     };
@@ -296,6 +298,22 @@ const LlamadoTurnos = () => {
                 }
             }));
             
+            // Disparar evento para actualizar la vista TV
+            localStorage.setItem('turnoActualizado', JSON.stringify({
+                clinica: clinica,
+                timestamp: Date.now(),
+                accion: 'llamar'
+            }));
+            
+            // Disparar evento personalizado para la misma pestaña
+            window.dispatchEvent(new CustomEvent('turnoActualizado', {
+                detail: {
+                    clinica: clinica,
+                    timestamp: Date.now(),
+                    accion: 'llamar'
+                }
+            }));
+            
             // Obtener el siguiente turno para la lista de espera
             await obtenerSiguienteTurno(clinica);
             
@@ -354,6 +372,22 @@ const LlamadoTurnos = () => {
                     }
                 };
                 localStorage.setItem('clinicasData', JSON.stringify(updatedData));
+                
+                // Disparar evento para actualizar la vista TV
+                localStorage.setItem('turnoActualizado', JSON.stringify({
+                    clinica: clinica,
+                    timestamp: Date.now(),
+                    accion: 'abandonar'
+                }));
+                
+                // Disparar evento personalizado para la misma pestaña
+                window.dispatchEvent(new CustomEvent('turnoActualizado', {
+                    detail: {
+                        clinica: clinica,
+                        timestamp: Date.now(),
+                        accion: 'abandonar'
+                    }
+                }));
                 
                 showSuccessModal(response.data.message || 'Turno marcado como abandonado');
             } else {
@@ -483,6 +517,22 @@ const LlamadoTurnos = () => {
                     }
                 };
                 localStorage.setItem('clinicasData', JSON.stringify(updatedData));
+                
+                // Disparar evento para actualizar la vista TV
+                localStorage.setItem('turnoActualizado', JSON.stringify({
+                    clinica: clinica,
+                    timestamp: Date.now(),
+                    accion: 'finalizar'
+                }));
+                
+                // Disparar evento personalizado para la misma pestaña
+                window.dispatchEvent(new CustomEvent('turnoActualizado', {
+                    detail: {
+                        clinica: clinica,
+                        timestamp: Date.now(),
+                        accion: 'finalizar'
+                    }
+                }));
                 
                 showSuccessModal(response.data.message || 'Turno finalizado exitosamente');
             } else {
