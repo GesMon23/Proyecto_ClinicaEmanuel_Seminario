@@ -120,7 +120,7 @@ const ReingresoPacientes = (props) => {
       if (noaf) params.noafiliacion = noaf;
       if (dpi) params.dpi = dpi;
 
-      const { data } = await api.get("/api/reingreso/pacientes/reingreso", {
+      const { data } = await api.get("/pacientes/reingreso", {
         params,
       });
 
@@ -248,7 +248,7 @@ const ReingresoPacientes = (props) => {
         usuario: "web",
       };
 
-      const resp = await api.post(`/api/reingreso/pacientes/reingreso`, payload);
+      const resp = await api.post(`/pacientes/reingreso`, payload);
 
       if (resp.data?.success) {
         setModalMessage("Reingreso guardado exitosamente.");

@@ -27,7 +27,7 @@ const ConsultaPsicologia = () => {
       if (noAfiliacion) params.noafiliacion = noAfiliacion;
       if (idInforme) params.idinforme = idInforme;
       if (sexo) params.sexo = sexo;
-      const { data } = await api.get('/api/psicologia/historial', { params });
+      const { data } = await api.get('/psicologia/historial', { params });
       if (data?.success) {
         setRegistros(data.data || []);
       } else {
