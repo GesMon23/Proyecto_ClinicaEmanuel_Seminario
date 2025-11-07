@@ -185,7 +185,7 @@ const ConsultaNutricion = () => {
       if (noAfiliacion) params.noafiliacion = noAfiliacion;
       if (idInforme) params.idinforme = idInforme;
       if (sexo) params.sexo = sexo;
-      const { data } = await api.get(`/api/nutricion/historial`, { params });
+      const { data } = await api.get(`/nutricion/historial`, { params });
       if (data?.success) {
         setHistorial(data.data || []);
       } else {

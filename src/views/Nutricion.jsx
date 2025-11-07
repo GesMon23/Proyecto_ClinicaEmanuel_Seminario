@@ -48,7 +48,7 @@ const Nutricion = () => {
         observaciones: observaciones || null,
         usuario_creacion: 'sistema'
       };
-      const resp = await api.post('/api/nutricion/evaluacion', payload);
+      const resp = await api.post('/nutricion/evaluacion', payload);
       if (resp.data && resp.data.informe) {
         const idInf = resp?.data?.informe?.id_informe;
         const msg = idInf

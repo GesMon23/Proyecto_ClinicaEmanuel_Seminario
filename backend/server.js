@@ -87,6 +87,8 @@ const backNuevoIngresoReportesRouter = require('./src/controllers/BackNuevoIngre
 // Importar otros routers usados más abajo
 // Usar router de consulta de laboratorios
 app.use(backConsultaLaboratoriosRouter);
+app.use('/api',backConsultaLaboratoriosRouter);
+
 const backActualizacionPacientes = require('./src/controllers/BackActualizacionPacientes');
 const backEgresoPacientes = require('./src/controllers/BackEgresoPacientes');
 const backReingresoPacientesRouter = require('./src/controllers/BackReingresoPacientes');
@@ -110,12 +112,18 @@ if (!fs.existsSync(fotosDir)) {
 }
 
 app.use(backGestionTurnosRouter);
+app.use('/api',backGestionTurnosRouter);
+
 
 app.use(backConsultaLaboratoriosRouter);
+app.use('/api',backConsultaLaboratoriosRouter);
 
 app.use(backPacientesReporteRouter);
+app.use('/api',backPacientesReporteRouter);
 app.use(backFallecidosReportesRouter);
+app.use('/api',backFallecidosReportesRouter);
 app.use(backEstadisticasResumenRouter);
+app.use('/api',backEstadisticasResumenRouter);
 app.use('/fotos', express.static(fotosDir));
 // (Desmontado) Usar el router legacy para actualización masiva de pacientes
 // app.use(updateMasivoPacientesRouter);
@@ -125,46 +133,62 @@ app.use(backLoginRouter);
 app.use('/api', backLoginRouter);
 // Usar router de registro de formularios
 app.use(backRegistroFormulariosRouter);
+app.use('/api',backRegistroFormulariosRouter);
 // Usar router de registro de empleados
 app.use(backRegistroEmpleadosRouter);
+app.use('/api',backRegistroEmpleadosRouter);
 // Usar router de gestión de empleados (GET/PUT/PATCH)
 app.use(backGestionEmpleadosRouter);
+app.use('/api',backGestionEmpleadosRouter);
 // Usar router de creación de usuarios
 app.use(backCreacionUsuariosRouter);
+app.use('/api',backCreacionUsuariosRouter);
 // Usar router de roles por usuario
 app.use(backRolesUsuariosRouter);
+app.use('/api',backRolesUsuariosRouter);
 // Usar router de psicología
 app.use('/api/psicologia', backPsicologiaRouter);
 // Usar router de consulta de psicología (endpoints GET de historial)
 app.use('/api/psicologia', backConsultaPsicologiaRouter);
 
 app.use(backNU);
+app.use('/api',backNU);
 // Usar router de nutrición
 app.use('/api/nutricion', backNutricionRouter);
 // Usar router de consulta de nutrición
 app.use('/api/nutricion', backConsultaNutricionRouter);
 // Usar router de registro de referencias
 app.use(backRegistroReferenciasRouter);
+app.use('/api',backRegistroReferenciasRouter);
 // Usar router de Nuevo Ingreso Reportes (expone /api/nuevoingreso y /api/nuevoingreso/excel)
 app.use(backNuevoIngresoReportesRouter);
+app.use('/api',backNuevoIngresoReportesRouter);
 // Usar router de consulta de referencias
 app.use(backConsultaReferenciasRouter);
+app.use('/api',backConsultaReferenciasRouter);
 // Usar router de catálogos
 app.use(backCatalogosRouter);
+app.use('/api',backCatalogosRouter);
 // Otros routers existentes
 app.use(backActualizacionPacientes);
+app.use('/api',backActualizacionPacientes);
 app.use('/api',backEgresoPacientes);
-app.use('/api/reingreso', backReingresoPacientesRouter);
+app.use(backReingresoPacientesRouter);
+app.use('/api', backReingresoPacientesRouter);
 // Usar router de consulta de pacientes
 app.use(backConsultaPacientesRouter);
+app.use('/api',backConsultaPacientesRouter);
 app.use(backRegistroPacientesApiRouter);
+app.use('/api',backRegistroPacientesApiRouter);
 // Usar router de registro/listado de laboratorios
 app.use('/laboratorios', backRegistroLaboratoriosRouter);
-
+app.use('/api',backRegistroLaboratoriosRouter);
 
 app.use(backReporteFaltistasRouter);
+app.use('/api',backReporteFaltistasRouter);
 
 app.use(backEgresoReportesRouter);
+app.use('/api',backEgresoReportesRouter);
 
 app.post('/upload-foto/:noAfiliacion', async (req, res) => {
     const { noAfiliacion } = req.params;
@@ -442,23 +466,7 @@ app.get('/clinicas', async (req, res) => {
         res.status(500).json({ detail: err.message });
     }
 });
-// Obtener paciente por número de afiliación
-app.get('/pacientes/:noAfiliacion', async (req, res) => {
-    try {
-        const { noAfiliacion } = req.params;
-        const result = await pool.query(
-            'SELECT * FROM tbl_pacientes WHERE no_Afiliacion = $1',
-            [noAfiliacion]
-        );
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({ detail: "Paciente no encontrado" });
-        }
-        res.json(result.rows[0]);
-    } catch (err) {
-        res.status(500).json({ detail: err.message });
-    }
-});
 // Endpoint para subir foto de paciente
 app.post('/upload-photo', async (req, res) => {
     try {
@@ -534,3 +542,4 @@ app.post('/definirCarnetPaciente', async (req, res) => {
 
 
 app.use(backCatalogosRouter);
+app.use('/api',backCatalogosRouter);

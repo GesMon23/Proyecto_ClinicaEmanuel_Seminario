@@ -44,41 +44,7 @@ router.get('/turnoLlamado', async (req, res) => {
         res.status(500).json({ error: 'Error al obtener turno llamado.' });
     }
 });
-// NO SE USA
-router.get('/api/pacientes/egreso', async (req, res) => {
-    const { dpi, noafiliacion } = req.query;
-    let baseQuery = `
-            SELECT 
-        pac.noafiliacion, pac.dpi, pac.nopacienteproveedor, pac.primernombre, pac.segundonombre, pac.otrosnombres, pac.primerapellido, pac.segundoapellido, pac.apellidocasada, pac.fechanacimiento, pac.sexo, pac.direccion, pac.fechaegreso, pac.nocasoconcluido, pac.idcausa, pac.causaegreso, 
-        cau.descripcion as causaegreso_descripcion,
-        pac.urlfoto, pac.iddepartamento, dep.nombre as departamento_nombre, pac.idestado, est.descripcion as estado_descripcion,
-        pac.idacceso, acc.descripcion as acceso_descripcion,
-        pac.idjornada, jor.descripcion as jornada_descripcion,
-        pac.fechainicioperiodo, pac.fechafinperiodo, pac.sesionesautorizadasmes AS sesionesautorizadas, pac.observaciones
-    FROM tbl_pacientes pac
-    LEFT JOIN tbl_causaegreso cau ON pac.idcausa = cau.idcausa
-    LEFT JOIN tbl_departamento dep ON pac.iddepartamento = dep.id_departamento
-    LEFT JOIN tbl_estadospaciente est ON pac.idestado = est.idestado
-    LEFT JOIN tbl_accesovascular acc ON pac.idacceso = acc.idacceso
-    LEFT JOIN tbl_jornadas jor ON pac.idjornada = jor.idjornada
-    WHERE pac.idestado != 3`;
-    let params = [];
-    if (dpi) {
-        baseQuery += ' AND pac.dpi = $1';
-        params.push(dpi);
-    } else if (noafiliacion) {
-        baseQuery += ' AND pac.noafiliacion = $1';
-        params.push(noafiliacion);
-    } else {
-        return res.status(400).json({ error: 'Debe proporcionar dpi o noafiliacion.' });
-    }
-    try {
-        const result = await pool.query(baseQuery, params);
-        res.json(result.rows);
-    } catch (error) {
-        res.status(500).json({ error: 'Error al buscar pacientes para egreso.', detalle: error.message });
-    }
-});
+
 // NO SE USA
 router.get('/api/reportes/egreso/excel', async (req, res) => {
     try {
@@ -947,85 +913,7 @@ router.get('/api/pacientes/pdf', async (req, res) => {
         res.status(500).json({ error: 'Error al exportar PDF.', detalle: error.message });
     }
 });
-//NO SE USA
-router.get('/api/pacientes', async (req, res) => {
-    const log = (...args) => { console.log('[PACIENTES]', ...args); }
-    try {
-        const { fechainicio, fechafin, estado, numeroformulario } = req.query;
-        let baseQuery = `SELECT 
-        pac.noafiliacion as noafiliacion,
-        pac.dpi as dpi,
-        pac.nopacienteproveedor as nopacienteproveedor,
-        pac.primernombre as primernombre,
-    pac.segundonombre as segundonombre,
-    pac.otrosnombres as otrosnombres,
-    pac.primerapellido as primerapellido,
-    pac.segundoapellido as segundoapellido,
-    pac.apellidocasada as apellidocasada,
-    TO_CHAR(pac.fechanacimiento, 'YYYY-MM-DD') as fechanacimiento,
-        pac.sexo as sexo,
-        pac.direccion as direccion,
-        dep.nombre as departamento,
-        TO_CHAR(pac.fechaingreso, 'YYYY-MM-DD') as fechaingreso,
-        est.descripcion as estado,
-        jor.descripcion as jornada,
-        acc.descripcion as accesovascular,
-        pac.numeroformulario as numeroformulario,
-        TO_CHAR(pac.fechainicioperiodo, 'YYYY-MM-DD') as fechainicioperiodo,
-        TO_CHAR(pac.fechafinperiodo, 'YYYY-MM-DD') as fechafinperiodo,
-        pac.sesionesautorizadasmes as sesionesautorizadasmes,
-        pac.sesionesrealizadasmes as sesionesrealizadasmes,
-        pac.observaciones as observaciones,
-        pac.fechanacimiento as fechanacimiento_raw,
-        pac.idcausa as idcausa,
-        pac.causaegreso as causaegreso,
-        pac.comorbilidades as comorbilidades,
-    pac.lugarfallecimiento as lugarfallecimiento,
-    pac.causafallecimiento as causafallecimiento,
-        cau.descripcion as causaegreso_descripcion,
-        To_Char(pac.fechaegreso, 'YYYY-MM-DD') as fechaegreso,
-        pac.nocasoconcluido as nocasoconcluido
-    FROM tbl_pacientes pac
-    LEFT JOIN tbl_estadospaciente est ON pac.idestado = est.idestado
-    LEFT JOIN tbl_accesovascular acc ON pac.idacceso = acc.idacceso
-    LEFT JOIN tbl_departamento dep ON pac.iddepartamento = dep.id_departamento
-    LEFT JOIN tbl_jornadas jor ON pac.idjornada = jor.idjornada
-    LEFT JOIN tbl_causaegreso cau ON pac.idcausa = cau.idcausa
-    WHERE 1=1`;
 
-        let params = [];
-        let idx = 1;
-        if (fechainicio) {
-            baseQuery += ` AND pac.fechainicioperiodo >= $${idx}`;
-            params.push(fechainicio);
-            idx++;
-        }
-        if (fechafin) {
-            baseQuery += ` AND pac.fechainicioperiodo <= $${idx}`;
-            params.push(fechafin);
-            idx++;
-        }
-        if (estado) {
-            baseQuery += ` AND est.descripcion = $${idx}`;
-            params.push(estado);
-            idx++;
-        }
-        if (numeroformulario) {
-            baseQuery += ` AND pac.numeroformulario ILIKE $${idx}`;
-            params.push(`%${numeroformulario}%`);
-            idx++;
-        }
-        baseQuery += ' ORDER BY pac.fechainicioperiodo DESC LIMIT 100';
-        log('Consulta SQL:', baseQuery);
-        log('Parámetros:', params);
-        const result = await pool.query(baseQuery, params);
-        log('Resultados:', result.rows.length);
-        res.json(result.rows);
-    } catch (error) {
-        log('ERROR:', error);
-        res.status(500).json({ error: 'Error al buscar pacientes para el reporte.', detalle: error.message });
-    }
-});
 //NO SE USA
 router.get('/causas-egreso', async (req, res) => {
     try {
@@ -1062,54 +950,6 @@ router.get('/estados-paciente', async (req, res) => {
     } catch (error) {
         console.error('Error al obtener estados de paciente:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
-    }
-});
-//NO SE USA
-router.get('/pacientes/:paciente_id', async (req, res) => {
-    try {
-        const { paciente_id } = req.params;
-        const result = await pool.query(`
-                SELECT 
-                    pac.noafiliacion, 
-                    pac.dpi, 
-                    pac.nopacienteproveedor, 
-                    pac.primernombre, 
-                    pac.segundonombre, 
-                    pac.otrosnombres, 
-                    pac.primerapellido, 
-                    pac.segundoapellido, 
-                    pac.apellidocasada, 
-                    pac.edad, 
-                    to_char(pac.fechanacimiento, 'YYYY-MM-DD') as fechanacimiento, 
-                    pac.sexo, 
-                    pac.direccion, 
-                    to_char(pac.fechaingreso, 'YYYY-MM-DD') as fechaingreso,
-                    dep.nombre AS departamento, 
-                    pac.estanciaprograma, 
-                    estp.descripcion AS estado, 
-                    acc.descripcion AS accesovascular, 
-                    cau.descripcion AS causaegreso, 
-                    pac.numeroformulario, 
-                    pac.fechainicioperiodo,
-                    pac.fechafinperiodo,
-                    pac.sesionesautorizadasmes,
-                    pac.urlfoto
-                FROM tbl_pacientes pac
-                LEFT JOIN tbl_departamento dep ON pac.iddepartamento = dep.id_departamento
-                LEFT JOIN tbl_estadospaciente estp ON pac.idestado = estp.idestado
-                LEFT JOIN tbl_accesovascular acc ON pac.idacceso = acc.idacceso
-                LEFT JOIN tbl_causaegreso cau ON pac.idcausa = cau.idcausa
-                WHERE pac.no_afiliacion = $1
-            `, [paciente_id]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ detail: "Paciente no encontrado" });
-        }
-
-        res.json(result.rows[0]);
-    } catch (err) {
-        res.status(500).json({ detail: err.message });
     }
 });
 //NO SE USA

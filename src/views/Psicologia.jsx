@@ -181,7 +181,7 @@ const Psicologia = () => {
     }
     
     try {
-      const response = await api.post('/api/psicologia/evaluacion', {
+      const response = await api.post('/psicologia/evaluacion', {
         no_afiliacion: noafiliacion,
         ...evaluacion
       });
