@@ -8,7 +8,7 @@ const router = express.Router();
 router.use(express.json());
 
 // Endpoint para buscar pacientes para egreso
-router.get('/api/pacientes/egreso', async (req, res) => {
+router.get('/pacientes/egreso', async (req, res) => {
   const { dpi, noafiliacion } = req.query;
   if (!dpi && !noafiliacion) {
     return res.status(400).json({ error: 'Debe proporcionar dpi o no_afiliacion.' });

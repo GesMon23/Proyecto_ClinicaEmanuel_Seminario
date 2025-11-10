@@ -131,7 +131,7 @@ const EgresoPacientes = () => {
         setLoading(false);
         return;
       }
-      const { data } = await api.get('/api/pacientes/egreso', { params });
+      const { data } = await api.get('/pacientes/egreso', { params });
       if (data && data.length > 0) {
         const noActivo = data.filter(p => p.idestado === 3);
         if (noActivo.length > 0) {
