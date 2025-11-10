@@ -78,7 +78,7 @@ const ActualizacionPacientes = () => {
     setError(null);
 
     try {
-      let url = '/api/Apacientes/actualizacion?';
+      let url = '/Apacientes/actualizacion?';
       if (busqueda.no_afiliacion.trim() !== '') {
         url += `no_afiliacion=${busqueda.no_afiliacion.trim()}`;
       } else if (busqueda.dpi.trim() !== '') {
@@ -106,7 +106,7 @@ const ActualizacionPacientes = () => {
         // Procesar foto si existe
         if (pacienteData.url_foto) {
           const filename = pacienteData.url_foto.replace(/^.*[\\\/]/, '');
-          pacienteData.url_foto = `/fotos/${filename}`;
+          pacienteData.url_foto = `/api/fotos/${filename}`;
         } else {
           pacienteData.url_foto = null;
         }
