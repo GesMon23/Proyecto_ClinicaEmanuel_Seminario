@@ -1005,6 +1005,7 @@ const ConsultaPacientes = () => {
 
         // Helper para obtener un PNG de QR en base64 (con múltiples fallbacks y validación de imagen)
         const getQRBase64 = async (text) => {
+            const normText = (text ?? '').toString().trim().replace(/\s+/g, ' ');
             const toBase64 = async (resp) => {
                 const ct = resp.headers.get('content-type') || '';
                 if (!ct.startsWith('image/')) return null;
@@ -1018,7 +1019,7 @@ const ConsultaPacientes = () => {
             const size = 300; // mayor resolución para mejor legibilidad al escalar en PDF
             // Opción 0 (preferida): QR interno del backend
             try {
-                const url = `/api/qr?size=${size}&text=${encodeURIComponent(text)}`;
+                const url = `/api/qr?size=${size}&text=${encodeURIComponent(normText)}`;
                 const resp = await fetch(url, { cache: 'no-store' });
                 if (resp.ok) {
                     const b64 = await toBase64(resp);
@@ -1027,7 +1028,7 @@ const ConsultaPacientes = () => {
             } catch {}
             // Alias local sin prefijo /api por si el proxy lo remueve
             try {
-                const url = `/qr?size=${size}&text=${encodeURIComponent(text)}`;
+                const url = `/qr?size=${size}&text=${encodeURIComponent(normText)}`;
                 const resp = await fetch(url, { cache: 'no-store' });
                 if (resp.ok) {
                     const b64 = await toBase64(resp);
@@ -1036,7 +1037,7 @@ const ConsultaPacientes = () => {
             } catch {}
             // Opción 1: quickchart.io con nivel de corrección alto
             try {
-                const url = `https://quickchart.io/qr?size=${size}&ecLevel=H&margin=0&text=${encodeURIComponent(text)}`;
+                const url = `https://quickchart.io/qr?size=${size}&ecLevel=H&margin=0&text=${encodeURIComponent(normText)}`;
                 const resp = await fetch(url, { cache: 'no-store' });
                 if (resp.ok) {
                     const b64 = await toBase64(resp);
@@ -1045,7 +1046,7 @@ const ConsultaPacientes = () => {
             } catch {}
             // Opción 2: qrserver.com
             try {
-                const url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&qzone=2&data=${encodeURIComponent(text)}`;
+                const url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&qzone=2&data=${encodeURIComponent(normText)}`;
                 const resp = await fetch(url, { cache: 'no-store' });
                 if (resp.ok) {
                     const b64 = await toBase64(resp);
@@ -1054,7 +1055,7 @@ const ConsultaPacientes = () => {
             } catch {}
             // Opción 3: Google Charts
             try {
-                const url = `https://chart.googleapis.com/chart?cht=qr&chs=${size}x${size}&chl=${encodeURIComponent(text)}`;
+                const url = `https://chart.googleapis.com/chart?cht=qr&chs=${size}x${size}&chl=${encodeURIComponent(normText)}`;
                 const resp = await fetch(url, { cache: 'no-store' });
                 if (resp.ok) {
                     const b64 = await toBase64(resp);
@@ -1070,8 +1071,10 @@ const ConsultaPacientes = () => {
         // URL fija para abrir directamente la consulta del paciente por no_afiliacion
         const origin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'http://localhost:3000';
         const qp = [];
-        if (paciente?.no_afiliacion) qp.push(`noafiliacion=${paciente.no_afiliacion}`);
-        if (paciente?.dpi) qp.push(`dpi=${paciente.dpi}`);
+        const noaf = (paciente?.no_afiliacion ?? '').toString().trim();
+        const dpi = (paciente?.dpi ?? '').toString().trim();
+        if (noaf) qp.push(`noafiliacion=${encodeURIComponent(noaf)}`);
+        if (dpi) qp.push(`dpi=${encodeURIComponent(dpi)}`);
         const qrTarget = `${origin}/layout/consulta-pacientes${qp.length ? `?${qp.join('&')}` : ''}`;
         const qrImgData = await getQRBase64(qrTarget);
         if (logoImg) {
