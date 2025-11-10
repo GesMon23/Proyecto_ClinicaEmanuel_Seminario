@@ -237,7 +237,7 @@ router.post('/Aupload-foto/:no_Afiliacion', async (req, res) => {
   }
 });
 
-router.get('/api/Apacientes/actualizacion', async (req, res) => {
+router.get('/Apacientes/actualizacion', async (req, res) => {
   const { dpi, no_afiliacion } = req.query;
     if (!dpi && !no_afiliacion) {
       return res.status(400).json({ error: 'Debe proporcionar dpi o no_afiliacion.' });
