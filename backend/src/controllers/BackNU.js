@@ -924,7 +924,7 @@ router.get('/causas-egreso', async (req, res) => {
     }
 });
 //NO SE USA
-router.get('/estados-paciente', async (req, res) => {
+router.get('/estados-paciente-legacy', async (req, res) => {
     try {
         const result = await pool.query('SELECT idestado, descripcion FROM tbl_estadospaciente ORDER BY descripcion ASC');
         res.json(result.rows);
@@ -933,7 +933,7 @@ router.get('/estados-paciente', async (req, res) => {
     }
 });
 //NO SE USA
-router.get('/causas-egreso', async (req, res) => {
+router.get('/causas-egreso-legacy', async (req, res) => {
     try {
         const result = await pool.query('SELECT idcausa, descripcion FROM tbl_causaegreso WHERE estado = true ORDER BY descripcion');
         res.json(result.rows);
@@ -943,7 +943,7 @@ router.get('/causas-egreso', async (req, res) => {
     }
 });
 //NO SE USA
-router.get('/estados-paciente', async (req, res) => {
+router.get('/estados-paciente-activos-legacy', async (req, res) => {
     try {
         const result = await pool.query('SELECT idestado, descripcion FROM tbl_estadospaciente WHERE estado = true ORDER BY descripcion');
         res.json(result.rows);

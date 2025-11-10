@@ -271,8 +271,16 @@ router.get('/estados-paciente', async (_req, res) => {
             res.json(r.rows || []);
         } catch (e) {
             try { await client.query('ROLLBACK'); } catch (_) {}
-            console.error('Error SP sp_catalogo_estados_paciente:', e);
-            res.status(500).json({ error: 'Error al obtener los estados de paciente.' });
+            console.error('Error SP sp_catalogo_estados_paciente, aplicando fallback SELECT:', e);
+            // Fallback: consulta directa a la tabla si el SP no existe o falla
+            try {
+                const q = 'SELECT idestado, descripcion FROM public.tbl_estadospaciente ORDER BY descripcion ASC';
+                const rs = await client.query(q);
+                return res.json(rs.rows || []);
+            } catch (e2) {
+                console.error('Fallback SELECT estados-paciente también falló:', e2);
+                return res.status(500).json({ error: 'Error al obtener los estados de paciente.' });
+            }
         } finally {
             client.release();
         }
