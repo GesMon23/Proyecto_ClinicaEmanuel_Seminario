@@ -145,18 +145,21 @@ const EgresoPacientes = () => {
           const enriquecidos = await Promise.all(
             data.map(async (p) => {
               const noAf = p.no_afiliacion || p.noafiliacion || '';
+              // 1) Intentar resolver SIEMPRE por /check-photo para obtener filename real
               let filename = null;
-              // Normalizar campo de BD
-              const raw = p.url_foto || p.urlfoto || null;
-              if (raw) {
-                try { filename = String(raw).replace(/^.*[\\\/]/, ''); } catch { filename = raw; }
-              }
-              // Fallback por número de afiliación
-              if (!filename && noAf) {
+              if (noAf) {
                 const resolved = await verificarExistenciaFoto(noAf);
                 if (resolved) filename = resolved;
               }
-              return { ...p, url_foto: filename || null, _cacheBuster: Date.now() };
+              // 2) Si no se resolvió, usar basename de lo que venga en BD
+              if (!filename) {
+                const raw = p.url_foto || p.urlfoto || null;
+                if (raw) {
+                  try { filename = String(raw).replace(/^.*[\\\/]/, ''); } catch { filename = raw; }
+                }
+              }
+              const _fotoUrl = filename ? `${baseURL}/fotos/${filename}` : null;
+              return { ...p, url_foto: filename || null, _fotoUrl, _cacheBuster: Date.now() };
             })
           );
           setResultados(enriquecidos);
@@ -399,11 +402,18 @@ const EgresoPacientes = () => {
                 <div className="w-48 h-48 lg:w-56 lg:h-56 rounded-xl overflow-hidden border-4 border-green-700 dark:border-green-600 shadow-lg bg-gray-100 dark:bg-slate-800">
                   <img
                     alt="Foto del paciente"
-                    src={p.url_foto ? `${baseURL}/fotos/${p.url_foto}?v=${p._cacheBuster || ''}` : defaultAvatar}
+                    src={p._fotoUrl ? `${p._fotoUrl}?v=${p._cacheBuster || ''}` : defaultAvatar}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = defaultAvatar;
+                      const tried = e.currentTarget.getAttribute('data-tried');
+                      const id = p.no_afiliacion || p.noafiliacion || '';
+                      if (!tried && id) {
+                        e.currentTarget.setAttribute('data-tried', '1');
+                        e.currentTarget.src = `${baseURL}/foto/${encodeURIComponent(id)}`;
+                        return;
+                      }
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = defaultAvatar;
                     }}
                   />
                 </div>
