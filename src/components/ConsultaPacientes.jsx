@@ -334,92 +334,46 @@ const ConsultaPacientes = () => {
             }
 
             if (response.data) {
-                console.log('Datos del paciente recibidos:', response.data);
-                console.log('URL foto original:', response.data.url_foto);
-                setPaciente(response.data);
-                setSelectedTab('Datos Personales');
-                // Verificar si la foto existe
-                if (response.data.url_foto) {
-                    const filename = response.data.url_foto.replace(/^.*[\\\/]/, '');
-                    console.log('Nombre de archivo extraído:', filename);
-                    const fotoExists = await verificarExistenciaFoto(filename);
-                    console.log('¿Foto existe?:', fotoExists);
-                    if (!fotoExists) {
-                        response.data.url_foto = null;
-                    } else {
-                        response.data.url_foto = filename; // Solo guardamos el nombre del archivo
+                // Resolver filename real de la foto
+                try {
+                    const r = response.data;
+                    // 1) Si viene un url_foto, validar/normalizar contra backend
+                    if (r.url_foto) {
+                        const bn = String(r.url_foto).replace(/^.*[\\\/]/, '');
+                        const chk = await verificarExistenciaFoto(bn);
+                        r.url_foto = chk?.exists ? (chk.filename || bn) : null;
                     }
-                    console.log('URL foto final:', response.data.url_foto);
-                } else {
-                    // Fallback: intentar con nombre estandar basado en no_afiliacion
-                    try {
-                        const base = `${response.data.no_afiliacion}`;
+                    // 2) Fallback por candidatos según no_afiliacion
+                    if (!r.url_foto) {
+                        const base = `${r.no_afiliacion}`;
                         const candidatos = [
                             `${base}.jpg`, `${base}.jpeg`, `${base}.png`,
                             `${base}.JPG`, `${base}.JPEG`, `${base}.PNG`
                         ];
-                        console.log('Intentando fallback de foto con candidatos:', candidatos);
                         let elegido = null;
                         for (const cand of candidatos) {
-                            const existe = await verificarExistenciaFoto(cand);
-                            console.log(`¿Existe ${cand}?`, existe);
-                            if (existe) { elegido = cand; break; }
+                            const chk = await verificarExistenciaFoto(cand);
+                            if (chk?.exists) { elegido = chk.filename || cand; break; }
                         }
-                        response.data.url_foto = elegido;
-                        console.log('Resultado fallback url_foto:', response.data.url_foto);
-                    } catch (e) {
-                        console.warn('Error en fallback de foto:', e);
-                        response.data.url_foto = null;
+                        r.url_foto = elegido;
                     }
+                } catch (_) {
+                    response.data.url_foto = response.data.url_foto || null;
                 }
-                // Cargar historial básico
-                try {
-                    await fetchHistorial(response.data.no_afiliacion);
-                } catch (e) {
-                    console.warn('No se pudo cargar el historial:', e);
-                }
-                // Cargar referencias
-                try {
-                    await fetchReferencias(response.data.no_afiliacion);
-                } catch (e) {
-                    console.warn('No se pudo cargar las referencias:', e);
-                }
-                // Cargar informes de nutrición
-                try {
-                    await fetchNutricion(response.data.no_afiliacion);
-                } catch (e) {
-                    console.warn('No se pudo cargar los informes de nutrición:', e);
-                }
-                // Cargar informes de psicología
-                try {
-                    await fetchPsicologia(response.data.no_afiliacion);
-                } catch (e) {
-                    console.warn('No se pudo cargar los informes de psicología:', e);
-                }
-                // Cargar historial de formularios
-                try {
-                    await fetchFormularios(response.data.no_afiliacion);
-                } catch (e) {
-                    console.warn('No se pudo cargar el historial de formularios:', e);
-                }
-                // Cargar turnos del paciente
-                try {
-                    await fetchTurnos(response.data.no_afiliacion);
-                } catch (e) {
-                    console.warn('No se pudo cargar los turnos del paciente:', e);
-                }
-                // Cargar faltistas del paciente
-                try {
-                    await fetchFaltistas(response.data.no_afiliacion);
-                } catch (e) {
-                    console.warn('No se pudo cargar faltistas del paciente:', e);
-                }
-                // Cargar laboratorios del paciente
-                try {
-                    await fetchLaboratorios(response.data.no_afiliacion);
-                } catch (e) {
-                    console.warn('No se pudo cargar laboratorios del paciente:', e);
-                }
+
+                // Setear paciente en el estado para que la vista use el filename resuelto
+                setPaciente(response.data);
+                setSelectedTab('Datos Personales');
+                
+                // Continuar con cargas relacionadas
+                try { await fetchHistorial(response.data.no_afiliacion); } catch (e) { console.warn('No se pudo cargar el historial:', e); }
+                try { await fetchReferencias(response.data.no_afiliacion); } catch (e) { console.warn('No se pudo cargar las referencias:', e); }
+                try { await fetchNutricion(response.data.no_afiliacion); } catch (e) { console.warn('No se pudo cargar los informes de nutrición:', e); }
+                try { await fetchPsicologia(response.data.no_afiliacion); } catch (e) { console.warn('No se pudo cargar los informes de psicología:', e); }
+                try { await fetchFormularios(response.data.no_afiliacion); } catch (e) { console.warn('No se pudo cargar el historial de formularios:', e); }
+                try { await fetchTurnos(response.data.no_afiliacion); } catch (e) { console.warn('No se pudo cargar los turnos del paciente:', e); }
+                try { await fetchFaltistas(response.data.no_afiliacion); } catch (e) { console.warn('No se pudo cargar faltistas del paciente:', e); }
+                try { await fetchLaboratorios(response.data.no_afiliacion); } catch (e) { console.warn('No se pudo cargar laboratorios del paciente:', e); }
             } else {
                 setShowModal(true);
                 setModalMessage('Paciente no encontrado');
@@ -549,13 +503,10 @@ const ConsultaPacientes = () => {
         try {
             const base = String(filename || '').trim();
             const id = base.replace(/\.[^.]+$/, '');
-            console.log('Verificando existencia de foto (id):', id);
-            const response = await api.get(`/check-photo/${encodeURIComponent(id)}`);
-            console.log('Respuesta del servidor:', response.data);
-            return !!response?.data?.exists;
+            const { data } = await api.get(`/check-photo/${encodeURIComponent(id)}`);
+            return data; // { exists, filename, url }
         } catch (error) {
-            console.error('Error al verificar la foto:', error);
-            return false;
+            return { exists: false };
         }
     };
 
@@ -1129,7 +1080,7 @@ const ConsultaPacientes = () => {
         doc.line(40, 95, pageWidth - 40, 95);
         // QR en la esquina superior derecha del encabezado (primera página)
         if (qrImgData) {
-            const qrSize = 72;
+            const qrSize = 60;
             const qrX = pageWidth - 40 - qrSize; // margen derecho 40
             const qrY = 25; // cerca del borde superior
             doc.addImage(qrImgData, 'PNG', qrX, qrY, qrSize, qrSize, undefined, 'FAST');
@@ -1224,7 +1175,7 @@ const ConsultaPacientes = () => {
             doc.text('Reporte de Paciente', pageWidth / 2, 70, { align: 'center' });
             // QR en la esquina superior derecha del encabezado (todas las páginas)
             if (qrImgData) {
-                const qrSize = 72;
+                const qrSize = 60;
                 const qrX = pageWidth - 40 - qrSize; // margen derecho 40
                 const qrY = 25; // cerca del borde superior
                 doc.addImage(qrImgData, 'PNG', qrX, qrY, qrSize, qrSize, undefined, 'FAST');
@@ -1792,9 +1743,9 @@ const ConsultaPacientes = () => {
                                         ) : (
                                             <img
                                                 alt="Foto del paciente"
-                                                src={paciente?.no_afiliacion
-                                                    ? `/api/foto/${encodeURIComponent(paciente.no_afiliacion)}?${Date.now()}`
-                                                    : (paciente?.url_foto ? `/api/fotos/${paciente.url_foto}?${Date.now()}` : avatarDefault)}
+                                                src={paciente?.url_foto
+                                                    ? `/api/fotos/${paciente.url_foto}?${Date.now()}`
+                                                    : (paciente?.no_afiliacion ? `/api/foto/${encodeURIComponent(paciente.no_afiliacion)}?${Date.now()}` : avatarDefault)}
                                                 className="w-full h-full object-cover"
                                                 onError={(e) => {
                                                     e.target.onerror = null;
