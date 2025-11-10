@@ -1783,11 +1783,18 @@ const ConsultaPacientes = () => {
                                         ) : (
                                             <img
                                                 alt="Foto del paciente"
-                                                src={paciente.url_foto ? `/api/fotos/${paciente.url_foto}?${Date.now()}` : avatarDefault}
+                                                src={paciente?.no_afiliacion
+                                                    ? `/api/foto/${encodeURIComponent(paciente.no_afiliacion)}?${Date.now()}`
+                                                    : (paciente?.url_foto ? `/api/fotos/${paciente.url_foto}?${Date.now()}` : avatarDefault)}
                                                 className="w-full h-full object-cover"
                                                 onError={(e) => {
                                                     e.target.onerror = null;
-                                                    e.target.src = avatarDefault;
+                                                    // Fallback a ruta directa por filename si existe, luego avatar
+                                                    if (paciente?.url_foto) {
+                                                        e.target.src = `/api/fotos/${paciente.url_foto}?${Date.now()}`;
+                                                    } else {
+                                                        e.target.src = avatarDefault;
+                                                    }
                                                 }}
                                             />
                                         )}
