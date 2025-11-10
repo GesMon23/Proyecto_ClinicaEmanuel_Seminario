@@ -547,10 +547,12 @@ const ConsultaPacientes = () => {
 
     const verificarExistenciaFoto = async (filename) => {
         try {
-            console.log('Verificando existencia de foto:', filename);
-            const response = await api.get(`/check-photo/${filename}`);
+            const base = String(filename || '').trim();
+            const id = base.replace(/\.[^.]+$/, '');
+            console.log('Verificando existencia de foto (id):', id);
+            const response = await api.get(`/check-photo/${encodeURIComponent(id)}`);
             console.log('Respuesta del servidor:', response.data);
-            return response.data.exists;
+            return !!response?.data?.exists;
         } catch (error) {
             console.error('Error al verificar la foto:', error);
             return false;
@@ -561,6 +563,7 @@ const ConsultaPacientes = () => {
 
     // Mostrar detalle genérico en modal
     const openDetail = (titulo, item) => {
+        // ...
         setModalTitle(titulo || 'Detalle');
         try {
             setModalMessage(JSON.stringify(item || {}, null, 2));
@@ -1037,9 +1040,11 @@ const ConsultaPacientes = () => {
         // Usar fuente incorporada segura (helvetica) para evitar errores de cmap
         doc.setFont('helvetica', 'normal');
 
-        // Helper para obtener un PNG de QR en base64 (con múltiples fallbacks)
+        // Helper para obtener un PNG de QR en base64 (con múltiples fallbacks y validación de imagen)
         const getQRBase64 = async (text) => {
             const toBase64 = async (resp) => {
+                const ct = resp.headers.get('content-type') || '';
+                if (!ct.startsWith('image/')) return null;
                 const blob = await resp.blob();
                 return await new Promise((resolve) => {
                     const reader = new FileReader();
@@ -1047,24 +1052,33 @@ const ConsultaPacientes = () => {
                     reader.readAsDataURL(blob);
                 });
             };
-            const size = 180;
-            // Primario: qrserver.com (menos restricciones CORS en general)
+            const size = 220; // mayor tamaño para mejor legibilidad
+            // Opción 1: quickchart.io con nivel de corrección alto
             try {
-                const url1 = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(text)}`;
-                const resp1 = await fetch(url1, { cache: 'no-store' });
-                if (resp1.ok) return await toBase64(resp1);
+                const url = `https://quickchart.io/qr?size=${size}&ecLevel=Q&margin=2&text=${encodeURIComponent(text)}`;
+                const resp = await fetch(url, { cache: 'no-store' });
+                if (resp.ok) {
+                    const b64 = await toBase64(resp);
+                    if (b64) return b64;
+                }
             } catch {}
-            // Fallback: Google Charts
+            // Opción 2: qrserver.com
             try {
-                const url2 = `https://chart.googleapis.com/chart?cht=qr&chs=${size}x${size}&chl=${encodeURIComponent(text)}`;
-                const resp2 = await fetch(url2, { cache: 'no-store' });
-                if (resp2.ok) return await toBase64(resp2);
+                const url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&qzone=2&data=${encodeURIComponent(text)}`;
+                const resp = await fetch(url, { cache: 'no-store' });
+                if (resp.ok) {
+                    const b64 = await toBase64(resp);
+                    if (b64) return b64;
+                }
             } catch {}
-            // Fallback adicional: quickchart.io
+            // Opción 3: Google Charts
             try {
-                const url3 = `https://quickchart.io/qr?size=${size}&text=${encodeURIComponent(text)}`;
-                const resp3 = await fetch(url3, { cache: 'no-store' });
-                if (resp3.ok) return await toBase64(resp3);
+                const url = `https://chart.googleapis.com/chart?cht=qr&chs=${size}x${size}&chl=${encodeURIComponent(text)}`;
+                const resp = await fetch(url, { cache: 'no-store' });
+                if (resp.ok) {
+                    const b64 = await toBase64(resp);
+                    if (b64) return b64;
+                }
             } catch {}
             return null;
         };
@@ -1081,7 +1095,7 @@ const ConsultaPacientes = () => {
         const qrImgData = await getQRBase64(qrTarget);
         if (logoImg) {
             // Logo ligeramente más largo
-            const logoW = 90, logoH = 60;
+            const logoW = 90, logoH = 60; // respeta el ajuste actual
             const logoX = 40;
             const logoY = 30;
             doc.addImage(logoImg, 'PNG', logoX, logoY, logoW, logoH, undefined, 'FAST');
@@ -1617,7 +1631,7 @@ const ConsultaPacientes = () => {
     // Botón para descargar carné
     const handleDescargarCarnet = async () => {
         if (!paciente || !paciente.no_afiliacion) return;
-        const directUrl = `/carnet/forzar/${encodeURIComponent(paciente.no_afiliacion)}`;
+        const directUrl = `/api/carnet/forzar/${encodeURIComponent(paciente.no_afiliacion)}`;
         try {
             // Intento 1: descarga directa por enlace (más compatible y evita CORS/Blob issues)
             const a = document.createElement('a');
@@ -1646,8 +1660,9 @@ const ConsultaPacientes = () => {
                 window.URL.revokeObjectURL(url);
             } catch (err2) {
                 setShowModal(true);
-                setModalMessage(`No se pudo descargar o generar el carné. Detalle: ${String(err2 && err2.message ? err2.message : err2)}`);
                 setModalType('error');
+                setModalTitle('Error al descargar carné');
+                setModalMessage(String(err2?.message || err2 || 'Error desconocido'));
             }
         }
     };
