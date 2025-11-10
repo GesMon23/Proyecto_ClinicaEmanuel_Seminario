@@ -157,8 +157,12 @@ app.use(backNU);
 app.use('/api',backNU);
 // Usar router de nutrición
 app.use('/api/nutricion', backNutricionRouter);
+// Tolerar proxies que remueven /api
+app.use('/nutricion', backNutricionRouter);
 // Usar router de consulta de nutrición
 app.use('/api/nutricion', backConsultaNutricionRouter);
+// Tolerar proxies sin /api para consultas
+app.use('/nutricion', backConsultaNutricionRouter);
 // Usar router de registro de referencias
 app.use(backRegistroReferenciasRouter);
 app.use('/api',backRegistroReferenciasRouter);
