@@ -1107,8 +1107,8 @@ const ConsultaPacientes = () => {
         // URL fija para abrir directamente la consulta del paciente por no_afiliacion
         const origin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'http://localhost:3000';
         const qp = [];
-        if (paciente?.no_afiliacion) qp.push(`noafiliacion=${encodeURIComponent(paciente.no_afiliacion)}`);
-        if (paciente?.dpi) qp.push(`dpi=${encodeURIComponent(paciente.dpi)}`);
+        if (paciente?.no_afiliacion) qp.push(`noafiliacion=${paciente.no_afiliacion}`);
+        if (paciente?.dpi) qp.push(`dpi=${paciente.dpi}`);
         const qrTarget = `${origin}/layout/consulta-pacientes${qp.length ? `?${qp.join('&')}` : ''}`;
         const qrImgData = await getQRBase64(qrTarget);
         if (logoImg) {
@@ -1129,7 +1129,7 @@ const ConsultaPacientes = () => {
         doc.line(40, 95, pageWidth - 40, 95);
         // QR en la esquina superior derecha del encabezado (primera página)
         if (qrImgData) {
-            const qrSize = 60;
+            const qrSize = 72;
             const qrX = pageWidth - 40 - qrSize; // margen derecho 40
             const qrY = 25; // cerca del borde superior
             doc.addImage(qrImgData, 'PNG', qrX, qrY, qrSize, qrSize, undefined, 'FAST');
@@ -1224,7 +1224,7 @@ const ConsultaPacientes = () => {
             doc.text('Reporte de Paciente', pageWidth / 2, 70, { align: 'center' });
             // QR en la esquina superior derecha del encabezado (todas las páginas)
             if (qrImgData) {
-                const qrSize = 60;
+                const qrSize = 72;
                 const qrX = pageWidth - 40 - qrSize; // margen derecho 40
                 const qrY = 25; // cerca del borde superior
                 doc.addImage(qrImgData, 'PNG', qrX, qrY, qrSize, qrSize, undefined, 'FAST');
