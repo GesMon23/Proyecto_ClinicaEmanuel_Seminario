@@ -1052,7 +1052,7 @@ const ConsultaPacientes = () => {
                     reader.readAsDataURL(blob);
                 });
             };
-            const size = 220; // mayor tamaño para mejor legibilidad
+            const size = 300; // mayor resolución para mejor legibilidad al escalar en PDF
             // Opción 0 (preferida): QR interno del backend
             try {
                 const url = `/api/qr?size=${size}&text=${encodeURIComponent(text)}`;
@@ -1073,7 +1073,7 @@ const ConsultaPacientes = () => {
             } catch {}
             // Opción 1: quickchart.io con nivel de corrección alto
             try {
-                const url = `https://quickchart.io/qr?size=${size}&ecLevel=Q&margin=2&text=${encodeURIComponent(text)}`;
+                const url = `https://quickchart.io/qr?size=${size}&ecLevel=H&margin=0&text=${encodeURIComponent(text)}`;
                 const resp = await fetch(url, { cache: 'no-store' });
                 if (resp.ok) {
                     const b64 = await toBase64(resp);
