@@ -131,7 +131,7 @@ const ReingresoPacientes = (props) => {
           const needsDetails = !p.departamento_nombre || !p.estado_descripcion || !p.jornada_descripcion || !p.acceso_descripcion || !p.direccion;
           if (needsDetails && p.noafiliacion) {
             try {
-              const egresoResp = await api.get('/api/pacientes/egreso', { params: { noafiliacion: p.noafiliacion } });
+              const egresoResp = await api.get('/pacientes/egreso', { params: { noafiliacion: p.noafiliacion } });
               const eg = Array.isArray(egresoResp.data) && egresoResp.data.length > 0 ? egresoResp.data[0] : null;
               if (eg) {
                 p = {
@@ -416,6 +416,12 @@ const ReingresoPacientes = (props) => {
                         alt="Foto del paciente"
                         className="w-full h-full object-cover"
                         onError={(e) => {
+                          const tried = e.currentTarget.getAttribute('data-tried');
+                          if (!tried && (p.noafiliacion || p.no_afiliacion)) {
+                            e.currentTarget.setAttribute('data-tried', '1');
+                            e.currentTarget.src = `${baseURL}/foto/${encodeURIComponent(p.noafiliacion || p.no_afiliacion)}`;
+                            return;
+                          }
                           e.currentTarget.onerror = null;
                           e.currentTarget.src = defaultAvatar;
                         }}
@@ -555,7 +561,6 @@ const ReingresoPacientes = (props) => {
                             required
                             className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                             inputMode="numeric"
-                            pattern="[0-9A-Za-z-]+"
                             aria-required="true"
                           />
                           <small className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
