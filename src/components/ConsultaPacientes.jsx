@@ -143,6 +143,8 @@ const ConsultaPacientes = () => {
     const [modalTitle, setModalTitle] = useState('');
     const [fotoCargando, setFotoCargando] = useState(false);
     const [departamentos, setDepartamentos] = useState([]);
+    const [fotoVersion, setFotoVersion] = useState(0);
+    const [fotoSrc, setFotoSrc] = useState(avatarDefault);
 
     // Autocompletar desde la URL (noafiliacion o dpi) y ejecutar la búsqueda al cargar
     useEffect(() => {
@@ -160,6 +162,15 @@ const ConsultaPacientes = () => {
             }
         } catch {}
     }, []);
+
+    // Inicializar/actualizar fuente de foto cuando cambia el paciente
+    useEffect(() => {
+        const ts = String(fotoVersion);
+        const preferId = paciente?.no_afiliacion ? `/api/foto/${encodeURIComponent(paciente.no_afiliacion)}?v=${ts}` : null;
+        const byFile = paciente?.url_foto ? `/api/fotos/${paciente.url_foto}?v=${ts}` : null;
+        const initial = preferId || byFile || avatarDefault;
+        setFotoSrc(initial);
+    }, [paciente, fotoVersion]);
     const [estados, setEstados] = useState([]);
     const [accesosVasculares, setAccesosVasculares] = useState([]);
     const [jornadas, setJornadas] = useState([]);
@@ -363,6 +374,7 @@ const ConsultaPacientes = () => {
 
                 // Setear paciente en el estado para que la vista use el filename resuelto
                 setPaciente(response.data);
+                setFotoVersion((v) => v + 1);
                 setSelectedTab('Datos Personales');
                 
                 // Continuar con cargas relacionadas
@@ -1743,17 +1755,16 @@ const ConsultaPacientes = () => {
                                         ) : (
                                             <img
                                                 alt="Foto del paciente"
-                                                src={paciente?.url_foto
-                                                    ? `/api/fotos/${paciente.url_foto}?${Date.now()}`
-                                                    : (paciente?.no_afiliacion ? `/api/foto/${encodeURIComponent(paciente.no_afiliacion)}?${Date.now()}` : avatarDefault)}
+                                                src={fotoSrc}
                                                 className="w-full h-full object-cover"
-                                                onError={(e) => {
-                                                    e.target.onerror = null;
-                                                    // Fallback a ruta directa por filename si existe, luego avatar
-                                                    if (paciente?.url_foto) {
-                                                        e.target.src = `/api/fotos/${paciente.url_foto}?${Date.now()}`;
+                                                onError={() => {
+                                                    // Si falló la ruta por ID, probar filename; si no, avatar
+                                                    const ts = String(fotoVersion);
+                                                    const byFile = paciente?.url_foto ? `/api/fotos/${paciente.url_foto}?v=${ts}` : null;
+                                                    if (fotoSrc.includes('/api/foto/') && byFile) {
+                                                        setFotoSrc(byFile);
                                                     } else {
-                                                        e.target.src = avatarDefault;
+                                                        setFotoSrc(avatarDefault);
                                                     }
                                                 }}
                                             />
