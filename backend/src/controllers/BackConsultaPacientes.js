@@ -632,7 +632,8 @@ router.get('/check-photo/:id', async (req, res) => {
 });
 
 // Helper para generar el carné en A4 vertical con logo, foto, QR, datos y tabla de firmas
-async function definirCarnetPaciente(paciente, fotoPath, outputPath) {
+// baseFrontend: URL base del frontend (por ejemplo, https://clinicaemanuel.com.gt)
+async function definirCarnetPaciente(paciente, fotoPath, outputPath, baseFrontend) {
     // Helper para obtener campos compatibles (con o sin guion bajo)
     const firstNonEmpty = (...vals) => vals.find(v => v !== undefined && v !== null && String(v).trim() !== '') || '';
     const primernombre = firstNonEmpty(paciente.primernombre, paciente.primer_nombre);
@@ -648,12 +649,12 @@ async function definirCarnetPaciente(paciente, fotoPath, outputPath) {
     const dpi = firstNonEmpty(paciente.dpi);
     const sexo = firstNonEmpty(paciente.sexo);
 
-    const baseFrontend = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const baseFront = baseFrontend || process.env.FRONTEND_URL || 'http://localhost:3000';
     const queryParts = [];
     if (noafiliacion) queryParts.push(`noafiliacion=${encodeURIComponent(noafiliacion)}`);
     if (dpi) queryParts.push(`dpi=${encodeURIComponent(dpi)}`);
     const queryStr = queryParts.join('&');
-    const qrUrl = `${baseFrontend}/layout/consulta-pacientes${queryStr ? `?${queryStr}` : ''}`;
+    const qrUrl = `${baseFront}/layout/consulta-pacientes${queryStr ? `?${queryStr}` : ''}`;
 
     // Generar QR como dataURL
     let qrDataUrl = null;
@@ -916,7 +917,11 @@ router.get('/carnet/forzar/:noafiliacion', async (req, res) => {
         if (!fs.existsSync(path.join(__dirname, 'tmp'))) {
             fs.mkdirSync(path.join(__dirname, 'tmp'));
         }
-        await definirCarnetPaciente(pacienteData, fotoPath, carnetPath);
+        // Resolver URL del frontend desde env o cabeceras del proxy
+        const xfProto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+        const xfHost = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3000';
+        const baseFrontend = process.env.FRONTEND_URL || `${xfProto}://${xfHost}`;
+        await definirCarnetPaciente(pacienteData, fotoPath, carnetPath, baseFrontend);
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="carnet_${noafiliacion}.pdf"`);
         const stream = fs.createReadStream(carnetPath);
