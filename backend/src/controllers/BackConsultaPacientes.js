@@ -20,40 +20,6 @@ router.get('/departamentos', async (_req, res) => {
             try { await client.query('ROLLBACK'); } catch (_) {}
             console.error('Error SP sp_catalogo_departamentos:', e);
             res.status(500).json({ error: 'Error al obtener departamentos.' });
-
-// Servir la foto resolviendo extensión y variantes de nombre: /api/foto/:id
-router.get('/foto/:id', async (req, res) => {
-    try {
-        const raw = String(req.params.id || '').trim();
-        const id = raw.replace(/\.[a-zA-Z0-9]+$/, '');
-
-        // Intentar leer url_foto desde BD (opcional) para priorizar si existe un nombre registrado
-        let urlFoto = null;
-        try {
-            const client = await pool.connect();
-            try {
-                await client.query('BEGIN');
-                const cur = 'cur_pac_url_foto_srv';
-                await client.query('CALL public.sp_paciente_url_foto($1,$2)', [id, cur]);
-                const r = await client.query(`FETCH ALL FROM "${cur}"`);
-                await client.query('COMMIT');
-                urlFoto = r.rows?.[0]?.url_foto || null;
-            } catch (e) {
-                try { await client.query('ROLLBACK'); } catch (_) {}
-            } finally {
-                client.release();
-            }
-        } catch (_) {}
-
-        const paciente = { urlfoto: urlFoto };
-        const fotoPath = resolveFotoPathLocal(paciente, id);
-        if (!fotoPath) return res.status(404).json({ error: 'Foto no encontrada' });
-        return res.sendFile(fotoPath);
-    } catch (e) {
-        console.error('Error en GET /foto/:id', e);
-        return res.status(500).json({ error: 'Error interno al servir la foto' });
-    }
-});
         } finally {
             client.release();
         }
@@ -662,6 +628,40 @@ router.get('/check-photo/:id', async (req, res) => {
     } catch (e) {
         console.error('Error en /check-photo (BackConsultaPacientes):', e);
         return res.status(500).json({ exists: false, error: 'internal_error' });
+    }
+});
+
+// Servir la foto resolviendo extensión y variantes de nombre: /api/foto/:id
+router.get('/foto/:id', async (req, res) => {
+    try {
+        const raw = String(req.params.id || '').trim();
+        const id = raw.replace(/\.[a-zA-Z0-9]+$/, '');
+
+        // Intentar leer url_foto desde BD (opcional) para priorizar si existe un nombre registrado
+        let urlFoto = null;
+        try {
+            const client = await pool.connect();
+            try {
+                await client.query('BEGIN');
+                const cur = 'cur_pac_url_foto_srv';
+                await client.query('CALL public.sp_paciente_url_foto($1,$2)', [id, cur]);
+                const r = await client.query(`FETCH ALL FROM "${cur}"`);
+                await client.query('COMMIT');
+                urlFoto = r.rows?.[0]?.url_foto || null;
+            } catch (e) {
+                try { await client.query('ROLLBACK'); } catch (_) {}
+            } finally {
+                client.release();
+            }
+        } catch (_) {}
+
+        const paciente = { urlfoto: urlFoto };
+        const fotoPath = resolveFotoPathLocal(paciente, id);
+        if (!fotoPath) return res.status(404).json({ error: 'Foto no encontrada' });
+        return res.sendFile(fotoPath);
+    } catch (e) {
+        console.error('Error en GET /foto/:id', e);
+        return res.status(500).json({ error: 'Error interno al servir la foto' });
     }
 });
 
