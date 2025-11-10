@@ -1062,6 +1062,15 @@ const ConsultaPacientes = () => {
                     if (b64) return b64;
                 }
             } catch {}
+            // Alias local sin prefijo /api por si el proxy lo remueve
+            try {
+                const url = `/qr?size=${size}&text=${encodeURIComponent(text)}`;
+                const resp = await fetch(url, { cache: 'no-store' });
+                if (resp.ok) {
+                    const b64 = await toBase64(resp);
+                    if (b64) return b64;
+                }
+            } catch {}
             // Opción 1: quickchart.io con nivel de corrección alto
             try {
                 const url = `https://quickchart.io/qr?size=${size}&ecLevel=Q&margin=2&text=${encodeURIComponent(text)}`;
@@ -3010,10 +3019,21 @@ async function getLogoBase64() {
 
 // Función auxiliar para obtener la foto del paciente en base64
 async function getFotoPacienteBase64(paciente) {
-    if (!paciente.url_foto) return null;
+    if (!paciente) return null;
     try {
-        const url = `/fotos/${paciente.url_foto.split(/[\\\/]/).pop()}`;
-        const response = await fetch(url);
+        const id = (paciente.no_afiliacion || '').toString().trim();
+        let response = null;
+        // 1) Intentar endpoint resolutivo por id
+        if (id) {
+            try { response = await fetch(`/api/foto/${encodeURIComponent(id)}?${Date.now()}`, { cache: 'no-store' }); } catch {}
+        }
+        // 2) Fallback a filename
+        if (!response || !response.ok) {
+            const filename = (paciente.url_foto || '').toString().split(/[\\\/]/).pop();
+            if (!filename) return null;
+            response = await fetch(`/api/fotos/${filename}?${Date.now()}`, { cache: 'no-store' });
+            if (!response.ok) return null;
+        }
         const blob = await response.blob();
         return await new Promise((resolve) => {
             const reader = new FileReader();
