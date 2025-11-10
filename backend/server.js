@@ -174,6 +174,8 @@ app.use('/api',backCatalogosRouter);
 // Otros routers existentes
 app.use(backActualizacionPacientes);
 app.use('/api',backActualizacionPacientes);
+// Exponer EgresoPacientes tanto con y sin prefijo /api
+app.use(backEgresoPacientes);
 app.use('/api',backEgresoPacientes);
 app.use(backReingresoPacientesRouter);
 app.use('/api', backReingresoPacientesRouter);
