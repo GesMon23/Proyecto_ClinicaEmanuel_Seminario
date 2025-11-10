@@ -72,6 +72,30 @@ const ActualizacionPacientes = () => {
     }
   };
 
+  const construirUrlFoto = async (p) => {
+    try {
+      const id = (p?.no_afiliacion || '').toString().trim();
+      // 1) Intentar resolver con /check-photo/:id (devuelve {exists, url: '/fotos/xx.ext'})
+      if (id) {
+        try {
+          const { data } = await api.get(`/check-photo/${encodeURIComponent(id)}`);
+          if (data && data.exists && data.url) {
+            const served = data.url.startsWith('/api') ? data.url : `/api${data.url}`;
+            return served;
+          }
+        } catch (_) {}
+      }
+      // 2) Fallback por filename conocido
+      const filename = (p?.url_foto || p?.urlfoto || '').toString().split(/[\\\/]/).pop();
+      if (filename) return `/api/fotos/${filename}`;
+      // 3) Último recurso: endpoint resolutivo por id
+      if (id) return `/api/foto/${encodeURIComponent(id)}`;
+      return null;
+    } catch (_) {
+      return null;
+    }
+  };
+
   const buscarPaciente = async (e) => {
     if (e) e.preventDefault();
     setLoading(true);
@@ -102,15 +126,13 @@ const ActualizacionPacientes = () => {
           setModalType('error');
           return;
         }
-        console.log("ðŸ“¸ url_foto crudo desde backend:", pacienteData.url_foto);
-        // Procesar foto si existe
-        if (pacienteData.url_foto) {
-          const filename = pacienteData.url_foto.replace(/^.*[\\\/]/, '');
-          pacienteData.url_foto = `/api/fotos/${filename}`;
-        } else {
-          pacienteData.url_foto = null;
-        }
-        console.log("âœ… url_foto procesado:", pacienteData.url_foto);
+        console.log("📸 url_foto crudo desde backend:", pacienteData.url_foto);
+        // Resolver URL de foto de forma robusta
+        const urlResuelta = await construirUrlFoto(pacienteData);
+        pacienteData.url_foto = urlResuelta || null;
+        // Alinear también urlfoto para que el <img> use la misma ruta
+        if (urlResuelta) pacienteData.urlfoto = urlResuelta;
+        console.log("✅ url_foto procesado:", pacienteData.url_foto);
         setPaciente(pacienteData);
         setFormData(pacienteData);
         setEditando(false);
@@ -692,6 +714,14 @@ const ActualizacionPacientes = () => {
                     }
                     className="w-full h-full object-cover"
                     onError={e => {
+                      // Intentar un fallback adicional por id si falla la ruta calculada
+                      const id = (formData.no_afiliacion || '').toString().trim();
+                      const tried = e.target.getAttribute('data-tried-fallback');
+                      if (id && !tried) {
+                        e.target.setAttribute('data-tried-fallback', '1');
+                        e.target.src = `/api/foto/${encodeURIComponent(id)}`;
+                        return;
+                      }
                       e.target.onerror = null;
                       e.target.src = defaultAvatar;
                     }}
