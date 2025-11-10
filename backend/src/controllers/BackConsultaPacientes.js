@@ -574,17 +574,32 @@ const LOGO_PATH = path.join(__dirname, '../../assets/img/logoClinica.png');
 function resolveFotoPathLocal(paciente, noafiliacion) {
     const baseDir = FOTOS_DIR;
     const candidates = [];
-    const url = paciente?.urlfoto || paciente?.url_foto || paciente?.url_foto || null;
+    let url = paciente?.urlfoto || paciente?.url_foto || null;
     if (url) {
         try {
-            const p = path.isAbsolute(url) ? url : path.join(baseDir, url);
-            candidates.push(p);
+            // Si es URL absoluta, tomar el basename; si tiene prefijo /fotos/, limpiarlo
+            if (/^https?:\/\//i.test(String(url))) {
+                try {
+                    const u = new URL(String(url));
+                    url = decodeURIComponent(path.basename(u.pathname));
+                } catch (_) {}
+            } else {
+                url = String(url).replace(/^\/+/, '').replace(/^fotos\//i, '');
+            }
+            if (url) candidates.push(path.join(baseDir, url));
         } catch (_) {}
     }
-    const exts = ['.jpg', '.jpeg', '.png', '.webp'];
+    // Probar variantes de extensión y mayúsculas/minúsculas
+    const exts = ['.jpg', '.jpeg', '.png', '.webp', '.JPG', '.JPEG', '.PNG', '.WEBP'];
     for (const ext of exts) candidates.push(path.join(baseDir, `${noafiliacion}${ext}`));
+    // Intento final: escanear el directorio y buscar por nombre (sin extensión), case-insensitive
+    try {
+        const files = fs.readdirSync(baseDir);
+        const hit = files.find(f => (path.parse(f).name || '').toLowerCase() === String(noafiliacion).toLowerCase());
+        if (hit) candidates.push(path.join(baseDir, hit));
+    } catch (_) {}
     for (const cand of candidates) {
-        try { if (fs.existsSync(cand)) return cand; } catch (_) {}
+        try { if (cand && fs.existsSync(cand)) return cand; } catch (_) {}
     }
     return null;
 }
