@@ -150,8 +150,12 @@ app.use(backRolesUsuariosRouter);
 app.use('/api',backRolesUsuariosRouter);
 // Usar router de psicología
 app.use('/api/psicologia', backPsicologiaRouter);
+// Tolerar proxies que remueven /api
+app.use('/psicologia', backPsicologiaRouter);
 // Usar router de consulta de psicología (endpoints GET de historial)
 app.use('/api/psicologia', backConsultaPsicologiaRouter);
+// Tolerar proxies sin /api para consultas
+app.use('/psicologia', backConsultaPsicologiaRouter);
 
 app.use(backNU);
 app.use('/api',backNU);
