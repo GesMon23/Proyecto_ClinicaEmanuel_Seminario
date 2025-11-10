@@ -94,6 +94,7 @@ const backEgresoPacientes = require('./src/controllers/BackEgresoPacientes');
 const backReingresoPacientesRouter = require('./src/controllers/BackReingresoPacientes');
 
 const backEgresoReportesRouter = require('./src/controllers/BackEgresoReportes');
+const QRCode = require('qrcode');
 
 // Importar router de consulta de pacientes
 const backConsultaPacientesRouter = require('./src/controllers/BackConsultaPacientes');
@@ -125,6 +126,7 @@ app.use('/api',backFallecidosReportesRouter);
 app.use(backEstadisticasResumenRouter);
 app.use('/api',backEstadisticasResumenRouter);
 app.use('/fotos', express.static(fotosDir));
+app.use('/api/fotos', express.static(fotosDir));
 // (Desmontado) Usar el router legacy para actualización masiva de pacientes
 // app.use(updateMasivoPacientesRouter);
 // Usar router de login/roles (centralizado en BackLogin.js)
@@ -216,6 +218,27 @@ app.post('/upload-foto/:noAfiliacion', async (req, res) => {
     } catch (err) {
         console.error('Error al subir foto:', err);
         res.status(500).json({ detail: 'Error al guardar la foto.' });
+    }
+});
+
+// Endpoint para generar QR como imagen PNG (útil para el reporte del frontend)
+app.get('/api/qr', async (req, res) => {
+    try {
+        const text = String(req.query.text || '').trim();
+        const size = Math.min(1024, Math.max(80, parseInt(req.query.size || '220', 10) || 220));
+        if (!text) return res.status(400).json({ error: 'text requerido' });
+        const buf = await QRCode.toBuffer(text, {
+            type: 'png',
+            width: size,
+            margin: 2,
+            errorCorrectionLevel: 'Q'
+        });
+        res.setHeader('Content-Type', 'image/png');
+        res.setHeader('Cache-Control', 'no-store');
+        return res.status(200).send(buf);
+    } catch (e) {
+        console.error('Error generando QR:', e);
+        return res.status(500).json({ error: 'No se pudo generar el QR' });
     }
 });
 
