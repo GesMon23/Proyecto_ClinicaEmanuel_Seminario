@@ -1053,6 +1053,15 @@ const ConsultaPacientes = () => {
                 });
             };
             const size = 220; // mayor tamaño para mejor legibilidad
+            // Opción 0 (preferida): QR interno del backend
+            try {
+                const url = `/api/qr?size=${size}&text=${encodeURIComponent(text)}`;
+                const resp = await fetch(url, { cache: 'no-store' });
+                if (resp.ok) {
+                    const b64 = await toBase64(resp);
+                    if (b64) return b64;
+                }
+            } catch {}
             // Opción 1: quickchart.io con nivel de corrección alto
             try {
                 const url = `https://quickchart.io/qr?size=${size}&ecLevel=Q&margin=2&text=${encodeURIComponent(text)}`;
@@ -1774,7 +1783,7 @@ const ConsultaPacientes = () => {
                                         ) : (
                                             <img
                                                 alt="Foto del paciente"
-                                                src={paciente.url_foto ? `/fotos/${paciente.url_foto}?${Date.now()}` : avatarDefault}
+                                                src={paciente.url_foto ? `/api/fotos/${paciente.url_foto}?${Date.now()}` : avatarDefault}
                                                 className="w-full h-full object-cover"
                                                 onError={(e) => {
                                                     e.target.onerror = null;
