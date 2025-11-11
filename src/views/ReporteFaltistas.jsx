@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import api from "@/config/api";
 import { Card, Form, Row, Col, Button, Table } from "react-bootstrap";
 import logoClinica from '@/assets/logoClinica2.png';
 import '../components/NuevoIngresoReportes.css';
@@ -37,9 +38,8 @@ const ReporteFaltistas = () => {
       if (filtros.departamento) params.append('departamento', filtros.departamento);
       if (filtros.clinica) params.append('clinica', filtros.clinica);
       if (filtros.noafiliacion) params.append('noafiliacion', filtros.noafiliacion);
-      const res = await fetch(`/api/faltistas?${params.toString()}`);
-      const data = await res.json();
-      setTodosFaltistas(data);
+      const { data } = await api.get('/faltistas', { params: Object.fromEntries(params) });
+      setTodosFaltistas(Array.isArray(data) ? data : []);
       setFaltistas(Array.isArray(data) ? data : []);
       setPaginaActual(1);
     } catch {
@@ -67,8 +67,7 @@ const ReporteFaltistas = () => {
   useEffect(() => {
     const cargarCatalogos = async () => {
       try {
-        const res = await fetch('/api/faltistas/catalogos');
-        const data = await res.json();
+        const { data } = await api.get('/faltistas/catalogos');
         setCatalogos({
           clinicas: Array.isArray(data?.clinicas) ? data.clinicas : [],
           jornadas: Array.isArray(data?.jornadas) ? data.jornadas : [],
@@ -229,7 +228,8 @@ const ReporteFaltistas = () => {
                     if (filtros.departamento) params.append('departamento', filtros.departamento);
                     if (filtros.clinica) params.append('clinica', filtros.clinica);
                     if (filtros.noafiliacion) params.append('noafiliacion', filtros.noafiliacion);
-                    window.open(`/api/faltistas/excel?${params.toString()}`);
+                    const url = `${window.location.origin}/api/faltistas/excel?${params.toString()}`;
+                    window.open(url);
                   }}
                   disabled={faltistas.length===0}
                   className={`px-4 py-2 font-medium rounded border flex items-center gap-2 ${faltistas.length===0?'bg-gray-300 text-white cursor-not-allowed border-gray-400':'bg-[#107C41] hover:bg-[#0E6A39] text-white border-[#0E6A39]'}`}
