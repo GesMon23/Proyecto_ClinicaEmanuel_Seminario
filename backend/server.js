@@ -243,6 +243,33 @@ app.post('/upload-foto/:noAfiliacion', async (req, res) => {
     }
 });
 
+// Alias con prefijo /api para clientes cuyo baseURL es '/api'
+app.post('/api/upload-foto/:noAfiliacion', async (req, res) => {
+    const { noAfiliacion } = req.params;
+    const { imagenBase64 } = req.body;
+    if (!imagenBase64) {
+        return res.status(400).json({ detail: 'No se recibió la imagen.' });
+    }
+    try {
+        const matches = imagenBase64.match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/);
+        if (!matches) {
+            return res.status(400).json({ detail: 'Formato de imagen inválido.' });
+        }
+        const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+        const data = matches[2];
+        const buffer = Buffer.from(data, 'base64');
+        const filename = `${noAfiliacion}.${ext}`;
+        const filePath = path.join(fotosDir, filename);
+        fs.writeFileSync(filePath, buffer);
+
+        await pool.query('UPDATE public.tbl_pacientes SET url_foto = $1 WHERE no_afiliacion = $2', [filename, noAfiliacion]);
+        res.json({ success: true, url: `/fotos/${filename}` });
+    } catch (err) {
+        console.error('Error al subir foto (alias /api):', err);
+        res.status(500).json({ detail: 'Error al guardar la foto.' });
+    }
+});
+
 // Endpoint para generar QR como imagen PNG (útil para el reporte del frontend)
 app.get('/api/qr', async (req, res) => {
     try {
