@@ -356,7 +356,16 @@ function getTransporter() {
     console.warn('[WARN] SMTP no configurado: defina SMTP_HOST, SMTP_USER y SMTP_PASS');
     return null;
   }
-  transporter = nodemailer.createTransport({ host, port, secure, auth: { user, pass } });
+  transporter = nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: { user, pass },
+    connectionTimeout: 7000,
+    socketTimeout: 7000,
+    greetingTimeout: 5000,
+    pool: false,
+  });
   return transporter;
 }
 // ==============================================================
@@ -652,7 +661,9 @@ router.post('/auth/forgot-password', async (req, res) => {
           const adminLink = adminActionToken
             ? `${base}/admin/reset-user?token=${adminActionToken}`
             : `${base}/admin/reset-user`;
-          await t.sendMail({
+          // Enviar correo en background para no bloquear la respuesta HTTP
+          // Nota: no usamos await; si falla, solo se registra en consola
+          t.sendMail({
             from: `Solicitud cambio de correo usuario '${usuario}' <${process.env.SMTP_USER}>`,
             to,
             subject: 'Solicitud de recuperación de contraseña (acción requerida)',
@@ -685,6 +696,10 @@ router.post('/auth/forgot-password', async (req, res) => {
                 </body>
               </html>
             `.trim(),
+          }).then(() => {
+            /* noop */
+          }).catch((err) => {
+            console.error('Error enviando correo forgot-password (async):', err);
           });
         }
       }
