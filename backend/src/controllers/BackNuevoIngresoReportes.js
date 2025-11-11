@@ -7,8 +7,8 @@ const path = require('path');
 
 
 
-// GET /api/nuevoingreso - lista filtrada (SP + cursor)
-router.get('/api/nuevoingreso', async (req, res) => {
+// GET /nuevoingreso - lista filtrada (SP + cursor)
+router.get('/nuevoingreso', async (req, res) => {
   try {
     const { fechainicio, fechafin, numeroformulario, jornada, accesovascular, sexo, departamento } = req.query;
     const client = await pool.connect();
@@ -38,13 +38,13 @@ router.get('/api/nuevoingreso', async (req, res) => {
       client.release();
     }
   } catch (error) {
-    console.error('[NuevoIngreso] /api/nuevoingreso error:', error);
+    console.error('[NuevoIngreso] /nuevoingreso error:', error);
     res.status(500).json({ error: 'Error al buscar nuevo ingreso.' });
   }
 });
 
 // Catálogos
-router.get('/api/nuevoingreso/catalogos', async (_req, res) => {
+router.get('/nuevoingreso/catalogos', async (_req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -71,7 +71,7 @@ router.get('/api/nuevoingreso/catalogos', async (_req, res) => {
     });
   } catch (error) {
     try { await client.query('ROLLBACK'); } catch (_) {}
-    console.error('[NuevoIngreso] /api/nuevoingreso/catalogos error:', error);
+    console.error('[NuevoIngreso] /nuevoingreso/catalogos error:', error);
     res.status(500).json({ error: 'Error al cargar catálogos.' });
   } finally {
     client.release();
@@ -79,7 +79,7 @@ router.get('/api/nuevoingreso/catalogos', async (_req, res) => {
 });
 
 // Excel
-router.get('/api/nuevoingreso/excel', async (req, res) => {
+router.get('/nuevoingreso/excel', async (req, res) => {
   try {
     const { fechainicio, fechafin, numeroformulario, jornada, accesovascular, sexo, departamento } = req.query;
     const client = await pool.connect();
@@ -248,7 +248,7 @@ router.get('/api/nuevoingreso/excel', async (req, res) => {
     await workbook.xlsx.write(res);
     res.end();
   } catch (error) {
-    console.error('[NuevoIngreso] /api/nuevoingreso/excel error:', error);
+    console.error('[NuevoIngreso] /nuevoingreso/excel error:', error);
     res.status(500).json({ error: 'Error al exportar Excel.' });
   }
 });
