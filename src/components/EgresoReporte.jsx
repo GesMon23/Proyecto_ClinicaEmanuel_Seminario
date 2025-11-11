@@ -77,7 +77,7 @@ const EgresoReporte = () => {
     React.useEffect(() => {
         const cargar = async () => {
             try {
-                const { data } = await api.get('/api/egreso/catalogos');
+                const { data } = await api.get('/egreso/catalogos');
                 setCatalogos({
                     jornadas: data?.jornadas || [],
                     accesos: data?.accesos || [],
@@ -102,8 +102,8 @@ const EgresoReporte = () => {
             if (filtros.accesovascular) params.accesovascular = filtros.accesovascular;
             if (filtros.sexo) params.sexo = filtros.sexo;
             if (filtros.departamento) params.departamento = filtros.departamento;
-            const res = await api.get('/api/egreso', { params });
-            setPacientes(res.data);
+            const res = await api.get('/egreso', { params });
+            setPacientes(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
             setPacientes([]);
         }
