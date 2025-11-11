@@ -5,8 +5,8 @@ const ExcelJS = require('exceljs');
 const fs = require('fs');
 const path = require('path');
 
-// GET /api/faltistas - lista con filtros por fecha (server-side)
-router.get('/api/faltistas', async (req, res) => {
+// GET /faltistas - lista con filtros por fecha (server-side)
+router.get('/faltistas', async (req, res) => {
   try {
     const { fechainicio, fechafin, noafiliacion, sexo, clinica, jornada, accesovascular, departamento } = req.query;
 
@@ -46,13 +46,13 @@ router.get('/api/faltistas', async (req, res) => {
       client.release();
     }
   } catch (error) {
-    console.error('[BackReporteFaltistas] /api/faltistas error:', error);
+    console.error('[BackReporteFaltistas] /faltistas error:', error);
     res.status(500).json({ error: 'Error al obtener faltistas.' });
   }
 });
 
-// GET /api/faltistas/excel - exporta listado en Excel
-router.get('/api/faltistas/excel', async (req, res) => {
+// GET /faltistas/excel - exporta listado en Excel
+router.get('/faltistas/excel', async (req, res) => {
   try {
     const { fechainicio, fechafin, noafiliacion, sexo, clinica, jornada, accesovascular, departamento } = req.query;
     const client = await pool.connect();
@@ -144,14 +144,14 @@ router.get('/api/faltistas/excel', async (req, res) => {
     await workbook.xlsx.write(res);
     res.end();
   } catch (error) {
-    console.error('[BackReporteFaltistas] /api/faltistas/excel error:', error);
+    console.error('[BackReporteFaltistas] /faltistas/excel error:', error);
     res.status(500).json({ error: 'Error al exportar Excel.' });
   }
 });
 
 module.exports = router;
 // Catálogos: clínicas, jornadas, accesos, departamentos
-router.get('/api/faltistas/catalogos', async (_req, res) => {
+router.get('/faltistas/catalogos', async (_req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -178,7 +178,7 @@ router.get('/api/faltistas/catalogos', async (_req, res) => {
     });
   } catch (error) {
     try { await client.query('ROLLBACK'); } catch (_) {}
-    console.error('[BackReporteFaltistas] /api/faltistas/catalogos error:', error);
+    console.error('[BackReporteFaltistas] /faltistas/catalogos error:', error);
     res.status(500).json({ error: 'Error al cargar catálogos.' });
   } finally {
     client.release();
