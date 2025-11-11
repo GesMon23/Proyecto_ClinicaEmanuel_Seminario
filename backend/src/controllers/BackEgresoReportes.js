@@ -6,8 +6,8 @@ const fs = require('fs');
 const path = require('path');
 
 
-// GET /api/egreso - lista filtrada
-router.get('/api/egreso', async (req, res) => {
+// GET /egreso - lista filtrada
+router.get('/egreso', async (req, res) => {
   try {
     const { fechainicio, fechafin, causa, jornada, accesovascular, sexo, departamento } = req.query;
     const client = await pool.connect();
@@ -34,13 +34,13 @@ router.get('/api/egreso', async (req, res) => {
       client.release();
     }
   } catch (error) {
-    console.error('[EgresoReporte] /api/egreso error:', error);
+    console.error('[EgresoReporte] /egreso error:', error);
     res.status(500).json({ error: 'Error al buscar egresos.' });
   }
 });
 
-// GET /api/egreso/catalogos - catálogos para filtros
-router.get('/api/egreso/catalogos', async (_req, res) => {
+// GET /egreso/catalogos - catálogos para filtros
+router.get('/egreso/catalogos', async (_req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -71,15 +71,15 @@ router.get('/api/egreso/catalogos', async (_req, res) => {
     });
   } catch (error) {
     try { await client.query('ROLLBACK'); } catch (_) {}
-    console.error('[EgresoReporte] /api/egreso/catalogos error:', error);
+    console.error('[EgresoReporte] /egreso/catalogos error:', error);
     res.status(500).json({ error: 'Error al cargar catálogos.' });
   } finally {
     client.release();
   }
 });
 
-// GET /api/egreso/excel - exporta excel
-router.get('/api/egreso/excel', async (req, res) => {
+// GET /egreso/excel - exporta excel
+router.get('/egreso/excel', async (req, res) => {
   try {
     const { fechainicio, fechafin, causa, jornada, accesovascular, sexo, departamento } = req.query;
     const client = await pool.connect();
@@ -211,7 +211,7 @@ router.get('/api/egreso/excel', async (req, res) => {
     await workbook.xlsx.write(res);
     res.end();
   } catch (error) {
-    console.error('[EgresoReporte] /api/egreso/excel error:', error);
+    console.error('[EgresoReporte] /egreso/excel error:', error);
     res.status(500).json({ error: 'Error al exportar Excel.' });
   }
 });
