@@ -6,8 +6,8 @@ const fs = require('fs');
 const path = require('path');
 
 
-// GET /api/pacientes - lista filtrada para la vista
-router.get('/api/pacientes', async (req, res) => {
+// GET /pacientes - lista filtrada para la vista (server.js lo monta también bajo /api)
+router.get('/pacientes', async (req, res) => {
   try {
     const { fechainicio, fechafin, estado, numeroformulario, jornada, accesovascular, sexo, departamento } = req.query;
     const client = await pool.connect();
@@ -35,13 +35,13 @@ router.get('/api/pacientes', async (req, res) => {
       client.release();
     }
   } catch (error) {
-    console.error('[PacientesReporte] /api/pacientes error:', error);
+    console.error('[PacientesReporte] /pacientes error:', error);
     res.status(500).json({ error: 'Error al buscar pacientes.' });
   }
 });
 
 // Catálogos para filtros en PacientesReporte (SP + cursores)
-router.get('/api/pacientes/catalogos', async (_req, res) => {
+router.get('/pacientes/catalogos', async (_req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -72,13 +72,13 @@ router.get('/api/pacientes/catalogos', async (_req, res) => {
     });
   } catch (error) {
     try { await client.query('ROLLBACK'); } catch (_) {}
-    console.error('[PacientesReporte] /api/pacientes/catalogos error:', error);
+    console.error('[PacientesReporte] /pacientes/catalogos error:', error);
     res.status(500).json({ error: 'Error al cargar catálogos.' });
   } finally {
     client.release();
   }
 });
-router.get('/api/pacientes/excel', async (req, res) => {
+router.get('/pacientes/excel', async (req, res) => {
   try {
     const { fechainicio, fechafin, estado, numeroformulario, jornada, accesovascular, sexo, departamento } = req.query;
     const client = await pool.connect();
