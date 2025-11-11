@@ -9,6 +9,7 @@ const path = require('path');
 const PDFDocument = require('pdfkit');
 const jwt = require('jsonwebtoken');
 const { runWithUser } = require('./src/db');
+const { enviarCorreo } = require('./src/utils/mailer');
 
 const nz = (v) => (v === undefined || v === null || v === '' ? null : v);
 
@@ -600,7 +601,24 @@ app.post('/upload-photo', async (req, res) => {
         res.status(500).json({ success: false, message: 'Error interno al guardar la foto' });
     }
 });
+
+// Endpoint de prueba para envío de correo vía SMTP (puerto configurable, p.ej. 2525)
+app.post('/api/mail/test', async (req, res) => {
+    try {
+        const { to, subject, html, text } = req.body || {};
+        if (!to || !subject || (!html && !text)) {
+            return res.status(400).json({ error: 'Parámetros requeridos: to, subject, (html o text).' });
+        }
+        const info = await enviarCorreo({ to, subject, html, text });
+        return res.json({ ok: true, messageId: info?.messageId || null });
+    } catch (e) {
+        console.error('Error en /api/mail/test:', e);
+        return res.status(500).json({ ok: false, error: e.message || 'Error enviando correo' });
+    }
+});
+
 const PORT = process.env.PORT || 3001;
+
 app.listen(PORT, () => {
     console.log(`Servidor corriendo en el puerto ${PORT}`);
 });
