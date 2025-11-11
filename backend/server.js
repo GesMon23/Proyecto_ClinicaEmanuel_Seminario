@@ -264,6 +264,27 @@ app.get('/api/qr', async (req, res) => {
     }
 });
 
+// Alias sin prefijo /api por tolerancia a proxies que lo remueven
+app.get('/qr', async (req, res) => {
+    try {
+        const text = String(req.query.text || '').trim();
+        const size = Math.min(1024, Math.max(80, parseInt(req.query.size || '220', 10) || 220));
+        if (!text) return res.status(400).json({ error: 'text requerido' });
+        const buf = await QRCode.toBuffer(text, {
+            type: 'png',
+            width: size,
+            margin: 2,
+            errorCorrectionLevel: 'Q'
+        });
+        res.setHeader('Content-Type', 'image/png');
+        res.setHeader('Cache-Control', 'no-store');
+        return res.status(200).send(buf);
+    } catch (e) {
+        console.error('Error generando QR (alias /qr):', e);
+        return res.status(500).json({ error: 'No se pudo generar el QR' });
+    }
+});
+
 // Configuración de la base de datos
 const ExcelJS = require("exceljs");
 
