@@ -3,6 +3,7 @@ const express = require('express');
 const pool = require('./db/pool');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const { enviarCorreo } = require('./src/utils/mailer');
 let nodemailer;
 try {
   nodemailer = require('nodemailer');
@@ -218,68 +219,38 @@ router.post('/auth/admin/reset-user-password/token', async (req, res) => {
     
     // Intentar enviar correo al usuario afectado con la nueva contraseña
     try {
-      const t = getTransporter();
-      if (t) {
-        // Buscar correo del usuario objetivo
-        let correoUsuario = null;
-        try {
-          const client = await pool.connect();
-          try {
-            await client.query('BEGIN');
-            const cur = 'cur_usuario_target_for_email';
-            await client.query('CALL public.sp_usuario_autenticado($1, $2)', [payload.target, cur]);
-            const cRes = await client.query(`FETCH ALL FROM "${cur}"`);
-            const u = cRes.rows?.[0];
-            correoUsuario = u?.correo || u?.email || null;
-            // Si no vino correo desde el SP, consultar join usuarios->empleados
-            if (!correoUsuario) {
-              const curEmail = 'cur_usuario_email_by_id';
-              await client.query('CALL public.sp_usuario_email_by_id($1, $2)', [payload.target, curEmail]);
-              const jr = await client.query(`FETCH ALL FROM "${curEmail}"`);
-              correoUsuario = jr.rows?.[0]?.email || null;
-            }
-            await client.query('COMMIT');
-          } catch (e) {
-            try { await client.query('ROLLBACK'); } catch (_) {}
-          } finally {
-            try { client.release(); } catch (_) {}
-          }
-        } catch (_) {}
-
-        const to = correoUsuario || process.env.ADMIN_EMAIL;
-        if (to) {
-          const baseApp = process.env.APP_BASE_URL || 'http://localhost:3000';
-          const loginLink = `${baseApp}`;
-          await t.sendMail({
-            from: `Soporte Clínica <${process.env.SMTP_USER}>`,
-            to,
-            subject: 'Credenciales actualizadas',
-            html: `
-              <!doctype html>
-              <html>
-                <body style="margin:0;background:#f5f7fb;font-family:Arial,Helvetica,sans-serif;color:#2d3748;">
-                  <div style="max-width:640px;margin:24px auto;padding:0 16px;">
-                    <div style="background:#16a34a;color:#fff;padding:16px 20px;border-top-left-radius:8px;border-top-right-radius:8px;">
-                      <h1 style="margin:0;font-size:18px;">Tu contraseña ha sido restablecida</h1>
-                    </div>
-                    <div style="background:#ffffff;border:1px solid #e2e8f0;border-top:none;border-bottom-left-radius:8px;border-bottom-right-radius:8px;padding:20px;">
-                      <p style="margin:0 0 12px;">Se ha restablecido tu contraseña en el sistema.</p>
-                      <p style="margin:0 0 8px;font-weight:bold;">Nueva contraseña temporal:</p>
-                      <div style="background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:6px;padding:10px 12px;margin:0 0 16px;">
-                        <code style="font-family:Consolas,Monaco,monospace;font-size:14px;">${plain}</code>
-                      </div>
-                      <a href="${loginLink}" style="display:inline-block;background:#16a34a;color:#ffffff;text-decoration:none;padding:10px 16px;border-radius:6px;font-weight:600;">Ir al inicio de sesión</a>
-                      <p style="margin:16px 0 0;color:#64748b;">Por seguridad, cambia tu contraseña al iniciar sesión.</p>
-                    </div>
-                    <div style="text-align:center;color:#94a3b8;font-size:12px;margin-top:10px;">
-                      Clínica Renal Emanuel — Soporte
-                    </div>
+      const to = correoUsuario || process.env.ADMIN_EMAIL;
+      if (to) {
+        const baseApp = process.env.APP_BASE_URL || 'http://localhost:3000';
+        const loginLink = `${baseApp}`;
+        await enviarCorreo({
+          to,
+          subject: 'Credenciales actualizadas',
+          html: `
+            <!doctype html>
+            <html>
+              <body style="margin:0;background:#f5f7fb;font-family:Arial,Helvetica,sans-serif;color:#2d3748;">
+                <div style="max-width:640px;margin:24px auto;padding:0 16px;">
+                  <div style="background:#16a34a;color:#fff;padding:16px 20px;border-top-left-radius:8px;border-top-right-radius:8px;">
+                    <h1 style="margin:0;font-size:18px;">Tu contraseña ha sido restablecida</h1>
                   </div>
-                </body>
-              </html>
-            `.trim()
-          });
-        }
+                  <div style="background:#ffffff;border:1px solid #e2e8f0;border-top:none;border-bottom-left-radius:8px;border-bottom-right-radius:8px;padding:20px;">
+                    <p style="margin:0 0 12px;">Se ha restablecido tu contraseña en el sistema.</p>
+                    <p style="margin:0 0 8px;font-weight:bold;">Nueva contraseña temporal:</p>
+                    <div style="background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:6px;padding:10px 12px;margin:0 0 16px;">
+                      <code style="font-family:Consolas,Monaco,monospace;font-size:14px;">${plain}</code>
+                    </div>
+                    <a href="${loginLink}" style="display:inline-block;background:#16a34a;color:#ffffff;text-decoration:none;padding:10px 16px;border-radius:6px;font-weight:600;">Ir al inicio de sesión</a>
+                    <p style="margin:16px 0 0;color:#64748b;">Por seguridad, cambia tu contraseña al iniciar sesión.</p>
+                  </div>
+                  <div style="text-align:center;color:#94a3b8;font-size:12px;margin-top:10px;">
+                    Clínica Renal Emanuel — Soporte
+                  </div>
+                </div>
+              </body>
+            </html>
+          `.trim()
+        });
       }
     } catch (e) {
       console.error('No fue posible enviar el correo de nueva contraseña:', e);
@@ -305,7 +276,7 @@ router.get('/auth/admin/reset-user-token-info', async (req, res) => {
 
     let payload;
     try {
-      payload = jwt.verify(String(token), JWT_SECRET);
+      payload = jwt.verify(token, JWT_SECRET);
     } catch (_) {
       return res.status(401).json({ error: 'Token inválido o expirado' });
     }
@@ -383,10 +354,12 @@ router.post('/auth/confirm-password', verifyJWT, async (req, res) => {
     let rows = [];
     try {
       await client.query('BEGIN');
-      const cursorName = `cur_confirmar_${sub}`;
-      await client.query('CALL public.sp_confirmar_pasword_usuario($1, $2)', [sub, cursorName]);
-      const fetchRes = await client.query(`FETCH ALL FROM "${cursorName}"`);
-      rows = fetchRes.rows;
+
+      // 1) Buscar usuario por nombre
+      const curUser = 'cur_buscar_usuario_auth';
+      await client.query('CALL public.sp_buscar_usuario_auth($1, $2)', [sub, curUser]);
+      const userRes = await client.query(`FETCH ALL FROM "${curUser}"`);
+      rows = userRes.rows;
       await client.query('COMMIT');
     } catch (e) {
       try { await client.query('ROLLBACK'); } catch (_) {}
@@ -455,7 +428,7 @@ router.post('/auth/login', async (req, res) => {
       const sec = seconds % 60;
       return res.status(429).json({ error: `Usuario bloqueado. Intenta nuevamente en ${min}m ${sec}s` });
     }
-    // Usar SPs con transacción y cursores
+    // Usar el SPs con transacción y cursores
     const client = await pool.connect();
     let user;
     let roles = [];
@@ -643,65 +616,60 @@ router.post('/auth/forgot-password', async (req, res) => {
       }
     } catch (_) { /* noop */ }
 
-    // Preparar envío de correo (si hay configuración SMTP) al ADMINISTRADOR
+    // Preparar envío de correo (si hay configuración) al ADMINISTRADOR
     try {
-      const t = getTransporter();
-      if (t) {
-        const to = process.env.ADMIN_EMAIL;
-        if (to) {
-          // Generar token de acción para admin (15 minutos) si existe el usuario
-          let adminActionToken = null;
-          try {
-            if (user && user.id_usuario) {
-              adminActionToken = jwt.sign({ purpose: 'admin_reset_user', target: user.id_usuario }, JWT_SECRET, { expiresIn: '15m' });
-            }
-          } catch (_) { /* noop */ }
+      const to = process.env.ADMIN_EMAIL;
+      if (to) {
+        // Generar token de acción para admin (15 minutos) si existe el usuario
+        let adminActionToken = null;
+        try {
+          if (user && user.id_usuario) {
+            adminActionToken = jwt.sign({ purpose: 'admin_reset_user', target: user.id_usuario }, JWT_SECRET, { expiresIn: '15m' });
+          }
+        } catch (_) { /* noop */ }
 
-          const base = process.env.APP_BASE_URL || 'http://localhost:3000';
-          const adminLink = adminActionToken
-            ? `${base}/admin/reset-user?token=${adminActionToken}`
-            : `${base}/admin/reset-user`;
-          // Enviar correo en background para no bloquear la respuesta HTTP
-          // Nota: no usamos await; si falla, solo se registra en consola
-          t.sendMail({
-            from: `Solicitud cambio de correo usuario '${usuario}' <${process.env.SMTP_USER}>`,
-            to,
-            subject: 'Solicitud de recuperación de contraseña (acción requerida)',
-            html: `
-              <!doctype html>
-              <html>
-                <body style="margin:0;background:#f5f7fb;font-family:Arial,Helvetica,sans-serif;color:#2d3748;">
-                  <div style="max-width:640px;margin:24px auto;padding:0 16px;">
-                    <div style="background:#16a34a;color:#fff;padding:16px 20px;border-top-left-radius:8px;border-top-right-radius:8px;">
-                      <h1 style="margin:0;font-size:18px;">Solicitud de recuperación de contraseña</h1>
-                    </div>
-                    <div style="background:#ffffff;border:1px solid #e2e8f0;border-top:none;border-bottom-left-radius:8px;border-bottom-right-radius:8px;padding:20px;">
-                      <p style="margin:0 0 12px;">Se recibió una solicitud de recuperación de contraseña desde el login.</p>
-                      <p style="margin:0 0 8px;font-weight:bold;">Datos suministrados por el usuario:</p>
-                      <ul style="margin:0 0 16px;padding-left:18px;line-height:1.6;">
-                        <li><strong>DPI:</strong> ${dpi}</li>
-                        <li><strong>Nombres:</strong> ${nombres}</li>
-                        <li><strong>Apellidos:</strong> ${apellidos}</li>
-                        <li><strong>Teléfono:</strong> ${telefono}</li>
-                        <li><strong>Usuario:</strong> ${usuario}</li>
-                      </ul>
-                      ${user && user.id_usuario ? `<p style="margin:0 0 16px;"><strong>ID Usuario en sistema:</strong> ${user.id_usuario}</p>` : ''}
-                      <a href="${adminLink}" style="display:inline-block;background:#16a34a;color:#ffffff;text-decoration:none;padding:10px 16px;border-radius:6px;font-weight:600;">Abrir acción rápida (expira en 15 min)</a>
-                      <p style="margin:16px 0 0;color:#64748b;">Favor validar la identidad y proceder al cambio de contraseña en el sistema si corresponde.</p>
-                    </div>
-                    <div style="text-align:center;color:#94a3b8;font-size:12px;margin-top:10px;">
-                      Clínica Renal Emanuel — Sistema de Gestión
-                    </div>
+        const base = process.env.APP_BASE_URL || 'http://localhost:3000';
+        const adminLink = adminActionToken
+          ? `${base}/admin/reset-user?token=${adminActionToken}`
+          : `${base}/admin/reset-user`;
+        // Enviar correo en background para no bloquear la respuesta HTTP
+        await enviarCorreo({
+          to,
+          subject: 'Solicitud de recuperación de contraseña (acción requerida)',
+          html: `
+            <!doctype html>
+            <html>
+              <body style="margin:0;background:#f5f7fb;font-family:Arial,Helvetica,sans-serif;color:#2d3748;">
+                <div style="max-width:640px;margin:24px auto;padding:0 16px;">
+                  <div style="background:#16a34a;color:#fff;padding:16px 20px;border-top-left-radius:8px;border-top-right-radius:8px;">
+                    <h1 style="margin:0;font-size:18px;">Solicitud de recuperación de contraseña</h1>
                   </div>
-                </body>
-              </html>
-            `.trim(),
-          }).then(() => {
-            /* noop */
-          }).catch((err) => {
-            console.error('Error enviando correo forgot-password (async):', err);
-          });
-        }
+                  <div style="background:#ffffff;border:1px solid #e2e8f0;border-top:none;border-bottom-left-radius:8px;border-bottom-right-radius:8px;padding:20px;">
+                    <p style="margin:0 0 12px;">Se recibió una solicitud de recuperación de contraseña desde el login.</p>
+                    <p style="margin:0 0 8px;font-weight:bold;">Datos suministrados por el usuario:</p>
+                    <ul style="margin:0 0 16px;padding-left:18px;line-height:1.6;">
+                      <li><strong>DPI:</strong> ${dpi}</li>
+                      <li><strong>Nombres:</strong> ${nombres}</li>
+                      <li><strong>Apellidos:</strong> ${apellidos}</li>
+                      <li><strong>Teléfono:</strong> ${telefono}</li>
+                      <li><strong>Usuario:</strong> ${usuario}</li>
+                    </ul>
+                    ${user && user.id_usuario ? `<p style="margin:0 0 16px;"><strong>ID Usuario en sistema:</strong> ${user.id_usuario}</p>` : ''}
+                    <a href="${adminLink}" style="display:inline-block;background:#16a34a;color:#ffffff;text-decoration:none;padding:10px 16px;border-radius:6px;font-weight:600;">Abrir acción rápida (expira en 15 min)</a>
+                    <p style="margin:16px 0 0;color:#64748b;">Favor validar la identidad y proceder al cambio de contraseña en el sistema si corresponde.</p>
+                  </div>
+                  <div style="text-align:center;color:#94a3b8;font-size:12px;margin-top:10px;">
+                    Clínica Renal Emanuel — Sistema de Gestión
+                  </div>
+                </div>
+              </body>
+            </html>
+          `.trim(),
+        }).then(() => {
+          /* noop */
+        }).catch((err) => {
+          console.error('Error enviando correo forgot-password (async):', err);
+        });
       }
     } catch (e) {
       console.error('Error enviando correo forgot-password:', e);
