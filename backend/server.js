@@ -19,9 +19,12 @@ const allowedOrigins = new Set([
   'https://172.235.145.142',
   'http://clinicaemanuel.com.gt',
   'https://clinicaemanuel.com.gt',
+  'http://www.clinicaemanuel.com.gt',
+  'https://www.clinicaemanuel.com.gt',
 
   'http://172.235.145.142:3000',
   'http://clinicaemanuel.com.gt:3000',
+  'http://www.clinicaemanuel.com.gt:3000',
 
   // desarrollo local
   'http://localhost:3000',
@@ -30,11 +33,20 @@ const allowedOrigins = new Set([
 
 app.use(cors({
     origin: (origin, callback) => {
-        // Permitir tools como curl/postman (sin origin) y los orígenes de la lista
-        if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+        // Permitir tools como curl/postman (sin origin)
+        if (!origin) return callback(null, true);
+        // Aceptar coincidencia exacta o subdominios *.clinicaemanuel.com.gt
+        if (allowedOrigins.has(origin)) return callback(null, true);
+        try {
+            const u = new URL(origin);
+            const host = u.hostname || '';
+            if (host === 'clinicaemanuel.com.gt' || host.endsWith('.clinicaemanuel.com.gt')) {
+                return callback(null, true);
+            }
+        } catch (_) {}
         return callback(new Error('Not allowed by CORS'));
     },
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
 }));
