@@ -352,7 +352,7 @@ function LaboratorioParametros({ onSubmit }) {
         <Row className="mb-3">
           <Col md={12} xs={12}>
             <Form.Group>
-              <Form.Label className="font-medium dark:text-gray-300">No. Afiliación *</Form.Label>
+              <Form.Label className="font-medium dark:text-gray-300">No. Afiliación <span className="text-rose-500">*</span></Form.Label>
               <>
                 <div className="flex flex-col md:flex-row md:flex-wrap lg:flex-nowrap items-stretch md:items-center gap-2">
                   <Form.Control
@@ -436,7 +436,7 @@ function LaboratorioParametros({ onSubmit }) {
                   {paciente && (
                     <>
                       <Form.Group className="w-full sm:w-auto sm:min-w-[200px] md:min-w-[220px] md:mr-4">
-                        <Form.Label className="block mb-1 dark:text-gray-300">Examen realizado</Form.Label>
+                        <Form.Label className="block mb-1 dark:text-gray-300">Examen realizado <span className="text-rose-500">*</span></Form.Label>
                         <Form.Select
                           value={valores.examen_realizado || ''}
                           onChange={e => handleChange('examen_realizado', e.target.value)}
@@ -479,7 +479,7 @@ function LaboratorioParametros({ onSubmit }) {
           <Row className="mb-3">
             <Col md={12} sm={12} xs={12}>
               <Form.Group>
-                <Form.Label className="dark:text-gray-300">Periodicidad *</Form.Label>
+                <Form.Label className="dark:text-gray-300">Periodicidad <span className="text-rose-500">*</span></Form.Label>
                 <Form.Select
                   value={valores.idPerLaboratorio || ''}
                   onChange={e => handleChange('idPerLaboratorio', e.target.value)}
@@ -491,7 +491,7 @@ function LaboratorioParametros({ onSubmit }) {
                   <option value="3">Semestral</option>
                   {/* Agrega más opciones según tus datos reales */}
                 </Form.Select>
-                <Form.Label className="dark:text-gray-300">Causa de no realizado</Form.Label>
+                <Form.Label className="dark:text-gray-300">Causa de no realizado {valores.examen_realizado === 'No' && (<span className="text-rose-500">*</span>)}</Form.Label>
                 <Form.Control
                   as="textarea"
                   rows={6}
@@ -512,7 +512,7 @@ function LaboratorioParametros({ onSubmit }) {
             <Row className="mb-3">
               <Col md={4} sm={6} xs={12}>
                 <Form.Group>
-                  <Form.Label className="dark:text-gray-300">Periodicidad *</Form.Label>
+                  <Form.Label className="dark:text-gray-300">Periodicidad <span className="text-rose-500">*</span></Form.Label>
                   <Form.Select
                     value={valores.idPerLaboratorio || ''}
                     onChange={e => handleChange('idPerLaboratorio', e.target.value)}
@@ -728,36 +728,42 @@ function LaboratorioParametros({ onSubmit }) {
             <Row className="mb-3">
               <Col md={4} sm={6} xs={12}>
                 <Form.Group>
-                  <Form.Label className="dark:text-gray-300">Infección de acceso</Form.Label>
+                  <Form.Label className="dark:text-gray-300">Infección de acceso <span className="text-rose-500">*</span></Form.Label>
                   <Form.Control
                     type="text"
                     value={valores.infeccion_acceso || ''}
                     onChange={e => handleChange('infeccion_acceso', e.target.value)}
+                    required
                     className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                   />
                 </Form.Group>
+
               </Col>
               <Col md={4} sm={6} xs={12}>
                 <Form.Group>
-                  <Form.Label className="dark:text-gray-300">Complicación de acceso</Form.Label>
+                  <Form.Label className="dark:text-gray-300">Complicación de acceso <span className="text-rose-500">*</span></Form.Label>
                   <Form.Control
                     type="text"
                     value={valores.complicacion_acceso || ''}
                     onChange={e => handleChange('complicacion_acceso', e.target.value)}
+                    required
                     className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                   />
                 </Form.Group>
+
               </Col>
               <Col md={4} sm={6} xs={12}>
                 <Form.Group>
-                  <Form.Label className="dark:text-gray-300">Virología</Form.Label>
+                  <Form.Label className="dark:text-gray-300">Virología <span className="text-rose-500">*</span></Form.Label>
                   <Form.Control
                     type="text"
                     value={valores.virologia || ''}
                     onChange={e => handleChange('virologia', e.target.value)}
+                    required
                     className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                   />
                 </Form.Group>
+
               </Col>
             </Row>
 
@@ -765,12 +771,13 @@ function LaboratorioParametros({ onSubmit }) {
             <Row className="mb-3">
               <Col md={4} sm={6} xs={12}>
                 <Form.Group>
-                  <Form.Label className="dark:text-gray-300">Antígeno Hepatitis C</Form.Label>
+                  <Form.Label className="dark:text-gray-300">Antígeno Hepatitis C <span className="text-rose-500">*</span></Form.Label>
                   <br />
                   <Form.Select
                     value={valores.antigeno_hepatitis_c || ''}
                     onChange={e => handleChange('antigeno_hepatitis_c', e.target.value)}
                     required
+
                     className="w-full sm:min-w-[300px] md:min-w-[380px] bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 font-medium rounded px-3 py-2 text-base"
                   >
                     <option value="">Seleccione</option>
@@ -782,12 +789,13 @@ function LaboratorioParametros({ onSubmit }) {
 
               <Col md={4} sm={6} xs={12}>
                 <Form.Group>
-                  <Form.Label className="dark:text-gray-300">Antígeno de superficie</Form.Label>
+                  <Form.Label className="dark:text-gray-300">Antígeno de superficie <span className="text-rose-500">*</span></Form.Label>
                   <br />
                   <Form.Select
                     value={valores.antigeno_superficie || ''}
                     onChange={e => handleChange('antigeno_superficie', e.target.value)}
                     required
+
                     className="w-full sm:min-w-[300px] md:min-w-[360px] bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 font-medium rounded px-3 py-2 text-base"                >
                     <option value="">Seleccione</option>
                     <option value="Positivo">Positivo</option>
@@ -798,14 +806,16 @@ function LaboratorioParametros({ onSubmit }) {
 
               <Col md={4} sm={6} xs={12}>
                 <Form.Group>
-                  <Form.Label className="dark:text-gray-300">HIV</Form.Label>
+                  <Form.Label className="dark:text-gray-300">HIV <span className="text-rose-500">*</span></Form.Label>
                   <Form.Control
                     type="text"
                     value={valores.hiv || ''}
                     onChange={e => handleChange('hiv', e.target.value)}
+                    required
                     className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                   />
                 </Form.Group>
+
               </Col>
             </Row>
 

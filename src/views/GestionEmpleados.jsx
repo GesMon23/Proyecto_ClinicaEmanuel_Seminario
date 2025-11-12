@@ -13,6 +13,9 @@ const GestionEmpleados = () => {
   const [confirmAction, setConfirmAction] = useState(null); // { tipo: 'editar'|'estado', payload: {...} }
   const [confirmPassword, setConfirmPassword] = useState('');
   const [confirmError, setConfirmError] = useState('');
+  // Paginación
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [filasPorPagina, setFilasPorPagina] = useState(10);
 
   useEffect(() => {
     const fetchEmpleados = async () => {
@@ -81,6 +84,13 @@ const GestionEmpleados = () => {
     setConfirmPassword('');
     setConfirmError('');
   };
+
+  // Datos paginados
+  const totalPaginas = useMemo(() => Math.max(1, Math.ceil(filtrados.length / filasPorPagina)), [filtrados.length, filasPorPagina]);
+  const empleadosPaginados = useMemo(
+    () => filtrados.slice((paginaActual - 1) * filasPorPagina, paginaActual * filasPorPagina),
+    [filtrados, paginaActual, filasPorPagina]
+  );
 
   const doConfirmed = async () => {
     if (!confirmAction) return;
@@ -177,7 +187,7 @@ const GestionEmpleados = () => {
                       <td colSpan={7} className="px-4 py-6 text-center text-slate-600 dark:text-slate-300">No hay empleados para mostrar.</td>
                     </tr>
                   ) : (
-                    filtrados.map((e) => {
+                    empleadosPaginados.map((e) => {
                       const nombre = `${e.primer_nombre || ''} ${e.segundo_nombre || ''} ${e.otros_nombres || ''} ${e.primer_apellido || ''} ${e.segundo_apellido || ''}`.replace(/\s+/g, ' ').trim();
                       return (
                         <tr key={e.dpi} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
@@ -222,11 +232,38 @@ const GestionEmpleados = () => {
                 </tbody>
               </table>
             </div>
-
-            {/* Nota */}
-            <div className="mt-4 text-xs text-slate-500 dark:text-slate-400">
-              Edición y activación/inactivación conectadas al backend.
-            </div>
+            {/* Paginación (estilo ConsultaNutricion) */}
+            {totalPaginas > 1 && (
+              <div className="flex flex-wrap justify-center items-center gap-2 mt-6">
+                <button
+                  className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400 transition-colors"
+                  disabled={paginaActual === 1}
+                  onClick={() => setPaginaActual(paginaActual - 1)}
+                >
+                  Anterior
+                </button>
+                {[...Array(totalPaginas)].map((_, i) => (
+                  <button
+                    key={i}
+                    className={`px-3 py-2 rounded-lg transition-colors ${
+                      paginaActual === i + 1
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-slate-600'
+                    }`}
+                    onClick={() => setPaginaActual(i + 1)}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+                <button
+                  className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400 transition-colors"
+                  disabled={paginaActual === totalPaginas}
+                  onClick={() => setPaginaActual(paginaActual + 1)}
+                >
+                  Siguiente
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
