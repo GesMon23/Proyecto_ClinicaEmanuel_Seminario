@@ -302,6 +302,12 @@ router.post('/auth/admin/reset-user-password/token', async (req, res) => {
       if (to) {
         const baseApp = process.env.APP_BASE_URL || 'http://localhost:3000';
         const loginLink = `${baseApp}`;
+        const plainEscaped = String(plain)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
         await enviarCorreo({
           to,
           subject: 'Credenciales actualizadas',
