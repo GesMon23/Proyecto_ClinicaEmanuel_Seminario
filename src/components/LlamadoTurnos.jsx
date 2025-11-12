@@ -283,11 +283,7 @@ const LlamadoTurnos = () => {
                 }
             }));
             
-            // Crear el mensaje de voz con el nombre del paciente y número de afiliación
-            const mensajeVoz = `Paciente ${turnoConFoto.nombrepaciente} con el número de afiliación ${turnoConFoto.no_afiliacion} presentarse en recepción para la clínica ${clinica}.`;
-            hablar(mensajeVoz);
-            
-            // Actualizar localStorage
+            // Actualizar localStorage primero (para que la TV lea datos inmediatos)
             localStorage.setItem('clinicasData', JSON.stringify({
                 ...clinicasData,
                 [clinica]: {
@@ -298,21 +294,19 @@ const LlamadoTurnos = () => {
                 }
             }));
             
-            // Disparar evento para actualizar la vista TV
-            localStorage.setItem('turnoActualizado', JSON.stringify({
-                clinica: clinica,
-                timestamp: Date.now(),
-                accion: 'llamar'
-            }));
-            
-            // Disparar evento personalizado para la misma pestaña
-            window.dispatchEvent(new CustomEvent('turnoActualizado', {
-                detail: {
+            // Disparar evento para que Turnos TV realice el anuncio por voz
+            try {
+                localStorage.setItem('turnoActualizado', JSON.stringify({
                     clinica: clinica,
                     timestamp: Date.now(),
                     accion: 'llamar'
-                }
-            }));
+                }));
+            } catch {}
+            try {
+                window.dispatchEvent(new CustomEvent('turnoActualizado', {
+                    detail: { clinica: clinica, timestamp: Date.now(), accion: 'llamar' }
+                }));
+            } catch {}
             
             // Obtener el siguiente turno para la lista de espera
             await obtenerSiguienteTurno(clinica);
@@ -411,9 +405,19 @@ const LlamadoTurnos = () => {
             await api.put(`/turnoLlamado/${turno.idturno}`, { idturnoestado: 3 });
             showSuccessModal('Turno llamado nuevamente');
             
-            // Crear el mensaje de voz para el llamado nuevamente
-            const mensajeVoz = `Atención por favor, paciente con número de afiliación ${turno.no_afiliacion}, código de turno ${turno.id_turno_cod}, favor presentarse en la recepción de la clínica ${selectedClinica}.`;
-            hablar(mensajeVoz);
+            // Disparar eventos para que Turnos TV realice el anuncio por voz
+            try {
+                localStorage.setItem('turnoActualizado', JSON.stringify({
+                    clinica: selectedClinica,
+                    timestamp: Date.now(),
+                    accion: 're-llamar'
+                }));
+            } catch {}
+            try {
+                window.dispatchEvent(new CustomEvent('turnoActualizado', {
+                    detail: { clinica: selectedClinica, timestamp: Date.now(), accion: 're-llamar' }
+                }));
+            } catch {}
             
             await obtenerSiguienteTurno(selectedClinica);
         } catch (error) {
@@ -824,14 +828,18 @@ const LlamadoTurnos = () => {
                                         </div>
                                         <button 
                                             onClick={() => {
-                                                const mensajeVoz = `Paciente ${clinicasData[selectedClinica].turnoLlamado.nombrepaciente} con el número de afiliación ${clinicasData[selectedClinica].turnoLlamado.no_afiliacion} presentarse en recepción para la clínica ${selectedClinica}.`;
-                                                if ('speechSynthesis' in window) {
-                                                    window.speechSynthesis.cancel();
-                                                    const mensaje = new SpeechSynthesisUtterance(mensajeVoz);
-                                                    mensaje.rate = 0.8; // Velocidad 
-                                                    mensaje.pitch = 1;
-                                                    window.speechSynthesis.speak(mensaje);
-                                                }
+                                                try {
+                                                    localStorage.setItem('turnoActualizado', JSON.stringify({
+                                                        clinica: selectedClinica,
+                                                        timestamp: Date.now(),
+                                                        accion: 're-llamar'
+                                                    }));
+                                                } catch {}
+                                                try {
+                                                    window.dispatchEvent(new CustomEvent('turnoActualizado', {
+                                                        detail: { clinica: selectedClinica, timestamp: Date.now(), accion: 're-llamar' }
+                                                    }));
+                                                } catch {}
                                             }}
                                             className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors duration-200"
                                         >
