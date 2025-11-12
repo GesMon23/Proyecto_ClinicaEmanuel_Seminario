@@ -173,6 +173,62 @@ router.post('/auth/admin/reset-user-password', verifyJWT, async (req, res) => {
       await pool.query('CALL public.sp_usuario_flag_force_change_set($1, $2)', [id, true]);
     } catch (_) { }
 
+    let correoUsuario = null;
+    try {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const cur = 'cur_usuario_target_admin_reset';
+        await client.query('CALL public.sp_usuario_autenticado($1, $2)', [id, cur]);
+        const r = await client.query(`FETCH ALL FROM "${cur}"`);
+        const u = r.rows?.[0] || null;
+        correoUsuario = u?.correo || u?.email || u?.correo_electronico || null;
+        await client.query('COMMIT');
+      } catch (e) {
+        try { await client.query('ROLLBACK'); } catch (_) {}
+      } finally {
+        try { await client.release(); } catch (_) {}
+      }
+    } catch (_) {}
+
+    try {
+      const to = correoUsuario || process.env.ADMIN_EMAIL;
+      if (to) {
+        const baseApp = process.env.APP_BASE_URL || 'http://localhost:3000';
+        const loginLink = `${baseApp}`;
+        await enviarCorreo({
+          to,
+          subject: 'Credenciales actualizadas',
+          html: `
+            <!doctype html>
+            <html>
+              <body style="margin:0;background:#f5f7fb;font-family:Arial,Helvetica,sans-serif;color:#2d3748;">
+                <div style="max-width:640px;margin:24px auto;padding:0 16px;">
+                  <div style="background:#16a34a;color:#fff;padding:16px 20px;border-top-left-radius:8px;border-top-right-radius:8px;">
+                    <h1 style="margin:0;font-size:18px;">Tu contraseña ha sido restablecida</h1>
+                  </div>
+                  <div style="background:#ffffff;border:1px solid #e2e8f0;border-top:none;border-bottom-left-radius:8px;border-bottom-right-radius:8px;padding:20px;">
+                    <p style="margin:0 0 12px;">Se ha restablecido tu contraseña en el sistema.</p>
+                    <p style="margin:0 0 8px;font-weight:bold;">Nueva contraseña temporal:</p>
+                    <div style="background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:6px;padding:10px 12px;margin:0 0 16px;">
+                      <code style="font-family:Consolas,Monaco,monospace;font-size:14px;">${nueva}</code>
+                    </div>
+                    <a href="${loginLink}" style="display:inline-block;background:#16a34a;color:#ffffff;text-decoration:none;padding:10px 16px;border-radius:6px;font-weight:600;">Ir al inicio de sesión</a>
+                    <p style="margin:16px 0 0;color:#64748b;">Por seguridad, cambia tu contraseña al iniciar sesión.</p>
+                  </div>
+                  <div style="text-align:center;color:#94a3b8;font-size:12px;margin-top:10px;">
+                    Clínica Renal Emanuel — Soporte
+                  </div>
+                </div>
+              </body>
+            </html>
+          `.trim()
+        });
+      }
+    } catch (e) {
+      console.error('No fue posible enviar el correo de nueva contraseña (admin inmediato):', e);
+    }
+
     // TODO: registrar auditoría (admin auth.sub cambia password de id)
     return res.json({ ok: true });
   } catch (err) {
@@ -219,6 +275,23 @@ router.post('/auth/admin/reset-user-password/token', async (req, res) => {
     
     // Intentar enviar correo al usuario afectado con la nueva contraseña
     try {
+      let correoUsuario = null;
+      try {
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          const cur = 'cur_usuario_target_for_mail';
+          await client.query('CALL public.sp_usuario_autenticado($1, $2)', [payload.target, cur]);
+          const r = await client.query(`FETCH ALL FROM "${cur}"`);
+          const u = r.rows?.[0] || null;
+          correoUsuario = u?.correo || u?.email || u?.correo_electronico || null;
+          await client.query('COMMIT');
+        } catch (e) {
+          try { await client.query('ROLLBACK'); } catch (_) {}
+        } finally {
+          try { await client.release(); } catch (_) {}
+        }
+      } catch (_) {}
       const to = correoUsuario || process.env.ADMIN_EMAIL;
       if (to) {
         const baseApp = process.env.APP_BASE_URL || 'http://localhost:3000';
