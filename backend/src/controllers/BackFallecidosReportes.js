@@ -123,10 +123,11 @@ router.get('/fallecidos/excel', async (req, res) => {
     worksheet.spliceRows(1, 0, [], [], []);
     for (let r = 1; r <= 3; r++) worksheet.getRow(r).height = 22;
     try {
-      const logoPath = path.join(__dirname, '../../../src/assets/logoClinica2.png');
+      const logoPath = path.join(__dirname, '../../assets/img/logoClinica.png');
       if (fs.existsSync(logoPath)) {
         const imageId = workbook.addImage({ filename: logoPath, extension: 'png' });
-        worksheet.addImage(imageId, 'A1:B3');
+        // Ubicar el logo un poco más ancho para mejor proporción
+        worksheet.addImage(imageId, 'A1:C3');
       }
     } catch {}
     const colCount = worksheet.columns.length;
