@@ -62,6 +62,7 @@ import {
   Form,
   Button
 } from 'react-bootstrap';
+import { calcularEstanciaRango } from '@/utils/fechas';
 
 const EgresoPacientes = () => {
   // Copia de los mismos estados y lógica de ReingresoPacientes
@@ -227,8 +228,8 @@ const EgresoPacientes = () => {
       return;
     }
     if (esFallecimiento) {
-      if (!formData.fechafallecimiento || !formData.comorbilidades || !formData.lugarfallecimiento || !formData.causafallecimiento) {
-        showToast('Debe completar todos los campos de fallecimiento');
+      if (!formData.fechafallecimiento || !formData.lugarfallecimiento || !formData.causafallecimiento) {
+        showToast('Debe completar todos los campos de fallecimiento (excepto Comorbilidades que es opcional)');
         return;
       }
     }
@@ -525,7 +526,6 @@ const EgresoPacientes = () => {
             <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
               <div className="p-4 sm:p-6 lg:p-8">
                 <form onSubmit={handleInsertEgreso} className="space-y-6">
-                  <span className="text-sm text-gray-500">Coloque 0 si no desea llenar los campos</span>
                   {/* Contenedor principal con columnas */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
                     {/* Columna izquierda */}
@@ -533,7 +533,7 @@ const EgresoPacientes = () => {
                       {/* Causa del Egreso */}
                       <div className="space-y-2">
                         <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-                          Causa del Egreso
+                          Causa del Egreso <span className="text-rose-500">*</span>
                         </label>
                         <select
                           name="causaegreso"
@@ -555,7 +555,7 @@ const EgresoPacientes = () => {
                       {!esFallecimiento && (
                         <div className="space-y-2">
                           <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-                            Fecha del egreso
+                            Fecha del egreso <span className="text-rose-500">*</span>
                           </label>
                           <input
                             type="date"
@@ -572,7 +572,7 @@ const EgresoPacientes = () => {
                     {!esFallecimiento && (
                       <div className="space-y-2">
                         <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-                          Descripción
+                          Descripción <span className="text-rose-500">*</span>
                         </label>
                         <input
                           type="text"
@@ -598,7 +598,7 @@ const EgresoPacientes = () => {
                         {/* Fecha de Fallecimiento */}
                         <div className="space-y-2">
                           <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-                            Fecha de Fallecimiento
+                            Fecha de Fallecimiento <span className="text-rose-500">*</span>
                           </label>
                           <input
                             type="date"
@@ -620,7 +620,6 @@ const EgresoPacientes = () => {
                             name="comorbilidades"
                             value={formData.comorbilidades}
                             onChange={handleFormChange}
-                            required={esFallecimiento}
                             placeholder="Ingrese comorbilidades (si aplica)"
                             className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                           />
@@ -629,7 +628,7 @@ const EgresoPacientes = () => {
                         {/* Lugar de Fallecimiento */}
                         <div className="space-y-2">
                           <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-                            Lugar de Fallecimiento
+                            Lugar de Fallecimiento <span className="text-rose-500">*</span>
                           </label>
                           <input
                             type="text"
@@ -645,7 +644,7 @@ const EgresoPacientes = () => {
                         {/* Causa de Fallecimiento */}
                         <div className="space-y-2">
                           <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-                            Causa de Fallecimiento
+                            Causa de Fallecimiento <span className="text-rose-500">*</span>
                           </label>
                           <input
                             type="text"
@@ -672,7 +671,6 @@ const EgresoPacientes = () => {
                       name="observaciones"
                       value={formData.observaciones}
                       onChange={handleFormChange}
-                      required
                       rows={5}
                       placeholder="Ingrese observaciones"
                       className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 resize-none"

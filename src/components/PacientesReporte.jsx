@@ -461,10 +461,10 @@ function PacientesReporte() {
               </div>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:items-center sm:justify-start">
               <button
                 type="submit"
-                className="bg-green-700 hover:bg-green-800 text-white font-medium px-4 py-2 rounded"
+                className="bg-green-700 hover:bg-green-800 text-white font-medium px-4 py-2 rounded w-full sm:w-auto"
               >
                 Buscar
               </button>
@@ -472,7 +472,7 @@ function PacientesReporte() {
               <button
                 type="button"
                 onClick={handleLimpiar}
-                className="font-medium px-4 py-2 rounded border text-white bg-[#B91C1C] hover:bg-[#991B1B] border-[#991B1B]"
+                className="font-medium px-4 py-2 rounded border text-white bg-[#B91C1C] hover:bg-[#991B1B] border-[#991B1B] w-full sm:w-auto"
               >
                 Limpiar
               </button>
@@ -481,7 +481,7 @@ function PacientesReporte() {
                 type="button"
                 onClick={descargarExcel}
                 disabled={pacientes.length === 0}
-                className={`px-4 py-2 font-medium rounded border flex items-center gap-2 ${pacientes.length === 0 ? 'bg-gray-300 text-white cursor-not-allowed border-gray-400' : 'bg-[#107C41] hover:bg-[#0E6A39] text-white border-[#0E6A39]'}`}
+                className={`px-4 py-2 font-medium rounded border flex items-center gap-2 w-full sm:w-auto ${pacientes.length === 0 ? 'bg-gray-300 text-white cursor-not-allowed border-gray-400' : 'bg-[#107C41] hover:bg-[#0E6A39] text-white border-[#0E6A39]'}`}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
                   <path d="M4 3.5A1.5 1.5 0 0 1 5.5 2h8.879a1.5 1.5 0 0 1 1.06.44l3.121 3.121c.282.282.44.665.44 1.06V20.5A1.5 1.5 0 0 1 17.5 22h-12A1.5 1.5 0 0 1 4 20.5v-17Z"/>
@@ -494,7 +494,7 @@ function PacientesReporte() {
                 type="button"
                 onClick={descargarListadoPDF}
                 disabled={pacientes.length === 0}
-                className={`px-4 py-2 font-medium rounded border flex items-center gap-2 ${pacientes.length === 0 ? 'bg-gray-300 text-white cursor-not-allowed border-gray-400' : 'bg-[#DC2626] hover:bg-[#B91C1C] text-white border-[#991B1B]'}`}
+                className={`px-4 py-2 font-medium rounded border flex items-center gap-2 w-full sm:w-auto ${pacientes.length === 0 ? 'bg-gray-300 text-white cursor-not-allowed border-gray-400' : 'bg-[#DC2626] hover:bg-[#B91C1C] text-white border-[#991B1B]'}`}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
                   <path d="M6 2h9.379a1.5 1.5 0 0 1 1.06.44L20 5v14a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3Z"/>
@@ -650,30 +650,31 @@ function PacientesReporte() {
         </div>
       )}
 
-      {/* Paginación */}
+      {/* Paginación (estilo ConsultaNutricion) */}
       {totalPaginas > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }} className="mt-2">
+        <div className="flex flex-wrap justify-center items-center gap-2 mt-6">
           <button
-            type="button"
-            className={`px-3 py-1 rounded border text-sm ${paginaActual === 1 ? 'bg-green-500 text-white border-green-300 cursor-not-allowed' : 'bg-green-700 hover:bg-green-800 text-white border-green-800'}`}
+            className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400 transition-colors"
             disabled={paginaActual === 1}
             onClick={() => handlePaginaChange(paginaActual - 1)}
           >
             Anterior
           </button>
           {[...Array(totalPaginas)].map((_, i) => (
-            <Button
+            <button
               key={i}
-              size="sm"
-              variant={paginaActual === i + 1 ? 'success' : 'outline-success'}
+              className={`px-3 py-2 rounded-lg transition-colors ${
+                paginaActual === i + 1
+                  ? 'bg-green-600 text-white'
+                  : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-slate-600'
+              }`}
               onClick={() => handlePaginaChange(i + 1)}
             >
               {i + 1}
-            </Button>
+            </button>
           ))}
           <button
-            type="button"
-            className={`px-3 py-1 rounded border text-sm ${paginaActual === totalPaginas ? 'bg-green-500 text-white border-green-300 cursor-not-allowed' : 'bg-green-700 hover:bg-green-800 text-white border-green-800'}`}
+            className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400 transition-colors"
             disabled={paginaActual === totalPaginas}
             onClick={() => handlePaginaChange(paginaActual + 1)}
           >
