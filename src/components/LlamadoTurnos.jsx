@@ -175,7 +175,11 @@ const LlamadoTurnos = () => {
             const id = base.replace(/\.[a-zA-Z0-9]+$/, '');
             const response = await api.get(`/check-photo/${id}`);
             if (response?.data?.exists && response.data.url) {
-                return response.data.url; // p.ej. /fotos/XYZ.jpg
+                let url = response.data.url; // p.ej. /fotos/XYZ.jpg
+                if (url.startsWith('/fotos/')) {
+                    url = `/api${url}`; // asegurar proxy vía /api
+                }
+                return url;
             }
         } catch (error) {
             // si 404 del endpoint, intentar fallback directo a servir imagen
