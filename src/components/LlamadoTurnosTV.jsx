@@ -55,6 +55,8 @@ const LlamadoTurnosTV = () => {
     const ultimosAnunciadosRef = useRef({}); // { [clinica]: id_turno_cod }
     const audioHabilitadoRef = useRef(audioHabilitado);
     const forzarClinicaRef = useRef({}); // { [clinica]: true }
+    const [sseConectado, setSseConectado] = useState(false);
+    const ultimoEventoTsRef = useRef(0);
 
     // Lista de clínicas a mostrar (se intentará cargar del backend)
     const [clinicas, setClinicas] = useState(['Hemodialisis', 'Nutrición', 'Psicología']);
@@ -192,6 +194,38 @@ const LlamadoTurnosTV = () => {
 
     // Sincronización por eventos para anunciar nuevo turno
     useEffect(() => {
+        // Helper común para procesar un evento { clinica, accion }
+        const procesarEvento = (clinica, accion, ts) => {
+            if (!clinica) return;
+            const force = accion === 're-llamar' || accion === 'llamar' || !accion;
+            try {
+                const saved = localStorage.getItem('clinicasData');
+                const parsed = saved ? JSON.parse(saved) : {};
+                const turnoLS = parsed?.[clinica]?.turnoLlamado;
+                if (turnoLS?.id_turno_cod && audioHabilitadoRef.current) {
+                    const ultimo = ultimosAnunciadosRef.current[clinica];
+                    if (force || turnoLS.id_turno_cod !== ultimo) {
+                        hablarTurno(turnoLS, clinica);
+                        ultimosAnunciadosRef.current[clinica] = turnoLS.id_turno_cod;
+                    }
+                } else {
+                    setPendienteAnunciarClinica(clinica);
+                    if (force) {
+                        forzarClinicaRef.current[clinica] = true;
+                    }
+                }
+            } catch (_) {
+                setPendienteAnunciarClinica(clinica);
+                if (force) {
+                    forzarClinicaRef.current[clinica] = true;
+                }
+            }
+            if (ts && ts > (ultimoEventoTsRef.current || 0)) {
+                ultimoEventoTsRef.current = ts;
+            }
+            setTimeout(cargarTurnos, 250);
+        };
+
         const handleStorageChange = (e) => {
             if (e.key === 'turnoActualizado') {
                 try {
@@ -199,30 +233,7 @@ const LlamadoTurnosTV = () => {
                     if (data?.clinica) {
                         const clinica = data.clinica;
                         const accion = data?.accion;
-                        const force = accion === 're-llamar' || accion === 'llamar' || !accion;
-                        // Intentar anunciar inmediatamente usando localStorage
-                        try {
-                            const saved = localStorage.getItem('clinicasData');
-                            const parsed = saved ? JSON.parse(saved) : {};
-                            const turnoLS = parsed?.[clinica]?.turnoLlamado;
-                            if (turnoLS?.id_turno_cod && audioHabilitadoRef.current) {
-                                const ultimo = ultimosAnunciadosRef.current[clinica];
-                                if (force || turnoLS.id_turno_cod !== ultimo) {
-                                    hablarTurno(turnoLS, clinica);
-                                    ultimosAnunciadosRef.current[clinica] = turnoLS.id_turno_cod;
-                                }
-                            } else {
-                                setPendienteAnunciarClinica(clinica);
-                                if (force) {
-                                    forzarClinicaRef.current[clinica] = true;
-                                }
-                            }
-                        } catch (_) {
-                            setPendienteAnunciarClinica(clinica);
-                            if (force) {
-                                forzarClinicaRef.current[clinica] = true;
-                            }
-                        }
+                        procesarEvento(clinica, accion, Date.now());
                     }
                 } catch (_) {}
                 // Pequeño retraso para dar tiempo a que el backend refleje el cambio
@@ -233,33 +244,45 @@ const LlamadoTurnosTV = () => {
             const c = ev?.detail?.clinica;
             if (c) {
                 const accion = ev?.detail?.accion;
-                const force = accion === 're-llamar' || accion === 'llamar' || !accion;
-                // Intentar con localStorage primero
-                try {
-                    const saved = localStorage.getItem('clinicasData');
-                    const parsed = saved ? JSON.parse(saved) : {};
-                    const turnoLS = parsed?.[c]?.turnoLlamado;
-                    if (turnoLS?.id_turno_cod && audioHabilitadoRef.current) {
-                        const ultimo = ultimosAnunciadosRef.current[c];
-                        if (force || turnoLS.id_turno_cod !== ultimo) {
-                            hablarTurno(turnoLS, c);
-                            ultimosAnunciadosRef.current[c] = turnoLS.id_turno_cod;
-                        }
-                    } else {
-                        setPendienteAnunciarClinica(c);
-                        if (force) {
-                            forzarClinicaRef.current[c] = true;
-                        }
-                    }
-                } catch (_) {
-                    setPendienteAnunciarClinica(c);
-                    if (force) {
-                        forzarClinicaRef.current[c] = true;
-                    }
-                }
+                procesarEvento(c, accion, Date.now());
             }
             setTimeout(cargarTurnos, 250);
         };
+        // Suscripción SSE multi-dispositivo
+        let es;
+        try {
+            es = new EventSource('/api/turnos/llamado-sse');
+            es.onopen = () => setSseConectado(true);
+            es.onerror = () => { setSseConectado(false); try { es.close(); } catch {} };
+            es.onmessage = (ev) => {
+                try {
+                    const data = JSON.parse(ev.data || '{}');
+                    if (data && data.clinica) {
+                        procesarEvento(data.clinica, data.accion, Number(data.ts) || Date.now());
+                    }
+                } catch (_) {}
+            };
+        } catch (_) { setSseConectado(false); }
+
+        // Polling de respaldo cuando no hay SSE
+        const poll = setInterval(async () => {
+            if (sseConectado) return; // si SSE está bien, no hace falta poll
+            try {
+                const since = ultimoEventoTsRef.current || 0;
+                const res = await api.get('/turnos/llamado-events', { params: { since, max: 100 } });
+                const events = res?.data?.events || [];
+                if (Array.isArray(events) && events.length > 0) {
+                    for (const e of events) {
+                        procesarEvento(e.clinica, e.accion, Number(e.ts) || Date.now());
+                    }
+                }
+                const now = Number(res?.data?.now) || Date.now();
+                if (now > (ultimoEventoTsRef.current || 0)) {
+                    ultimoEventoTsRef.current = now;
+                }
+            } catch (_) { /* noop */ }
+        }, 2000);
+
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') cargarTurnos();
         };
@@ -272,6 +295,8 @@ const LlamadoTurnosTV = () => {
             window.removeEventListener('storage', handleStorageChange);
             window.removeEventListener('turnoActualizado', handleCustomEvent);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
+            try { if (es) es.close(); } catch {}
+            clearInterval(poll);
         };
     }, []);
 
