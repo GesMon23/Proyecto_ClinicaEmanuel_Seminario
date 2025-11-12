@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+
 import api from '../config/api';
 import logoClinica from "@/assets/logoClinica1Min.png";
 import { 
@@ -46,16 +47,25 @@ const LlamadoTurnosTV = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [horaActual, setHoraActual] = useState(new Date());
+    const [pendienteAnunciarClinica, setPendienteAnunciarClinica] = useState(null);
+    const [audioHabilitado, setAudioHabilitado] = useState(() => {
+        try { return localStorage.getItem('tvAudioEnabled') === '1'; } catch { return false; }
+    });
+    const [vocesCargadas, setVocesCargadas] = useState(false);
+    const ultimosAnunciadosRef = useRef({}); // { [clinica]: id_turno_cod }
+    const audioHabilitadoRef = useRef(audioHabilitado);
+    const forzarClinicaRef = useRef({}); // { [clinica]: true }
 
-    // Lista de clínicas a mostrar
-    const clinicas = ['Hemodialisis', 'Nutrición', 'Psicología'];
+    // Lista de clínicas a mostrar (se intentará cargar del backend)
+    const [clinicas, setClinicas] = useState(['Hemodialisis', 'Nutrición', 'Psicología']);
 
     const cargarTurnos = async () => {
         try {
+            if (!clinicas || clinicas.length === 0) return;
             const resultados = await Promise.all(
                 clinicas.map(async (clinica) => {
                     try {
-                        const response = await api.get(`/Gturno-actual/${encodeURIComponent(clinica)}`);
+                        const response = await api.get(`/Gturno-actual/${clinica}`);
                         if (response && response.data) {
                             const data = Array.isArray(response.data) ? response.data[0] : response.data;
                             return { clinica, turno: data?.id_turno_cod ? data : null };
@@ -68,8 +78,19 @@ const LlamadoTurnosTV = () => {
             );
 
             const nuevosTurnos = {};
+            // Intentar usar API; si no hay, usar localStorage como respaldo
+            let savedLS = null;
+            try {
+                const saved = localStorage.getItem('clinicasData');
+                savedLS = saved ? JSON.parse(saved) : null;
+            } catch {}
             resultados.forEach(({ clinica, turno }) => {
-                nuevosTurnos[clinica] = turno;
+                if (turno && turno.id_turno_cod) {
+                    nuevosTurnos[clinica] = turno;
+                } else {
+                    const turnoLS = savedLS?.[clinica]?.turnoLlamado;
+                    nuevosTurnos[clinica] = turnoLS?.id_turno_cod ? turnoLS : null;
+                }
             });
 
             setTurnosActuales(nuevosTurnos);
@@ -82,21 +103,163 @@ const LlamadoTurnosTV = () => {
     };
 
     useEffect(() => {
+        const cargarClinicas = async () => {
+            try {
+                const res = await api.get('/GclinicasT');
+                const lista = Array.isArray(res.data) ? res.data.map(c => c.descripcion).filter(Boolean) : [];
+                if (lista.length > 0) setClinicas(lista);
+            } catch (_) {
+                // mantener lista por defecto
+            }
+        };
+        cargarClinicas();
+    }, []);
+
+    // Mantener ref sincronizada con el estado de audio
+    useEffect(() => {
+        audioHabilitadoRef.current = audioHabilitado;
+    }, [audioHabilitado]);
+
+    useEffect(() => {
         cargarTurnos();
         const intervalo = setInterval(cargarTurnos, 30000);
         return () => clearInterval(intervalo);
-    }, []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [clinicas]);
 
     useEffect(() => {
         const intervalo = setInterval(() => setHoraActual(new Date()), 1000);
         return () => clearInterval(intervalo);
     }, []);
 
+    // Hablar utilitario
+    const hablarTurno = (turno, clinica) => {
+        if (!turno) return;
+        const mensajeVoz = `Paciente ${turno.nombrepaciente || ''} con el número de afiliación ${turno.no_afiliacion || ''} presentarse en recepción para la clínica ${clinica}.`;
+        if ('speechSynthesis' in window) {
+            try {
+                // Intentar reanudar por si el motor quedó en pausa
+                try { window.speechSynthesis.resume(); } catch (_) {}
+                window.speechSynthesis.cancel();
+                const utter = new SpeechSynthesisUtterance(mensajeVoz);
+                utter.rate = 0.8;
+                utter.pitch = 1;
+                const voces = window.speechSynthesis.getVoices();
+                const vozEs = voces.find(v => v.lang?.startsWith('es') || v.name?.toLowerCase().includes('spanish'));
+                if (vozEs) utter.voice = vozEs;
+                window.speechSynthesis.speak(utter);
+            } catch (_) {}
+        }
+    };
+
+    // Inicializar voces
+    useEffect(() => {
+        if (!('speechSynthesis' in window)) return;
+        const handleVoices = () => setVocesCargadas(true);
+        window.speechSynthesis.onvoiceschanged = handleVoices;
+        // Forzar carga de voces
+        const _ = window.speechSynthesis.getVoices();
+        setTimeout(() => setVocesCargadas(true), 500);
+        return () => { try { window.speechSynthesis.onvoiceschanged = null; } catch {} };
+    }, []);
+
+    const habilitarAudio = () => {
+        try {
+            // Reproducir un aviso corto para registrar la interacción
+            if ('speechSynthesis' in window) {
+                try { window.speechSynthesis.resume(); } catch (_) {}
+                const utter = new SpeechSynthesisUtterance('Audio habilitado');
+                utter.rate = 1; utter.pitch = 1;
+                const voces = window.speechSynthesis.getVoices();
+                const vozEs = voces.find(v => v.lang?.startsWith('es') || v.name?.toLowerCase().includes('spanish'));
+                if (vozEs) utter.voice = vozEs;
+                window.speechSynthesis.speak(utter);
+            }
+            setAudioHabilitado(true);
+            localStorage.setItem('tvAudioEnabled', '1');
+            // Anunciar inmediatamente cualquier turno actual visible
+            try {
+                Object.entries(turnosActuales || {}).forEach(([clinica, turno]) => {
+                    const ultimo = ultimosAnunciadosRef.current[clinica];
+                    if (turno?.id_turno_cod && turno.id_turno_cod !== ultimo) {
+                        hablarTurno(turno, clinica);
+                        ultimosAnunciadosRef.current[clinica] = turno.id_turno_cod;
+                    }
+                });
+            } catch {}
+        } catch {}
+    };
+
+    // Sincronización por eventos para anunciar nuevo turno
     useEffect(() => {
         const handleStorageChange = (e) => {
-            if (e.key === 'turnoActualizado') cargarTurnos();
+            if (e.key === 'turnoActualizado') {
+                try {
+                    const data = JSON.parse(e.newValue || '{}');
+                    if (data?.clinica) {
+                        const clinica = data.clinica;
+                        const accion = data?.accion;
+                        const force = accion === 're-llamar' || accion === 'llamar' || !accion;
+                        // Intentar anunciar inmediatamente usando localStorage
+                        try {
+                            const saved = localStorage.getItem('clinicasData');
+                            const parsed = saved ? JSON.parse(saved) : {};
+                            const turnoLS = parsed?.[clinica]?.turnoLlamado;
+                            if (turnoLS?.id_turno_cod && audioHabilitadoRef.current) {
+                                const ultimo = ultimosAnunciadosRef.current[clinica];
+                                if (force || turnoLS.id_turno_cod !== ultimo) {
+                                    hablarTurno(turnoLS, clinica);
+                                    ultimosAnunciadosRef.current[clinica] = turnoLS.id_turno_cod;
+                                }
+                            } else {
+                                setPendienteAnunciarClinica(clinica);
+                                if (force) {
+                                    forzarClinicaRef.current[clinica] = true;
+                                }
+                            }
+                        } catch (_) {
+                            setPendienteAnunciarClinica(clinica);
+                            if (force) {
+                                forzarClinicaRef.current[clinica] = true;
+                            }
+                        }
+                    }
+                } catch (_) {}
+                // Pequeño retraso para dar tiempo a que el backend refleje el cambio
+                setTimeout(cargarTurnos, 250);
+            }
         };
-        const handleCustomEvent = () => cargarTurnos();
+        const handleCustomEvent = (ev) => {
+            const c = ev?.detail?.clinica;
+            if (c) {
+                const accion = ev?.detail?.accion;
+                const force = accion === 're-llamar' || accion === 'llamar' || !accion;
+                // Intentar con localStorage primero
+                try {
+                    const saved = localStorage.getItem('clinicasData');
+                    const parsed = saved ? JSON.parse(saved) : {};
+                    const turnoLS = parsed?.[c]?.turnoLlamado;
+                    if (turnoLS?.id_turno_cod && audioHabilitadoRef.current) {
+                        const ultimo = ultimosAnunciadosRef.current[c];
+                        if (force || turnoLS.id_turno_cod !== ultimo) {
+                            hablarTurno(turnoLS, c);
+                            ultimosAnunciadosRef.current[c] = turnoLS.id_turno_cod;
+                        }
+                    } else {
+                        setPendienteAnunciarClinica(c);
+                        if (force) {
+                            forzarClinicaRef.current[c] = true;
+                        }
+                    }
+                } catch (_) {
+                    setPendienteAnunciarClinica(c);
+                    if (force) {
+                        forzarClinicaRef.current[c] = true;
+                    }
+                }
+            }
+            setTimeout(cargarTurnos, 250);
+        };
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') cargarTurnos();
         };
@@ -111,6 +274,45 @@ const LlamadoTurnosTV = () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, []);
+
+    // Anunciar cuando haya clínica pendiente y turno cambió
+    useEffect(() => {
+        if (!pendienteAnunciarClinica) return;
+        if (!audioHabilitado) return; // esperar a que el usuario habilite audio
+        const clinica = pendienteAnunciarClinica;
+        const turno = turnosActuales[clinica];
+        const ultimo = ultimosAnunciadosRef.current[clinica];
+        const force = !!forzarClinicaRef.current[clinica];
+        let didSpeak = false;
+        if (turno?.id_turno_cod && (force || turno.id_turno_cod !== ultimo)) {
+            hablarTurno(turno, clinica);
+            ultimosAnunciadosRef.current[clinica] = turno.id_turno_cod;
+            didSpeak = true;
+        }
+        if (didSpeak) {
+            // limpiar flags solo si se anunció
+            forzarClinicaRef.current[clinica] = false;
+            setPendienteAnunciarClinica(null);
+        } else {
+            // Reintentar pronto: quizá backend/localStorage aún no está listo
+            setTimeout(() => {
+                cargarTurnos();
+                // mantener pendiente y forzar si estaba activo
+            }, 300);
+        }
+    }, [pendienteAnunciarClinica, turnosActuales, audioHabilitado]);
+
+    // Inicializar mapa de últimos anunciados en primer render de datos
+    useEffect(() => {
+        // evitar anunciar en la primera carga
+        Object.entries(turnosActuales || {}).forEach(([clinica, turno]) => {
+            if (turno?.id_turno_cod) {
+                if (!ultimosAnunciadosRef.current[clinica]) {
+                    ultimosAnunciadosRef.current[clinica] = turno.id_turno_cod;
+                }
+            }
+        });
+    }, [loading]);
 
     if (loading) {
         return (
@@ -175,6 +377,16 @@ const LlamadoTurnosTV = () => {
 
             {/* Contenido - 3 tarjetas que ocupan exactamente 1/3 cada una */}
             <div className="flex-1 p-3 flex flex-col gap-2 overflow-hidden">
+                {!audioHabilitado && (
+                    <div className="fixed bottom-4 right-4 z-50">
+                        <button
+                            onClick={habilitarAudio}
+                            className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow-lg"
+                        >
+                            Habilitar sonido
+                        </button>
+                    </div>
+                )}
                 {clinicas.map((clinica) => {
                     const turno = turnosActuales[clinica];
                     const config = clinicaConfig[clinica] || {};
