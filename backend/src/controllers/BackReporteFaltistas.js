@@ -97,14 +97,16 @@ router.get('/faltistas/excel', async (req, res) => {
       { header: 'Fecha de Falta', key: 'fechafalta', width: 16 },
     ];
 
-    // Encabezado compacto con logo y título
+    // Encabezado compacto con logo y título (estilo Fallecidos)
     worksheet.spliceRows(1, 0, [], [], []);
-    for (let r = 1; r <= 3; r++) worksheet.getRow(r).height = 22;
+    for (let r = 1; r <= 6; r++) worksheet.getRow(r).height = 22;
+    // Remover fila 4 (header auto generado por worksheet.columns)
+    worksheet.spliceRows(4, 1);
     try {
-      const logoPath = path.join(__dirname, '../../../src/assets/logoClinica2.png');
+      const logoPath = path.join(__dirname, '../../assets/img/logoClinica.png');
       if (fs.existsSync(logoPath)) {
         const imageId = workbook.addImage({ filename: logoPath, extension: 'png' });
-        worksheet.addImage(imageId, 'A1:B3');
+        worksheet.addImage(imageId, 'A1:C6');
       }
     } catch {}
     const colCount = worksheet.columns.length;
@@ -113,8 +115,8 @@ router.get('/faltistas/excel', async (req, res) => {
     worksheet.getCell(2, 1).font = { bold: true, size: 16, color: { argb: 'FF166534' } };
     worksheet.getCell(2, 1).alignment = { horizontal: 'center' };
 
-    // Header de columnas
-    const headerRowIndex = 4;
+    // Header de columnas en fila 7 y estilo
+    const headerRowIndex = 7;
     const headerValues = worksheet.columns.map(c => c.header);
     worksheet.insertRow(headerRowIndex, headerValues);
     const headerRow = worksheet.getRow(headerRowIndex);
@@ -123,8 +125,17 @@ router.get('/faltistas/excel', async (req, res) => {
     headerRow.height = 22;
     headerRow.eachCell((cell) => {
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF16A34A' } };
-      cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FF0F172A' } },
+        left: { style: 'thin', color: { argb: 'FF0F172A' } },
+        bottom: { style: 'thin', color: { argb: 'FF0F172A' } },
+        right: { style: 'thin', color: { argb: 'FF0F172A' } },
+      };
     });
+    // AutoFilter y freeze panes
+    const colLetter = (n) => { let s = ''; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; };
+    worksheet.autoFilter = { from: `A${headerRowIndex}`, to: `${colLetter(colCount)}${headerRowIndex}` };
+    worksheet.views = [{ state: 'frozen', ySplit: headerRowIndex }];
 
     // Filas
     rows.forEach(r => {
