@@ -332,6 +332,7 @@ const LlamadoTurnos = () => {
                     clinica: clinica,
                     accion: 'llamar',
                     turnoId: turnoConFoto?.id_turno_cod || null,
+                    turno: turnoConFoto || null,
                     ts: Date.now(),
                 });
             } catch (_) {}
@@ -474,6 +475,7 @@ const LlamadoTurnos = () => {
                     clinica: selectedClinica,
                     accion: 're-llamar',
                     turnoId: turno?.id_turno_cod || null,
+                    turno: turno || null,
                     ts: Date.now(),
                 });
             } catch (_) {}

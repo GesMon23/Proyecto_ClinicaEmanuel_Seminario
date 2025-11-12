@@ -628,6 +628,7 @@ function pushLlamadoEvent(evt) {
     accion: String(evt?.accion || ''),
     turnoId: evt?.turnoId ? String(evt.turnoId) : null,
     ts: Number(evt?.ts) || Date.now(),
+    turno: evt?.turno || null,
   };
   llamadoEvents.push(e);
   // Mantener tamaño acotado
