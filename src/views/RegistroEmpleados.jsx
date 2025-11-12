@@ -128,7 +128,7 @@ const RegistroEmpleados = () => {
             <form className="w-full space-y-6" onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">DPI *</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">DPI <span className="text-rose-500">*</span></label>
                   <input
                     type="text"
                     name="dpi"
@@ -143,7 +143,7 @@ const RegistroEmpleados = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Primer Nombre *</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Primer Nombre <span className="text-rose-500">*</span></label>
                   <input
                     type="text"
                     name="primer_nombre"
@@ -177,7 +177,7 @@ const RegistroEmpleados = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Primer Apellido *</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Primer Apellido <span className="text-rose-500">*</span></label>
                   <input
                     type="text"
                     name="primer_apellido"
@@ -217,7 +217,7 @@ const RegistroEmpleados = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Fecha de Nacimiento *</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Fecha de Nacimiento <span className="text-rose-500">*</span></label>
                   <input
                     type="date"
                     name="fecha_nacimiento"
@@ -229,7 +229,7 @@ const RegistroEmpleados = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Sexo *</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Sexo <span className="text-rose-500">*</span></label>
                   <select
                     name="sexo"
                     value={form.sexo}
@@ -244,7 +244,7 @@ const RegistroEmpleados = () => {
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Dirección *</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Dirección <span className="text-rose-500">*</span></label>
                   <textarea
                     name="direccion"
                     value={form.direccion}
@@ -256,7 +256,7 @@ const RegistroEmpleados = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Teléfono *</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Teléfono <span className="text-rose-500">*</span></label>
                   <input
                     type="text"
                     name="telefono"
@@ -272,7 +272,7 @@ const RegistroEmpleados = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Email *</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Email <span className="text-rose-500">*</span></label>
                   <input
                     type="email"
                     name="email"
@@ -284,7 +284,7 @@ const RegistroEmpleados = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Fecha de Ingreso *</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Fecha de Ingreso <span className="text-rose-500">*</span></label>
                   <input
                     type="date"
                     name="fecha_ingreso"

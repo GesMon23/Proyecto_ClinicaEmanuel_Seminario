@@ -203,7 +203,7 @@ const RegistroReferencias = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div>
                 <label className="block text-[18px] font-medium text-gray-800 dark:text-white mb-1">
-                  No. Afiliación*
+                  No. Afiliación <span className="text-rose-500">*</span>
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -229,7 +229,7 @@ const RegistroReferencias = () => {
 
               <div>
                 <label className="block text-[18px] font-medium text-gray-800 dark:text-white mb-1">
-                  Fecha de Referencia*
+                  Fecha de Referencia <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="date"
@@ -244,7 +244,7 @@ const RegistroReferencias = () => {
 
               <div>
                 <label className="block text-[18px] font-medium text-gray-800 dark:text-white mb-1">
-                  ID Médico*
+                  ID Médico <span className="text-rose-500">*</span>
                 </label>
                 <select
                   name="idMedico"
@@ -272,7 +272,7 @@ const RegistroReferencias = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
               <div>
                 <label className="block text-[18px] font-medium text-gray-800 dark:text-white mb-1">
-                  Motivo de Traslado *
+                  Motivo de Traslado <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -289,7 +289,7 @@ const RegistroReferencias = () => {
 
               <div>
                 <label className="block text-[18px] font-medium text-gray-800 dark:text-white mb-1">
-                  Especialidad de Referencia *
+                  Especialidad de Referencia <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
