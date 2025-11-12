@@ -124,8 +124,8 @@ const LlamadoTurnos = () => {
                 let turnoConFoto = { ...response.data };
                 if (turnoConFoto?.url_foto) {
                     const filename = turnoConFoto.url_foto.replace(/^.*[\\\/]/, '');
-                    const fotoExists = await verificarExistenciaFoto(filename);
-                    turnoConFoto.url_foto = fotoExists ? `/fotos/${filename}` : null;
+                    const resolved = await verificarExistenciaFoto(filename);
+                    turnoConFoto.url_foto = resolved;
                 }
                 
                 setClinicasData(prev => ({
@@ -167,15 +167,30 @@ const LlamadoTurnos = () => {
         loadInitialData();
     }, [selectedClinica, clinicas]);
 
-    // Función para verificar existencia de foto
+    // Resolver URL de foto con fallback si /check-photo no existe en prod
     const verificarExistenciaFoto = async (filename) => {
         try {
-            const response = await api.get(`/check-photo/${filename}`);
-            return response.data.exists;
+            // 1) Intentar endpoint JSON (sin extensión para evitar filtro de Nginx)
+            const base = String(filename || '').replace(/^.*[\\\/]/, '');
+            const id = base.replace(/\.[a-zA-Z0-9]+$/, '');
+            const response = await api.get(`/check-photo/${id}`);
+            if (response?.data?.exists && response.data.url) {
+                return response.data.url; // p.ej. /fotos/XYZ.jpg
+            }
         } catch (error) {
-            console.error('Error al verificar la foto:', error);
-            return false;
+            // si 404 del endpoint, intentar fallback directo a servir imagen
+            // console.warn('check-photo no disponible, aplicando fallback /foto/:id');
         }
+        // 2) Fallback: pedir la imagen directa sin extensión
+        try {
+            const base = String(filename || '').replace(/^.*[\\\/]/, '');
+            const id = base.replace(/\.[a-zA-Z0-9]+$/, '');
+            const respImg = await api.get(`/foto/${id}`, { responseType: 'blob' });
+            if (respImg && respImg.status === 200) {
+                return `/api/foto/${id}`; // servir desde backend
+            }
+        } catch (_) {}
+        return null;
     };
 
     const handleCloseModal = () => setShowModal(false);
@@ -268,8 +283,8 @@ const LlamadoTurnos = () => {
             let turnoConFoto = { ...turno };
             if (turnoConFoto?.url_foto) {
                 const filename = turnoConFoto.url_foto.replace(/^.*[\\\/]/, '');
-                const fotoExists = await verificarExistenciaFoto(filename);
-                turnoConFoto.url_foto = fotoExists ? `/fotos/${filename}` : null;
+                const resolved = await verificarExistenciaFoto(filename);
+                turnoConFoto.url_foto = resolved;
             }
             
             // Actualizar el estado con el turno llamado
@@ -450,8 +465,8 @@ const LlamadoTurnos = () => {
             let turnoConFoto = { ...turno };
             if (turnoConFoto?.url_foto) {
                 const filename = turnoConFoto.url_foto.replace(/^.*[\\\/]/, '');
-                const fotoExists = await verificarExistenciaFoto(filename);
-                turnoConFoto.url_foto = fotoExists ? `/fotos/${filename}` : null;
+                const resolved = await verificarExistenciaFoto(filename);
+                turnoConFoto.url_foto = resolved;
             }
             
             setClinicasData(prev => ({
