@@ -178,11 +178,11 @@ router.post('/auth/admin/reset-user-password', verifyJWT, async (req, res) => {
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
-        const cur = 'cur_usuario_target_admin_reset';
-        await client.query('CALL public.sp_usuario_autenticado($1, $2)', [id, cur]);
+        const cur = 'cur_usuario_email_admin_reset';
+        await client.query('CALL public.sp_usuario_email_by_id($1, $2)', [id, cur]);
         const r = await client.query(`FETCH ALL FROM "${cur}"`);
         const u = r.rows?.[0] || null;
-        correoUsuario = u?.correo || u?.email || u?.correo_electronico || null;
+        correoUsuario = u?.email || null;
         await client.query('COMMIT');
       } catch (e) {
         try { await client.query('ROLLBACK'); } catch (_) {}
@@ -280,11 +280,11 @@ router.post('/auth/admin/reset-user-password/token', async (req, res) => {
         const client = await pool.connect();
         try {
           await client.query('BEGIN');
-          const cur = 'cur_usuario_target_for_mail';
-          await client.query('CALL public.sp_usuario_autenticado($1, $2)', [payload.target, cur]);
+          const cur = 'cur_usuario_email_for_mail';
+          await client.query('CALL public.sp_usuario_email_by_id($1, $2)', [payload.target, cur]);
           const r = await client.query(`FETCH ALL FROM "${cur}"`);
           const u = r.rows?.[0] || null;
-          correoUsuario = u?.correo || u?.email || u?.correo_electronico || null;
+          correoUsuario = u?.email || null;
           await client.query('COMMIT');
         } catch (e) {
           try { await client.query('ROLLBACK'); } catch (_) {}
@@ -745,7 +745,22 @@ router.post('/auth/forgot-password', async (req, res) => {
         });
       }
       try {
-        const correoUsuario = (user && (user.correo || user.email || user.correo_electronico || user.correo_usuario || user.email_usuario)) || null;
+        let correoUsuario = null;
+        if (user && user.id_usuario) {
+          const client = await pool.connect();
+          try {
+            await client.query('BEGIN');
+            const curMail = 'cur_usuario_email_forgot_ack';
+            await client.query('CALL public.sp_usuario_email_by_id($1, $2)', [user.id_usuario, curMail]);
+            const rr = await client.query(`FETCH ALL FROM "${curMail}"`);
+            await client.query('COMMIT');
+            correoUsuario = rr.rows?.[0]?.email || null;
+          } catch (e2) {
+            try { await client.query('ROLLBACK'); } catch (_) {}
+          } finally {
+            try { await client.release(); } catch (_) {}
+          }
+        }
         if (correoUsuario) {
           const base = process.env.APP_BASE_URL || 'http://localhost:3000';
           await enviarCorreo({
