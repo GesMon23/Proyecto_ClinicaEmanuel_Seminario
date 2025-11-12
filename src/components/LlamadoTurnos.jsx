@@ -786,9 +786,27 @@ const LlamadoTurnos = () => {
                                         {/* Foto del paciente */}
                                         <div className="relative group">
                                             <div className="w-36 h-36 rounded-xl overflow-hidden border-4 border-green-100 dark:border-green-900 bg-gray-100 dark:bg-slate-700 flex-shrink-0 relative transition-transform duration-300 group-hover:scale-105">
-                                                {clinicasData[selectedClinica].turnoLlamado.url_foto ? (
+                                                {(() => {
+                                                    const t = clinicasData[selectedClinica].turnoLlamado;
+                                                    const noaf = t?.no_afiliacion || t?.noafiliacion || '';
+                                                    let src = null;
+                                                    if (noaf) {
+                                                        const v = encodeURIComponent(t?.id_turno_cod || '1');
+                                                        src = `/api/foto/${encodeURIComponent(noaf)}?v=${v}`;
+                                                    } else {
+                                                        const raw = t?.url_foto;
+                                                        if (raw) {
+                                                            const s = String(raw);
+                                                            if (s.startsWith('http')) src = s;
+                                                            else if (s.startsWith('/api/foto')) src = s;
+                                                            else if (s.startsWith('/api/fotos/')) src = s;
+                                                            else if (s.startsWith('/fotos/')) src = `/api${s}`;
+                                                            else src = `/api/fotos/${encodeURIComponent(s)}`;
+                                                        }
+                                                    }
+                                                    return src ? (
                                                     <img 
-                                                        src={`${clinicasData[selectedClinica].turnoLlamado.url_foto}`} 
+                                                        src={src} 
                                                         alt="Foto del paciente" 
                                                         className="w-full h-full object-cover"
 
@@ -799,11 +817,12 @@ const LlamadoTurnos = () => {
                                                                 '&background=3B82F6&color=fff';
                                                         }}
                                                     />
-                                                ) : (
+                                                    ) : (
                                                     <div className="w-full h-full flex items-center justify-center bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300 text-5xl">
                                                         {clinicasData[selectedClinica].turnoLlamado.nombrepaciente.charAt(0).toUpperCase()}
                                                     </div>
-                                                )}
+                                                    );
+                                                })()}
                                             </div>
                                         </div>
 
