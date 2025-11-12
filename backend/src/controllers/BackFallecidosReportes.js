@@ -122,6 +122,8 @@ router.get('/fallecidos/excel', async (req, res) => {
     // Encabezado compacto con logo
     worksheet.spliceRows(1, 0, [], [], []);
     for (let r = 1; r <= 6; r++) worksheet.getRow(r).height = 22;
+    // Remover la fila 4 que contiene el header automático generado por worksheet.columns
+    worksheet.spliceRows(4, 1);
     try {
       const logoPath = path.join(__dirname, '../../assets/img/logoClinica.png');
       if (fs.existsSync(logoPath)) {
