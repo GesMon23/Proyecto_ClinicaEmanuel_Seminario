@@ -61,8 +61,8 @@ const EgresoReporte = () => {
 
     // Paginación
     const [paginaActual, setPaginaActual] = useState(1);
-    const filasPorPagina = 10;
-    const totalPaginas = Math.ceil(pacientes.length / filasPorPagina);
+    const [filasPorPagina, setFilasPorPagina] = useState(10);
+    const totalPaginas = Math.max(1, Math.ceil(pacientes.length / filasPorPagina));
     const pacientesPaginados = pacientes.slice((paginaActual - 1) * filasPorPagina, paginaActual * filasPorPagina);
 
     const handlePaginaChange = (nuevaPagina) => {
@@ -94,6 +94,7 @@ const EgresoReporte = () => {
     const handleBuscar = async (e) => {
         e.preventDefault();
         setLoading(true);
+        setPaginaActual(1);
         try {
             const params = {};
             if (filtros.fechaInicioPeriodo) params.fechainicio = filtros.fechaInicioPeriodo;
@@ -308,7 +309,7 @@ const EgresoReporte = () => {
 
                         <div className="flex gap-3">
                             <button type="submit" className="bg-green-700 hover:bg-green-800 text-white font-medium px-4 py-2 rounded">Buscar</button>
-                            <button type="button" className="font-medium px-4 py-2 rounded border text-white bg-[#B91C1C] hover:bg-[#991B1B] border-[#991B1B]" onClick={() => { setFiltros({ fechaInicioPeriodo:'', fechaFinPeriodo:'', jornada:'', accesovascular:'', sexo:'', departamento:'' }); setPacientes([]); }}>Limpiar</button>
+                            <button type="button" className="font-medium px-4 py-2 rounded border text-white bg-[#B91C1C] hover:bg-[#991B1B] border-[#991B1B]" onClick={() => { setFiltros({ fechaInicioPeriodo:'', fechaFinPeriodo:'', jornada:'', accesovascular:'', sexo:'', departamento:'' }); setPacientes([]); setPaginaActual(1); }}>Limpiar</button>
                             <button type="button" onClick={exportarExcel} disabled={pacientes.length===0} className={`px-4 py-2 font-medium rounded border flex items-center gap-2 ${pacientes.length===0?'bg-gray-300 text-white cursor-not-allowed border-gray-400':'bg-[#107C41] hover:bg-[#0E6A39] text-white border-[#0E6A39]'}`}>
                               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M4 3.5A1.5 1.5 0 0 1 5.5 2h8.879a1.5 1.5 0 0 1 1.06.44l3.121 3.121c.282.282.44.665.44 1.06V20.5A1.5 1.5 0 0 1 17.5 22h-12A1.5 1.5 0 0 1 4 20.5v-17Z"/><path d="M15 2.75V5a1 1 0 0 0 1 1h2.25" className="opacity-80"/><path d="M7.2 10h2l1.3 2.4L11.8 10h2l-2.2 4 2.2 4h-2l-1.3-2.4L9.2 18h-2l2.2-4-2.2-4Z" className="opacity-95"/></svg>
                               Excel
@@ -323,6 +324,17 @@ const EgresoReporte = () => {
                 </div>
             </div>
                 
+                 <div className="flex items-center justify-end gap-3 mb-3">
+                    <div className="flex items-center gap-2">
+                        <label className="text-sm text-gray-700 dark:text-gray-300">Filas por página:</label>
+                        <select value={filasPorPagina} onChange={(e)=>{ const v=parseInt(e.target.value,10)||10; setFilasPorPagina(v); setPaginaActual(1); }} className="px-2 py-1 border border-gray-300 dark:border-slate-600 rounded-md dark:bg-slate-800 dark:text-white">
+                            <option value={5}>5</option>
+                            <option value={10}>10</option>
+                            <option value={15}>15</option>
+                            <option value={20}>20</option>
+                        </select>
+                    </div>
+                 </div>
                  <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-300 dark:divide-slate-700 text-sm text-left text-gray-800 dark:text-gray-100">
                     <thead className="bg-gray-100 dark:bg-slate-800 text-xs uppercase font-semibold text-gray-700 dark:text-gray-200">

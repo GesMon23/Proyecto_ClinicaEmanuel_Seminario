@@ -46,17 +46,17 @@ var routes = [
     layout: "/admin"
   },
   {
-    path: "/llamadopacientes",
-    name: "Llamado Pacientes",
-    icon: "nc-icon nc-notification-70",
-    component: LlamadoTurnos,
-    layout: "/admin"
-  },
-  {
     path: "/turnos",
     name: "Turnos",
     icon: "nc-icon nc-bullet-list-67",
     component: Turnos,
+    layout: "/admin"
+  },
+  {
+    path: "/gestion-reportes",
+    name: "Reportes",
+    icon: "nc-icon nc-paper-2",
+    component: GestionReportes,
     layout: "/admin"
   },
   {

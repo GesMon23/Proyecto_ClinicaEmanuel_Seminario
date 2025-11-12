@@ -27,12 +27,6 @@ export const navbarLinks = [
                 allowedRoles: ["RolGestionPaciente"],
             },
             {
-                label: "Llamado Pacientes",
-                icon: Megaphone  ,
-                path: "/llamadopacientes",
-                allowedRoles: ["RolTurnos"],
-            },
-            {
                 label: "Turnos",
                 icon: ListTodo   ,
                 path: "/turnos",
