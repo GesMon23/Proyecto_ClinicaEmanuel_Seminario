@@ -12,6 +12,8 @@ const ConsultaPsicologia = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [detalle, setDetalle] = useState({ isOpen: false, item: null });
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [filasPorPagina, setFilasPorPagina] = useState(10);
 
   const abrirDetalle = (item) => setDetalle({ isOpen: true, item });
   const cerrarDetalle = () => setDetalle({ isOpen: false, item: null });
@@ -20,6 +22,7 @@ const ConsultaPsicologia = () => {
     setError('');
     setRegistros([]);
     setLoading(true);
+    setPaginaActual(1);
     try {
       const params = {};
       if (desde) params.desde = desde;
@@ -48,6 +51,19 @@ const ConsultaPsicologia = () => {
     setSexo('');
     setRegistros([]);
     setError('');
+    setPaginaActual(1);
+  };
+
+  const totalPaginas = Math.max(1, Math.ceil((registros?.length || 0) / filasPorPagina));
+  const inicio = (paginaActual - 1) * filasPorPagina;
+  const registrosPaginados = (registros || []).slice(inicio, inicio + filasPorPagina);
+  const handlePaginaChange = (p) => {
+    if (p >= 1 && p <= totalPaginas) setPaginaActual(p);
+  };
+  const handleFilasPorPaginaChange = (e) => {
+    const v = parseInt(e.target.value, 10) || 10;
+    setFilasPorPagina(v);
+    setPaginaActual(1);
   };
 
   const descargarPDF = (item) => {
@@ -282,7 +298,19 @@ const ConsultaPsicologia = () => {
         </div>
       </div>
 
-      <div className="mt-6 overflow-x-auto">
+      <div className="mt-6">
+        <div className="flex items-center justify-end gap-3 mb-3">
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-700 dark:text-gray-300">Filas por página:</label>
+            <select value={filasPorPagina} onChange={handleFilasPorPaginaChange} className="px-2 py-1 border border-gray-300 dark:border-slate-600 rounded-md dark:bg-slate-800 dark:text-white">
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={15}>15</option>
+              <option value={20}>20</option>
+            </select>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
         {loading ? (
           <div className="text-center my-5"><span className="text-green-700">Cargando...</span></div>
         ) : (
@@ -307,7 +335,7 @@ const ConsultaPsicologia = () => {
               {registros.length === 0 ? (
                 <tr><td colSpan={12} className="text-center py-4 text-gray-600 dark:text-gray-300">No hay informes para mostrar.</td></tr>
               ) : (
-                registros.map((it, idx) => {
+                registrosPaginados.map((it, idx) => {
                   const pn = it.primer_nombre ?? it.primernombre ?? '';
                   const sn = it.segundo_nombre ?? it.segundonombre ?? '';
                   const pa = it.primer_apellido ?? it.primerapellido ?? '';
@@ -315,7 +343,7 @@ const ConsultaPsicologia = () => {
                   const sexo = it.sexo ?? it.Sexo ?? '';
                   return (
                     <tr key={it.id_informe || idx} className="border-t border-gray-200 dark:border-slate-700">
-                      <td className="px-3 py-2">{idx + 1}</td>
+                      <td className="px-3 py-2">{inicio + idx + 1}</td>
                       <td className="px-3 py-2">{it.no_afiliacion}</td>
                       <td className="px-3 py-2">{[pn, sn, pa, sa].filter(Boolean).join(' ')}</td>
                       <td className="px-3 py-2">{sexo}</td>
@@ -335,6 +363,22 @@ const ConsultaPsicologia = () => {
               )}
             </tbody>
           </table>
+        )}
+        </div>
+        {registros.length > 0 && (
+          <div className="flex flex-wrap justify-center items-center gap-2 mt-6">
+            <button className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400 transition-colors" disabled={paginaActual === 1} onClick={() => handlePaginaChange(paginaActual - 1)}>Anterior</button>
+            {[...Array(totalPaginas)].map((_, i) => (
+              <button key={i} className={`px-3 py-2 rounded-lg transition-colors ${
+                paginaActual === i + 1
+                  ? 'bg-green-600 text-white'
+                  : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-slate-600'
+              }`} onClick={() => handlePaginaChange(i + 1)}>
+                {i + 1}
+              </button>
+            ))}
+            <button className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400 transition-colors" disabled={paginaActual === totalPaginas} onClick={() => handlePaginaChange(paginaActual + 1)}>Siguiente</button>
+          </div>
         )}
       </div>
 

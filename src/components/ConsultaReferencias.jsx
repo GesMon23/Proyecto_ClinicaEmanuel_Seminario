@@ -15,6 +15,8 @@ const ConsultaReferencias = () => {
   const [sexo, setSexo] = useState('');
   const [medicos, setMedicos] = useState([]);
   const [detalle, setDetalle] = useState({ isOpen: false, item: null });
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [filasPorPagina, setFilasPorPagina] = useState(10);
 
   useEffect(() => {
     fetchMedicos();
@@ -47,6 +49,7 @@ const ConsultaReferencias = () => {
       setReferencias([]);
     }
     setLoading(false);
+    setPaginaActual(1);
   };
 
   const abrirDetalle = (item) => setDetalle({ isOpen: true, item });
@@ -185,6 +188,18 @@ const ConsultaReferencias = () => {
       (ref.sexo || '').toLowerCase().includes(filtro.toLowerCase())
     );
   });
+
+  const totalPaginas = Math.max(1, Math.ceil((referenciasFiltradas.length || 0) / filasPorPagina));
+  const inicio = (paginaActual - 1) * filasPorPagina;
+  const referenciasPaginadas = referenciasFiltradas.slice(inicio, inicio + filasPorPagina);
+  const handlePaginaChange = (p) => {
+    if (p >= 1 && p <= totalPaginas) setPaginaActual(p);
+  };
+  const handleFilasPorPaginaChange = (e) => {
+    const v = parseInt(e.target.value, 10) || 10;
+    setFilasPorPagina(v);
+    setPaginaActual(1);
+  };
 
   return (
     <div className="w-full px-4 md:px-8 mt-4">
@@ -333,6 +348,18 @@ const ConsultaReferencias = () => {
             </div>
           </form>
           <br />
+          {/* Selector de filas por página */}
+          <div className="flex items-center justify-end gap-3 mb-3">
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-700 dark:text-gray-300">Filas por página:</label>
+              <select value={filasPorPagina} onChange={handleFilasPorPaginaChange} className="px-2 py-1 border border-gray-300 dark:border-slate-600 rounded-md dark:bg-slate-800 dark:text-white">
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={15}>15</option>
+                <option value={20}>20</option>
+              </select>
+            </div>
+          </div>
           {/* Spinner o Tabla */}
           {loading ? (
             <div className="text-center my-5">
@@ -364,9 +391,9 @@ const ConsultaReferencias = () => {
                       </td>
                     </tr>
                   ) : (
-                    referenciasFiltradas.map((ref, idx) => (
+                    referenciasPaginadas.map((ref, idx) => (
                       <tr key={ref.idreferencia} className="border-t border-gray-200 dark:border-slate-700">
-                        <td className="px-3 py-2">{idx + 1}</td>
+                        <td className="px-3 py-2">{inicio + idx + 1}</td>
                         <td className="px-3 py-2">{ref.idreferencia}</td>
                         <td className="px-3 py-2">{ref.noafiliacion}</td>
                         <td className="px-3 py-2">
@@ -389,6 +416,21 @@ const ConsultaReferencias = () => {
                   )}
                 </tbody>
               </table>
+            </div>
+          )}
+          {referenciasFiltradas.length > 0 && (
+            <div className="flex flex-wrap justify-center items-center gap-2 mt-6">
+              <button className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400 transition-colors" disabled={paginaActual === 1} onClick={() => handlePaginaChange(paginaActual - 1)}>Anterior</button>
+              {[...Array(totalPaginas)].map((_, i) => (
+                <button key={i} className={`px-3 py-2 rounded-lg transition-colors ${
+                  paginaActual === i + 1
+                    ? 'bg-green-600 text-white'
+                    : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-slate-600'
+                }`} onClick={() => handlePaginaChange(i + 1)}>
+                  {i + 1}
+                </button>
+              ))}
+              <button className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400 transition-colors" disabled={paginaActual === totalPaginas} onClick={() => handlePaginaChange(paginaActual + 1)}>Siguiente</button>
             </div>
           )}
           {/* Modal dentro del contenedor */}

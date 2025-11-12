@@ -34,10 +34,25 @@ const LoginComponent = () => {
     setMensaje("");
   }, []);
 
+  // Normaliza mensajes del login: mayúscula inicial y 'password' -> 'contraseña'
+  const normalizeLoginError = (msg) => {
+    try {
+      let s = (msg || '').toString().trim();
+      if (!s) return s;
+      s = s.replace(/password/gi, 'contraseña');
+      s = s.replace(/contrasena/gi, 'contraseña');
+      // Mayúscula inicial del mensaje completo
+      s = s.charAt(0).toUpperCase() + s.slice(1);
+      return s;
+    } catch {
+      return msg;
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (/[A-Z]/.test(usuario)) {
-      setMensaje("Todos los caracteres del usuario deben ir en minúsculas");
+      setMensaje(normalizeLoginError("todos los caracteres del usuario deben ir en minúsculas"));
       return;
     }
     try {
@@ -53,7 +68,7 @@ const LoginComponent = () => {
         navigate('/layout/dashboard');
       }
     } catch (err) {
-      setMensaje(err?.response?.data?.error || 'No fue posible iniciar sesión');
+      setMensaje(normalizeLoginError(err?.response?.data?.error || 'No fue posible iniciar sesión'));
     }
   };
 
@@ -86,7 +101,7 @@ const LoginComponent = () => {
 
   return (
     <div className="bg-white dark:bg-gray-900">
-      <div className="flex justify-center h-screen" style={{ background: "#edf2f7" }}>
+      <div className="flex justify-center h-screen bg-gray-100 dark:bg-slate-900">
         <div
           className="hidden bg-cover bg-black bg-opacity-50 lg:block lg:w-2/3"
           style={{
@@ -98,7 +113,7 @@ const LoginComponent = () => {
             <div>
               <h2 className="text-4xl font-bold text-white">Clínica Renal Emanuel</h2>
               <p className="max-w-xl mt-3 text-gray-300">
-                Inserte frase motivadora o de identidad de la empresa
+                Expertos en salud renal, comprometidos contigo.
               </p>
             </div>
           </div>
@@ -151,7 +166,7 @@ const LoginComponent = () => {
                   <button
                     type="button"
                     onClick={() => { setShowForgot(true); setFpError(''); setFpMsg(''); setFpDpi(''); setFpNombres(''); setFpApellidos(''); setFpTelefono(''); setFpUsuario(''); }}
-                    className="text-sm text-green-800 hover:underline"
+                    className="text-sm text-green-800 dark:text-green-400 hover:underline"
                   >
                     ¿Olvidaste tu contraseña?
                   </button>

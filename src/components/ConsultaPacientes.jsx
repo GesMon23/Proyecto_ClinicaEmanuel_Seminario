@@ -2266,9 +2266,6 @@ const ConsultaPacientes = () => {
                                                     <thead className="bg-gray-100 dark:bg-slate-800 text-xs uppercase font-semibold text-gray-700 dark:text-gray-200">
                                                         <tr>
                                                             <th className="px-4 py-2 text-left">#</th>
-                                                            <th className="px-4 py-2 text-left">No. Afiliación</th>
-                                                            <th className="px-4 py-2 text-left">Paciente</th>
-                                                            <th className="px-4 py-2 text-left">Sexo</th>
                                                             <th className="px-4 py-2 text-left">ID Informe</th>
                                                             <th className="px-4 py-2 text-left">Fecha</th>
                                                             <th className="px-4 py-2 text-left">Motivo</th>
@@ -2282,7 +2279,7 @@ const ConsultaPacientes = () => {
                                                     <tbody>
                                                         {(!psiPageItems || psiPageItems.length === 0) ? (
                                                             <tr>
-                                                                <td colSpan={12} className="text-center py-4 text-gray-600 dark:text-gray-300">No hay informes para mostrar.</td>
+                                                                <td colSpan={9} className="text-center py-4 text-gray-600 dark:text-gray-300">No hay informes para mostrar.</td>
                                                             </tr>
                                                         ) : (
                                                             psiPageItems.map((it, idx) => {
@@ -2295,9 +2292,6 @@ const ConsultaPacientes = () => {
                                                                 return (
                                                                     <tr key={it.id_informe || idx} className="border-t border-gray-200 dark:border-slate-700">
                                                                         <td className="px-3 py-2">{(pagePsicologia - 1) * pageSizePsicologia + idx + 1}</td>
-                                                                        <td className="px-3 py-2">{it.no_afiliacion ?? ''}</td>
-                                                                        <td className="px-3 py-2">{nombre}</td>
-                                                                        <td className="px-3 py-2">{sexo}</td>
                                                                         <td className="px-3 py-2">{it.id_informe ?? ''}</td>
                                                                         <td className="px-3 py-2">{it.fecha_creacion ? new Date(it.fecha_creacion).toLocaleDateString() : ''}</td>
                                                                         <td className="px-3 py-2">{it.motivo_consulta ?? ''}</td>
@@ -2571,8 +2565,6 @@ const ConsultaPacientes = () => {
                                                 <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
                                                     <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">
                                                         <tr>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">No. Afiliación</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Nombre</th>
                                                             <th className="p-3 border dark:border-gray-600 font-semibold">Código Turno</th>
                                                             <th className="p-3 border dark:border-gray-600 font-semibold">Clínica</th>
                                                             <th className="p-3 border dark:border-gray-600 font-semibold">Fecha</th>
@@ -2583,8 +2575,6 @@ const ConsultaPacientes = () => {
                                                         {turnosPageItems && turnosPageItems.length > 0 ? (
                                                             turnosPageItems.map((t, idx) => (
                                                                 <tr key={t.id_turno || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.noafiliacion}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.nombrepaciente}</td>
                                                                     <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.id_turno_cod || t.id_turno}</td>
                                                                     <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.nombre_clinica}</td>
                                                                     <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.fecha_turno ? new Date(t.fecha_turno).toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' }) : ''}</td>
@@ -2595,7 +2585,7 @@ const ConsultaPacientes = () => {
                                                             ))
                                                         ) : (
                                                             <tr>
-                                                                <td colSpan={6} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
+                                                                <td colSpan={4} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
                                                             </tr>
                                                         )}
                                                     </tbody>
@@ -2669,37 +2659,21 @@ const ConsultaPacientes = () => {
                                                 <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
                                                     <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">
                                                         <tr>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">No. Afiliación</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Nombre</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Sexo</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Jornada</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Acceso Vascular</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Departamento</th>
                                                             <th className="p-3 border dark:border-gray-600 font-semibold">Clínica</th>
                                                             <th className="p-3 border dark:border-gray-600 font-semibold">Fecha Falta</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Acciones</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
                                                         {faltistasPageItems && faltistasPageItems.length > 0 ? (
                                                             faltistasPageItems.map((f, idx) => (
                                                                 <tr key={(f.noafiliacion || '') + (f.fechafalta || '') + idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.noafiliacion || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{[(f.nombres||''),(f.apellidos||'')].filter(Boolean).join(' ')}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.sexo || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.jornada || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.accesovascular || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.departamento || ''}</td>
                                                                     <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.clinica || ''}</td>
                                                                     <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.fechafalta || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600">
-                                                                        <button className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white" onClick={() => openFaltaDetail(f)}>Ver detalle</button>
-                                                                    </td>
                                                                 </tr>
                                                             ))
                                                         ) : (
                                                             <tr>
-                                                                <td colSpan={10} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
+                                                                <td colSpan={2} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
                                                             </tr>
                                                         )}
                                                     </tbody>
@@ -2777,9 +2751,6 @@ const ConsultaPacientes = () => {
                                                 <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
                                                     <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">
                                                         <tr>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold text-center">No. Afiliación</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold text-center">Paciente</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold text-center">Sexo</th>
                                                             <th className="p-3 border dark:border-gray-600 font-semibold text-center">ID Lab</th>
                                                             <th className="p-3 border dark:border-gray-600 font-semibold text-center">Fecha</th>
                                                             <th className="p-3 border dark:border-gray-600 font-semibold text-center">Periodicidad</th>
@@ -2801,9 +2772,6 @@ const ConsultaPacientes = () => {
                                                                 const fecha = rawFecha ? new Date(rawFecha).toLocaleDateString() : '';
                                                                 return (
                                                                     <tr key={(it.id_laboratorio || '') + '-' + idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                                                                        <td className="p-3 border dark:border-gray-600 text-center">{it.no_afiliacion || ''}</td>
-                                                                        <td className="p-3 border dark:border-gray-600 text-center">{nombre}</td>
-                                                                        <td className="p-3 border dark:border-gray-600 text-center">{it.sexo || ''}</td>
                                                                         <td className="p-3 border dark:border-gray-600 text-center">{it.id_laboratorio ?? it.idlaboratorio ?? ''}</td>
                                                                         <td className="p-3 border dark:border-gray-600 text-center">{fecha}</td>
                                                                         <td className="p-3 border dark:border-gray-600 text-center">{it.periodicidad || ''}</td>
@@ -2818,7 +2786,7 @@ const ConsultaPacientes = () => {
                                                             })
                                                         ) : (
                                                             <tr>
-                                                                <td colSpan={10} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
+                                                                <td colSpan={7} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
                                                             </tr>
                                                         )}
                                                     </tbody>

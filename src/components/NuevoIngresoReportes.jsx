@@ -81,8 +81,8 @@ const NuevoIngresoReportes = () => {
 
     // Paginación
     const [paginaActual, setPaginaActual] = useState(1);
-    const filasPorPagina = 10;
-    const totalPaginas = Math.ceil(pacientes.length / filasPorPagina);
+    const [filasPorPagina, setFilasPorPagina] = useState(10);
+    const totalPaginas = Math.max(1, Math.ceil(pacientes.length / filasPorPagina));
     const pacientesPaginados = pacientes.slice((paginaActual - 1) * filasPorPagina, paginaActual * filasPorPagina);
 
     const handlePaginaChange = (nuevaPagina) => {
@@ -114,6 +114,7 @@ const NuevoIngresoReportes = () => {
     const handleBuscar = async (e) => {
         e.preventDefault();
         setLoading(true);
+        setPaginaActual(1);
         try {
             const params = {};
             if (filtros.fechaInicioPeriodo) params.fechainicio = filtros.fechaInicioPeriodo;
@@ -397,10 +398,7 @@ const NuevoIngresoReportes = () => {
                                 <button
                                     type="button"
                                     className="font-medium px-4 py-2 rounded border text-white bg-[#B91C1C] hover:bg-[#991B1B] border-[#991B1B]"
-                                    onClick={() => {
-                                        setFiltros({ fechaInicioPeriodo: '', fechaFinPeriodo: '', sexo: '', jornada: '', accesovascular: '', departamento: '' });
-                                        setPacientes([]);
-                                    }}
+                                    onClick={handleLimpiar}
                                 >
                                     Limpiar
                                 </button>
@@ -443,6 +441,17 @@ const NuevoIngresoReportes = () => {
             </div>
 
 
+            <div className="flex items-center justify-end gap-3 mb-3">
+                <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-700 dark:text-gray-300">Filas por página:</label>
+                    <select value={filasPorPagina} onChange={(e)=>{ const v=parseInt(e.target.value,10)||10; setFilasPorPagina(v); setPaginaActual(1); }} className="px-2 py-1 border border-gray-300 dark:border-slate-600 rounded-md dark:bg-slate-800 dark:text-white">
+                        <option value={5}>5</option>
+                        <option value={10}>10</option>
+                        <option value={15}>15</option>
+                        <option value={20}>20</option>
+                    </select>
+                </div>
+            </div>
             <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-300 dark:divide-slate-700 text-sm text-left text-gray-800 dark:text-gray-100">
                     <thead className="bg-gray-100 dark:bg-slate-800 text-xs uppercase font-semibold text-gray-700 dark:text-gray-200">

@@ -65,14 +65,6 @@ function App() {
                     )
                 },
                 {
-                    path: "llamadopacientes",
-                    element: (
-                        <RequireRole roles={["RolTurnos"]}>
-                            <h1 className="title">Llamado Pacientes</h1>
-                        </RequireRole>
-                    ),
-                },
-                {
                     path: "turnos",
                     element: (
                         <RequireRole roles={["RolTurnos"]}>
