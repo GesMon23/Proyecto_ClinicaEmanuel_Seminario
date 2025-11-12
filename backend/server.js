@@ -617,6 +617,86 @@ app.post('/api/mail/test', async (req, res) => {
     }
 });
 
+// ---------------- Eventos de Llamados (SSE + Poll) ----------------
+// Memoria simple en proceso. Si se reinicia el server, se pierde el historial.
+const llamadoEvents = [];
+const sseClients = new Set(); // cada elemento es { id, res }
+
+function pushLlamadoEvent(evt) {
+  const e = {
+    clinica: String(evt?.clinica || ''),
+    accion: String(evt?.accion || ''),
+    turnoId: evt?.turnoId ? String(evt.turnoId) : null,
+    ts: Number(evt?.ts) || Date.now(),
+  };
+  llamadoEvents.push(e);
+  // Mantener tamaño acotado
+  if (llamadoEvents.length > 500) llamadoEvents.splice(0, llamadoEvents.length - 500);
+  // Notificar a los clientes SSE
+  const data = `data: ${JSON.stringify(e)}\n\n`;
+  for (const c of sseClients) {
+    try { c.res.write(data); } catch (_) { /* noop */ }
+  }
+}
+
+// Publicar evento (usado por LlamadoTurnos.jsx)
+app.post('/api/turnos/llamado', (req, res) => {
+  try {
+    const { clinica, accion, turnoId, ts } = req.body || {};
+    if (!clinica || !accion) return res.status(400).json({ error: 'clinica y accion son requeridos' });
+    pushLlamadoEvent({ clinica, accion, turnoId, ts });
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('Error en POST /api/turnos/llamado:', e);
+    return res.status(500).json({ error: 'internal_error' });
+  }
+});
+
+// Suscripción SSE
+app.get('/api/turnos/llamado-sse', (req, res) => {
+  try {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders?.();
+
+    const id = Math.random().toString(36).slice(2);
+    const client = { id, res };
+    sseClients.add(client);
+
+    // heartbeat para mantener viva la conexión en proxies
+    const ping = setInterval(() => {
+      try { res.write(': ping\n\n'); } catch (_) {}
+    }, 25000);
+
+    // Enviar un comentario inicial
+    try { res.write(': connected\n\n'); } catch (_) {}
+
+    req.on('close', () => {
+      clearInterval(ping);
+      sseClients.delete(client);
+      try { res.end(); } catch (_) {}
+    });
+  } catch (e) {
+    console.error('Error en GET /api/turnos/llamado-sse:', e);
+    return res.status(500).end();
+  }
+});
+
+// Polling de eventos desde cierto timestamp
+app.get('/api/turnos/llamado-events', (req, res) => {
+  try {
+    const since = Number(req.query.since || 0) || 0;
+    const max = Math.min(200, Number(req.query.max || 100) || 100);
+    const out = llamadoEvents.filter(e => e.ts > since).slice(-max);
+    return res.json({ events: out, now: Date.now() });
+  } catch (e) {
+    console.error('Error en GET /api/turnos/llamado-events:', e);
+    return res.status(500).json({ error: 'internal_error' });
+  }
+});
+// -----------------------------------------------------------------
+
 const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {

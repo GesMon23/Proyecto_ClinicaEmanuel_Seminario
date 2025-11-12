@@ -326,6 +326,15 @@ const LlamadoTurnos = () => {
                     detail: { clinica: clinica, timestamp: Date.now(), accion: 'llamar' }
                 }));
             } catch {}
+            // Notificar a TVs vía backend (SSE/poll)
+            try {
+                await api.post('/turnos/llamado', {
+                    clinica: clinica,
+                    accion: 'llamar',
+                    turnoId: turnoConFoto?.id_turno_cod || null,
+                    ts: Date.now(),
+                });
+            } catch (_) {}
             
             // Obtener el siguiente turno para la lista de espera
             await obtenerSiguienteTurno(clinica);
@@ -437,6 +446,15 @@ const LlamadoTurnos = () => {
                     detail: { clinica: selectedClinica, timestamp: Date.now(), accion: 're-llamar' }
                 }));
             } catch {}
+            // Notificar a TVs vía backend (SSE/poll)
+            try {
+                await api.post('/turnos/llamado', {
+                    clinica: selectedClinica,
+                    accion: 're-llamar',
+                    turnoId: turno?.id_turno_cod || null,
+                    ts: Date.now(),
+                });
+            } catch (_) {}
             
             await obtenerSiguienteTurno(selectedClinica);
         } catch (error) {
