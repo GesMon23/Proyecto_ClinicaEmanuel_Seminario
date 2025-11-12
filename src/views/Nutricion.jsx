@@ -150,9 +150,9 @@ const Nutricion = () => {
   };
 
   return (
-    <div className="w-full px-4 md:px-8">
-      <div className="w-full">
-        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-md mt-8 w-full">
+    <div className="w-full px-4 md:px-8 py-6">
+      <div className="w-full max-w-6xl mx-auto mb-10">
+        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 overflow-hidden w-full mt-4">
           <div className="p-6 min-w-[280px]">
             {/* Encabezado */}
             <div className="w-full text-center mb-6">
@@ -168,7 +168,7 @@ const Nutricion = () => {
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-3 mb-6">
+            <div className="flex flex-wrap gap-3 mb-6">
               <button
                 type="button"
                 onClick={() => setTab('registro')}
@@ -210,7 +210,7 @@ const Nutricion = () => {
                 <Col md={12}>
                   <Form.Group>
                     <Form.Label className="font-medium dark:text-gray-300 text-lg">Búsqueda de Paciente</Form.Label>
-                    <div className="flex items-center gap-3 mt-2">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-2">
                       <Form.Control
                         type="text"
                         value={noafiliacion}
@@ -221,14 +221,14 @@ const Nutricion = () => {
                       />
                       <Button
                         type="button"
-                        className="bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-16 rounded"
+                        className="bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-16 rounded w-full sm:w-auto"
                         onClick={buscarPaciente}
                       >
                         Buscar
                       </Button>
                       <Button
                         type="button"
-                        className="bg-red-700 hover:bg-red-800 text-white font-semibold py-2 px-16 rounded"
+                        className="bg-red-700 hover:bg-red-800 text-white font-semibold py-2 px-16 rounded w-full sm:w-auto"
                         onClick={limpiarFormulario}
                       >
                         Limpiar
@@ -247,7 +247,7 @@ const Nutricion = () => {
                   <hr className="my-6 border-gray-300 dark:border-gray-600" />
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Altura (CM)</label>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Altura (CM) <span className="text-rose-500">*</span></label>
                       <input
                         type="number"
                         step="0.1"
@@ -266,7 +266,7 @@ const Nutricion = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Peso (KG)</label>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Peso (KG) <span className="text-rose-500">*</span></label>
                       <input
                         type="number"
                         step="0.1"
@@ -304,7 +304,7 @@ const Nutricion = () => {
                   <hr className="my-6 border-gray-300 dark:border-gray-600" />
                   <div className="grid grid-cols-1 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Motivo de Consulta</label>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Motivo de Consulta <span className="text-rose-500">*</span></label>
                       <select
                         value={motivoConsulta}
                         onChange={e => setMotivoConsulta(e.target.value)}
@@ -330,14 +330,16 @@ const Nutricion = () => {
                 </>
               )}
               {paciente && (
-                <div className="flex justify-end mt-6">
-                  <Button
-                    type="button"
-                    className="bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2 px-6 rounded shadow-md transition-colors duration-200"
-                    onClick={guardarResultados}
-                  >
-                    Guardar Resultados
-                  </Button>
+                <div className="border-t border-gray-200 dark:border-slate-700 pt-6">
+                  <div className="flex flex-col sm:flex-row gap-4 justify-end">
+                    <Button
+                      type="button"
+                      className="!w-full sm:!w-56 !px-8 !py-3 !bg-blue-700 hover:!bg-blue-800 !text-white !text-lg !font-semibold !rounded-lg shadow-md transition duration-200 focus:!ring-2 focus:!ring-blue-600"
+                      onClick={guardarResultados}
+                    >
+                      Guardar Resultados
+                    </Button>
+                  </div>
                 </div>
               )}
             </Form>

@@ -201,10 +201,11 @@ const Psicologia = () => {
   };
 
   return (
-    <div className="w-full px-4 md:px-8">
-      <div className="w-full">
-        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-md mt-8 w-full">
+    <div className="w-full px-4 md:px-8 py-6">
+      <div className="w-full max-w-6xl mx-auto mb-10">
+        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 overflow-hidden w-full mt-4">
           <div className="p-6 min-w-[280px]">
+
             {/* Encabezado */}
             <div className="w-full text-center mb-6">
               <div className="flex items-center justify-center gap-6 flex-wrap">
@@ -221,7 +222,7 @@ const Psicologia = () => {
             </div>
             
             {/* Tabs */}
-            <div className="flex gap-3 mb-6">
+            <div className="flex flex-wrap gap-3 mb-6">
               <button
                 type="button"
                 onClick={() => setTab('registro')}
@@ -266,7 +267,7 @@ const Psicologia = () => {
                 <Col md={12}>
                   <Form.Group>
                     <Form.Label className="font-medium dark:text-gray-300 text-lg">Búsqueda de Paciente</Form.Label>
-                    <div className="flex items-center gap-3 mt-2">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-2">
                       <Form.Control
                         type="text"
                         value={noafiliacion}
@@ -277,14 +278,14 @@ const Psicologia = () => {
                       />
                       <Button
                         type="button"
-                        className="bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-16 rounded"
+                        className="bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-16 rounded w-full sm:w-auto"
                         onClick={buscarPaciente}
                       >
                         Buscar
                       </Button>
                       <Button
                         type="button"
-                        className="bg-red-700 hover:bg-red-800 text-white font-semibold py-2 px-16 rounded"
+                        className="bg-red-700 hover:bg-red-800 text-white font-semibold py-2 px-16 rounded w-full sm:w-auto"
                         onClick={limpiarFormulario}
                       >
                         Limpiar
@@ -306,7 +307,7 @@ const Psicologia = () => {
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Tipo de Consulta *</label>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Tipo de Consulta <span className="text-rose-500">*</span></label>
                       <select
                         value={evaluacion.tipo_consulta}
                         onChange={e => handleEvaluacionChange('tipo_consulta', e.target.value)}
@@ -319,7 +320,7 @@ const Psicologia = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Motivo de Consulta *</label>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Motivo de Consulta <span className="text-rose-500">*</span></label>
                       <input
                         type="text"
                         value={evaluacion.motivo_consulta}
@@ -331,7 +332,7 @@ const Psicologia = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Tipo de Atención *</label>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Tipo de Atención <span className="text-rose-500">*</span></label>
                       <select
                         value={evaluacion.tipo_atencion}
                         onChange={e => handleEvaluacionChange('tipo_atencion', e.target.value)}
@@ -345,7 +346,7 @@ const Psicologia = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-3">Aplicación de KDQOL *</label>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-3">Aplicación de KDQOL <span className="text-rose-500">*</span></label>
                       <div className="flex gap-6">
                         <div className="flex items-center">
                           <input
@@ -385,7 +386,7 @@ const Psicologia = () => {
                   {evaluacion.aplicacion_kdqol === 'Si' && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Físico y mental *</label>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Físico y mental <span className="text-rose-500">*</span></label>
                         <input
                           type="number"
                           step="0.01"
@@ -406,7 +407,7 @@ const Psicologia = () => {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Enfermedad renal *</label>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Enfermedad renal <span className="text-rose-500">*</span></label>
                         <input
                           type="number"
                           step="0.01"
@@ -428,7 +429,7 @@ const Psicologia = () => {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Síntomas y problemas *</label>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Síntomas y problemas <span className="text-rose-500">*</span></label>
                         <input
                           type="number"
                           step="0.01"
@@ -450,7 +451,7 @@ const Psicologia = () => {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Efectos de la enfermedad *</label>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Efectos de la enfermedad <span className="text-rose-500">*</span></label>
                         <input
                           type="number"
                           step="0.01"
@@ -474,7 +475,7 @@ const Psicologia = () => {
                       <div className="md:col-span-2">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Vida Diaria *</label>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Vida Diaria <span className="text-rose-500">*</span></label>
                             <input
                               type="number"
                               step="0.01"
@@ -512,10 +513,11 @@ const Psicologia = () => {
 
                   {/* Campo Pronóstico del Paciente */}
                   <div className="mt-4">
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Pronóstico del Paciente</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Pronóstico del Paciente <span className="text-rose-500">*</span></label>
                     <select
                       value={evaluacion.pronostico_paciente}
                       onChange={e => handleEvaluacionChange('pronostico_paciente', e.target.value)}
+                      required
                       className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600"
                     >
                       <option value="">Seleccionar...</option>
@@ -540,13 +542,15 @@ const Psicologia = () => {
                   )}
 
 
-                  <div className="flex justify-end mt-6">
-                    <Button
-                      type="submit"
-                      className="bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2 px-6 rounded shadow-md transition-colors duration-200"
-                    >
-                      Guardar Evaluación
-                    </Button>
+                  <div className="border-t border-gray-200 dark:border-slate-700 pt-6">
+                    <div className="flex flex-col sm:flex-row gap-4 justify-end">
+                      <Button
+                        type="submit"
+                        className="!w-full sm:!w-56 !px-8 !py-3 !bg-blue-700 hover:!bg-blue-800 !text-white !text-lg !font-semibold !rounded-lg shadow-md transition duration-200 focus:!ring-2 focus:!ring-blue-600"
+                      >
+                        Guardar Evaluación
+                      </Button>
+                    </div>
                   </div>
                 </>
               )}

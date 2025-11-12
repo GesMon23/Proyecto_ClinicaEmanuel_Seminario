@@ -263,6 +263,13 @@ function DashboardPsicologia() {
 
   return (
     <>
+      <style>{`
+        @media (max-width: 768px) {
+          .legend-hide-sm .recharts-default-legend,
+          .legend-hide-sm .recharts-legend-wrapper { display: none !important; }
+          .tick-sm .recharts-cartesian-axis-tick-value { font-size: 12px; }
+        }
+      `}</style>
       <div className="mb-3">
         <Card className="card-stats text-center" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(25,135,84,0.12)', borderColor: isDark ? 'rgba(255,255,255,0.15)' : theme.success, color: isDark ? '#ffffff' : theme.success }}>
           <Card.Body className="text-center">
@@ -273,17 +280,17 @@ function DashboardPsicologia() {
           </Card.Body>
         </Card>
       </div>
-      <div className="mt-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16, alignItems: 'stretch' }}>
-        <div>
+      <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
+        <div className="legend-hide-sm">
           <h5 style={{ fontWeight: 700, marginBottom: 8 }}>Tipo de consulta</h5>
-          <div style={{ width: '100%', height: 320 }}>
+          <div style={{ width: '100%', height: 300 }} className="md:h-80">
             <ResponsiveContainer>
               <PieChart>
                 <Pie
                   data={psicoTipoData}
                   dataKey="total"
                   nameKey="name"
-                  outerRadius={110}
+                  outerRadius="75%"
                   paddingAngle={2}
                 >
                   {psicoTipoData.map((entry, index) => (
@@ -296,11 +303,11 @@ function DashboardPsicologia() {
             </ResponsiveContainer>
           </div>
         </div>
-        <div>
+        <div className="tick-sm legend-hide-sm">
           <h5 style={{ fontWeight: 700, marginBottom: 8 }}>Jornada</h5>
-          <div style={{ width: '100%', height: 320 }}>
+          <div style={{ width: '100%', height: 300 }} className="md:h-80">
             <ResponsiveContainer>
-              <BarChart data={psicoJornadaData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+              <BarChart data={psicoJornadaData} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
                 <XAxis dataKey="name" interval={0} angle={-15} textAnchor="end" height={60} />
                 <YAxis />
                 <RTooltip content={<PsicoJornadaTooltip />} />
@@ -313,17 +320,17 @@ function DashboardPsicologia() {
             </ResponsiveContainer>
           </div>
         </div>
-        <div>
+        <div className="legend-hide-sm">
           <h5 style={{ fontWeight: 700, marginBottom: 8 }}>Pronóstico</h5>
-          <div style={{ width: '100%', height: 320 }}>
+          <div style={{ width: '100%', height: 300 }} className="md:h-80">
             <ResponsiveContainer>
               <PieChart>
                 <Pie
                   data={psicoPronosticoData}
                   dataKey="total"
                   nameKey="name"
-                  innerRadius={60}
-                  outerRadius={100}
+                  innerRadius="45%"
+                  outerRadius="70%"
                   paddingAngle={2}
                 >
                   {psicoPronosticoData.map((entry, index) => (
@@ -339,14 +346,14 @@ function DashboardPsicologia() {
       </div>
 
       
-      <div className="mt-4" style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'stretch' }}>
-        <div style={{ flex: '1 1 0', minWidth: 320 }}>
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+        <div className="w-full h-80 tick-sm">
           <h5 style={{ fontWeight: 700, marginBottom: 8 }}>Tipo de atención</h5>
-          <div style={{ width: '100%', height: 320 }}>
+          <div style={{ width: '100%', height: '100%' }}>
             <ResponsiveContainer>
               <BarChart data={psicoAtencionData} layout="vertical" margin={{ top: 10, right: 20, left: 20, bottom: 10 }}>
                 <XAxis type="number" />
-                <YAxis dataKey="name" type="category" width={140} />
+                <YAxis dataKey="name" type="category" width={110} />
                 <RTooltip content={<PsicoAtencionTooltip />} />
                 <Bar dataKey="total">
                   {psicoAtencionData.map((entry, index) => (
@@ -357,17 +364,17 @@ function DashboardPsicologia() {
             </ResponsiveContainer>
           </div>
         </div>
-        <div style={{ flex: '0 1 280px' }}>
+        <div className="w-full h-80 legend-hide-sm">
           <h5 style={{ fontWeight: 700, marginBottom: 8 }}>Sexo</h5>
-          <div style={{ width: '100%', height: 320 }}>
+          <div style={{ width: '100%', height: '100%' }}>
             <ResponsiveContainer>
               <PieChart>
                 <Pie
                   data={psicoSexoData}
                   dataKey="total"
                   nameKey="name"
-                  innerRadius={60}
-                  outerRadius={100}
+                  innerRadius="45%"
+                  outerRadius="70%"
                   paddingAngle={2}
                 >
                   {psicoSexoData.map((entry, index) => (
@@ -498,7 +505,7 @@ function DashboardPsicologia() {
           </Card>
         </div>
 
-        <div className="mb-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16 }}>
+        <div className="mb-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <Card className="card-stats text-center" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(25,135,84,0.12)', borderColor: isDark ? 'rgba(255,255,255,0.15)' : theme.success, color: isDark ? '#ffffff' : theme.success }}>
               <Card.Body className="text-center">
@@ -562,14 +569,14 @@ function DashboardPsicologia() {
         </div>
       </div>
 
-      <div className="mt-4" style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'stretch' }}>
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
         <div style={{ flex: '1 1 0', minWidth: 320 }}>
           <h5 style={{ fontWeight: 700, marginBottom: 8 }}>KDQOL por jornada</h5>
-          <div style={{ width: '100%', height: 320 }}>
+          <div style={{ width: '100%', height: 320 }} className="tick-sm">
             <ResponsiveContainer>
               <BarChart data={kdqolJornadaData} layout="vertical" margin={{ top: 10, right: 20, left: 20, bottom: 10 }}>
                 <XAxis type="number" />
-                <YAxis dataKey="name" type="category" width={140} />
+                <YAxis dataKey="name" type="category" width={110} />
                 <RTooltip content={<KdqolJornadaTooltip />} />
                 <Bar dataKey="total">
                   {kdqolJornadaData.map((entry, index) => (
@@ -580,17 +587,17 @@ function DashboardPsicologia() {
             </ResponsiveContainer>
           </div>
         </div>
-        <div style={{ flex: '0 1 280px' }}>
+        <div className="w-full h-80 legend-hide-sm">
           <h5 style={{ fontWeight: 700, marginBottom: 8 }}>KDQOL por sexo</h5>
-          <div style={{ width: '100%', height: 320 }}>
+          <div style={{ width: '100%', height: '100%' }}>
             <ResponsiveContainer>
               <PieChart>
                 <Pie
                   data={kdqolSexoData}
                   dataKey="total"
                   nameKey="name"
-                  innerRadius={60}
-                  outerRadius={100}
+                  innerRadius="45%"
+                  outerRadius="70%"
                   paddingAngle={2}
                 >
                   {kdqolSexoData.map((entry, index) => (
@@ -607,7 +614,7 @@ function DashboardPsicologia() {
 
       <div className="mt-4">
         <h5 style={{ fontWeight: 700, marginBottom: 8 }}>Promedios KDQOL por área</h5>
-        <div style={{ width: '100%', height: 340 }}>
+        <div style={{ width: '100%', height: 320 }} className="tick-sm legend-hide-sm">
           <ResponsiveContainer>
             <BarChart data={kdqolPromData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
               <XAxis dataKey="name" interval={0} angle={-15} textAnchor="end" height={60} />

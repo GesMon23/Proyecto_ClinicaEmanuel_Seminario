@@ -354,7 +354,7 @@ function LaboratorioParametros({ onSubmit }) {
             <Form.Group>
               <Form.Label className="font-medium dark:text-gray-300">No. Afiliación *</Form.Label>
               <>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col md:flex-row md:flex-wrap lg:flex-nowrap items-stretch md:items-center gap-2">
                   <Form.Control
                     type="text"
                     value={noafiliacion}
@@ -367,7 +367,7 @@ function LaboratorioParametros({ onSubmit }) {
                   />
                   <Button
                     type="button"
-                    className="w-full sm:min-w-[100px] bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-4 rounded"
+                    className="w-full sm:min-w-[100px] sm:w-auto bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-4 rounded"
                     onClick={async () => {
                       setBusquedaError("");
                       setPaciente(null);
@@ -418,7 +418,7 @@ function LaboratorioParametros({ onSubmit }) {
                   </Button>
                   <Button
                     type="button"
-                    className="w-full sm:min-w-[100px] bg-red-700 hover:bg-red-800 text-white font-semibold py-2 px-4 rounded"
+                    className="w-full sm:min-w-[100px] sm:w-auto bg-red-700 hover:bg-red-800 text-white font-semibold py-2 px-4 rounded"
                     onClick={() => {
                       setNoAfiliacion("");
                       setValores({});
@@ -432,10 +432,10 @@ function LaboratorioParametros({ onSubmit }) {
                   >
                     Limpiar
                   </Button>
-                  <div className="flex-grow" />
+                  <div className="hidden md:block flex-grow" />
                   {paciente && (
                     <>
-                      <Form.Group className="w-full sm:min-w-[200px] mr-4">
+                      <Form.Group className="w-full sm:w-auto sm:min-w-[200px] md:min-w-[220px] md:mr-4">
                         <Form.Label className="block mb-1 dark:text-gray-300">Examen realizado</Form.Label>
                         <Form.Select
                           value={valores.examen_realizado || ''}
@@ -448,13 +448,14 @@ function LaboratorioParametros({ onSubmit }) {
                           <option value="No">No</option>
                         </Form.Select>
                       </Form.Group>
-                      <Form.Group className="w-full sm:min-w-[200px]">
-                        <Form.Label className="dark:text-gray-300">Fecha de laboratorio *</Form.Label>
+                      <Form.Group className="w-full sm:w-auto sm:min-w-[220px]">
+                        <Form.Label className="dark:text-gray-300">Fecha de laboratorio <span className="text-rose-500">*</span></Form.Label>
                         <div className="flex items-center gap-2">
                           <Form.Control
                             type="date"
                             value={valores.fecha_laboratorio || ''}
                             onChange={e => handleChange('fecha_laboratorio', e.target.value)}
+                            required
                             className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200"
                           />
                         </div>
@@ -540,7 +541,7 @@ function LaboratorioParametros({ onSubmit }) {
                       <Col md={6} sm={12} xs={12} key={param} className="mb-3">
                         <Form.Group>
                           <Form.Label className="dark:text-gray-300">{label}</Form.Label>
-                          <div className="flex items-center gap-3">
+                          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
                             <Form.Control
                               type="number"
                               inputMode="decimal"
@@ -568,11 +569,11 @@ function LaboratorioParametros({ onSubmit }) {
                                 if (/^[-+]/.test(t)) e.preventDefault();
                               }}
                               placeholder={`Ingrese ${label.toLowerCase()}`}
-                              className={`flex-1 border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 ${bloqueados[param] ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed opacity-90' : ''}`}
+                              className={`w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 ${bloqueados[param] ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed opacity-90' : ''}`}
                               readOnly={!!bloqueados[param]}
                             />
                             {fechasParametro[param] && (
-                              <div className="flex items-center">
+                              <div className="flex items-center sm:ml-2">
                                 <span
                                   className="inline-flex items-center gap-2 py-1.5 px-3 rounded shadow-md bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200 border border-emerald-200/80 dark:border-emerald-700/60 font-semibold"
                                   title="Fecha del laboratorio de origen"
@@ -582,10 +583,10 @@ function LaboratorioParametros({ onSubmit }) {
                                 </span>
                               </div>
                             )}
-                            <div className="flex items-center gap-2">
+                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 md:flex md:flex-row md:flex-wrap md:gap-2 md:w-auto md:ml-2">
                               {bloqueados[param] ? (
                                 <Button
-                                  className="flex items-center justify-center bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2 px-4 rounded shadow-md"
+                                  className="w-full sm:w-auto flex items-center justify-center bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2 px-4 rounded shadow-md"
                                   onClick={() => setBloqueados(prev => ({ ...prev, [param]: false }))}
                                   title="Actualizar este campo"
                                   style={{ boxShadow: '0 2px 8px rgba(25,118,210,0.15)' }}
@@ -595,7 +596,7 @@ function LaboratorioParametros({ onSubmit }) {
                               ) : (
                                 <>
                                   <Button
-                                    className="flex items-center justify-center bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2 px-4 rounded shadow-md"
+                                    className="w-full sm:w-auto flex items-center justify-center bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2 px-4 rounded shadow-md"
                                     onClick={() => setBloqueados(prev => ({ ...prev, [param]: true }))}
                                     title="Finalizar edición de este campo"
                                     style={{ boxShadow: '0 2px 8px rgba(56,142,60,0.15)' }}
@@ -603,7 +604,7 @@ function LaboratorioParametros({ onSubmit }) {
                                     Listo
                                   </Button>
                                   <Button
-                                    className="flex items-center justify-center bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded shadow-md"
+                                    className="w-full sm:w-auto flex items-center justify-center bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded shadow-md"
                                     onClick={() => {
                                       const original = (originalValores[param] ?? '').toString();
                                       setValores(v => ({ ...v, [param]: original }));
@@ -621,7 +622,7 @@ function LaboratorioParametros({ onSubmit }) {
                               {!PARAMETROS_LAB_BASE.find(base => base.param === param) && (
                                 <>
                                   <Button
-                                    className="flex items-center justify-center bg-red-700 hover:bg-red-800 text-white font-semibold py-2 px-4 rounded shadow-md"
+                                    className="w-full sm:w-auto flex items-center justify-center bg-red-700 hover:bg-red-800 text-white font-semibold py-2 px-4 rounded shadow-md"
                                     onClick={() => setParametrosLab(parametrosLab.filter(p => p.param !== param))}
                                     title="Eliminar este parámetro"
                                     style={{ boxShadow: '0 2px 8px rgba(167,29,42,0.12)' }}
@@ -633,7 +634,7 @@ function LaboratorioParametros({ onSubmit }) {
                                   </Button>
                                   {param === parametrosLab[parametrosLab.length - 1].param && (
                                     <Button
-                                      className="flex items-center justify-center bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-4 rounded shadow-md"
+                                      className="w-full sm:w-auto flex items-center justify-center bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-4 rounded shadow-md"
                                       onClick={() => setShowAddParam(true)}
                                       title="Agregar nuevo parámetro"
                                       style={{ boxShadow: '0 2px 8px rgba(56,142,60,0.13)' }}

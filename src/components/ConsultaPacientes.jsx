@@ -80,36 +80,37 @@ const formatearFechaGuion = (fecha) => {
 
 const calcularEstanciaPrograma = (fechaIngreso) => {
     if (!fechaIngreso) return '';
-    // Fecha actual proporcionada
-    const hoy = new Date(2025, 3, 18); // Mes 3 = abril, día 18, año 2025
-    let soloFecha = fechaIngreso.split('T')[0].split(' ')[0];
-    const partes = soloFecha.split('-');
-    if (partes.length < 3) return '';
-    let anio = parseInt(partes[0], 10);
-    let mes = parseInt(partes[1], 10) - 1;
-    let dia = parseInt(partes[2], 10);
-    const ingreso = new Date(anio, mes, dia);
-    if (ingreso > hoy) return '0 días';
-    // Calcular diferencia
-    let años = hoy.getFullYear() - ingreso.getFullYear();
-    let meses = hoy.getMonth() - ingreso.getMonth();
-    let dias = hoy.getDate() - ingreso.getDate();
+    // Acepta 'YYYY-MM-DD', 'YYYY-MM-DDTHH:mm:ss', 'YYYY-MM-DD HH:mm:ss'
+    const base = String(fechaIngreso).split('T')[0].split(' ')[0];
+    const p = base.split('-');
+    if (p.length < 3) return '';
+    const y = parseInt(p[0], 10);
+    const m = parseInt(p[1], 10) - 1; // 0-index
+    const d = parseInt(p[2], 10);
+    const inicio = new Date(y, m, d);
+    const hoy = new Date();
+    if (!(inicio instanceof Date) || isNaN(inicio)) return '';
+    if (inicio > hoy) return '0 días';
+
+    let años = hoy.getFullYear() - inicio.getFullYear();
+    let meses = hoy.getMonth() - inicio.getMonth();
+    let dias = hoy.getDate() - inicio.getDate();
+
     if (dias < 0) {
-        meses--;
-        // Obtener días del mes anterior
-        const mesAnterior = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
-        dias += mesAnterior.getDate();
+        meses -= 1;
+        dias += new Date(hoy.getFullYear(), hoy.getMonth(), 0).getDate();
     }
     if (meses < 0) {
-        años--;
+        años -= 1;
         meses += 12;
     }
-    let resultado = [];
-    if (años > 0) resultado.push(años + (años === 1 ? ' año' : ' años'));
-    if (meses > 0) resultado.push(meses + (meses === 1 ? ' mes' : ' meses'));
-    if (dias > 0) resultado.push(dias + (dias === 1 ? ' día' : ' días'));
-    if (resultado.length === 0) return '0 días';
-    return resultado.join(', ');
+
+    const partesStr = [];
+    if (años > 0) partesStr.push(años + (años === 1 ? ' año' : ' años'));
+    if (meses > 0) partesStr.push(meses + (meses === 1 ? ' mes' : ' meses'));
+    if (dias > 0) partesStr.push(dias + (dias === 1 ? ' día' : ' días'));
+    if (partesStr.length === 0) return 'Menos de un día';
+    return partesStr.join(', ');
 };
 
 const calcularEdad = (fechaNacimiento) => {
@@ -131,6 +132,7 @@ const calcularEdad = (fechaNacimiento) => {
 };
 
 import jsPDF from 'jspdf';
+import { calcularEstanciaRango } from '@/utils/fechas';
 
 const ConsultaPacientes = () => {
     const [paciente, setPaciente] = useState(null);
@@ -1163,7 +1165,7 @@ const ConsultaPacientes = () => {
         printPair('Edad:', `${calcularEdad(paciente.fecha_nacimiento)}`, true);
         printPair('Sexo:', `${paciente.sexo || ''}`, true);
         printPair('Fecha Ingreso:', `${formatearFecha(paciente.fecha_ingreso) || ''}`, true);
-        printPair('Estancia Programa:', `${calcularEstanciaPrograma(paciente.fecha_ingreso)}`, true);
+        printPair('Estancia Programa:', `${calcularEstanciaRango(paciente.fecha_ingreso, new Date())}` , true);
         printPair('Jornada:', `${paciente.jornada_descripcion || ''}`, true);
         printPair('Sesiones Autorizadas:', `${paciente.sesiones_autorizadas_mes || ''}`, true);
         printPair('Dirección:', `${paciente.direccion || ''}`, true);
@@ -2001,7 +2003,7 @@ const ConsultaPacientes = () => {
                                             { label: 'Fecha Creación', value: formatearFecha(paciente.fecha_creacion) || '' },
                                             { label: 'Inicio Prestación Servicios', value: formatearFecha(paciente.inicio_prest_servicios) || '' },
                                             { label: 'Fin Prestación Servicios', value: formatearFecha(paciente.fin_prest_servicios) || '' },
-                                            { label: 'Estancia Programa', value: calcularEstanciaPrograma(paciente.fecha_ingreso) },
+                                            { label: 'Estancia Programa', value: calcularEstanciaRango(paciente.fecha_ingreso, new Date()) },
                                         ];
                                         let campos = [...camposBase];
                                         const mitad = Math.ceil(campos.length / 2);

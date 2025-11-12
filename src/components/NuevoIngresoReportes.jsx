@@ -131,6 +131,19 @@ const NuevoIngresoReportes = () => {
         setLoading(false);
     };
 
+    const handleLimpiar = () => {
+        setFiltros({
+            fechaInicioPeriodo: '',
+            fechaFinPeriodo: '',
+            sexo: '',
+            jornada: '',
+            accesovascular: '',
+            departamento: '',
+        });
+        setPacientes([]);
+        setPaginaActual(1);
+    };
+
     // Nueva función para exportar a Excel desde backend (como PacientesReporte)
     const exportarExcel = () => {
         const params = new URLSearchParams();
@@ -387,17 +400,17 @@ const NuevoIngresoReportes = () => {
                                 </select>
                             </div>
 
-                            <div className="flex gap-3">
+                            <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:items-center sm:justify-start">
                                 <button
                                     type="submit"
-                                    className="bg-green-700 hover:bg-green-800 text-white font-medium px-4 py-2 rounded"
+                                    className="bg-green-700 hover:bg-green-800 text-white font-medium px-4 py-2 rounded w-full sm:w-auto"
                                 >
                                     Buscar
                                 </button>
 
                                 <button
                                     type="button"
-                                    className="font-medium px-4 py-2 rounded border text-white bg-[#B91C1C] hover:bg-[#991B1B] border-[#991B1B]"
+                                    className="font-medium px-4 py-2 rounded border text-white bg-[#B91C1C] hover:bg-[#991B1B] border-[#991B1B] w-full sm:w-auto"
                                     onClick={handleLimpiar}
                                 >
                                     Limpiar
@@ -407,7 +420,7 @@ const NuevoIngresoReportes = () => {
                                     type="button"
                                     onClick={exportarExcel}
                                     disabled={pacientes.length === 0}
-                                    className={`px-4 py-2 font-medium rounded border flex items-center gap-2 ${pacientes.length === 0
+                                    className={`px-4 py-2 font-medium rounded border flex items-center gap-2 w-full sm:w-auto ${pacientes.length === 0
                                             ? 'bg-gray-300 text-white cursor-not-allowed border-gray-400'
                                             : 'bg-[#107C41] hover:bg-[#0E6A39] text-white border-[#0E6A39]'
                                         }`}
@@ -423,7 +436,7 @@ const NuevoIngresoReportes = () => {
                                     type="button"
                                     onClick={descargarListadoPDF}
                                     disabled={pacientes.length === 0}
-                                    className={`px-4 py-2 font-medium rounded border flex items-center gap-2 ${pacientes.length === 0
+                                    className={`px-4 py-2 font-medium rounded border flex items-center gap-2 w-full sm:w-auto ${pacientes.length === 0
                                             ? 'bg-gray-300 text-white cursor-not-allowed border-gray-400'
                                             : 'bg-[#DC2626] hover:bg-[#B91C1C] text-white border-[#991B1B]'
                                         }`}

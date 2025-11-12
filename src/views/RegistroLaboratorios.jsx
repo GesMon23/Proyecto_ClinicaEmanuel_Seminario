@@ -9,9 +9,9 @@ function RegistroLaboratorios() {
     console.log("Guardar laboratorio para afiliación:", noafiliacion, valores);
   };
   return (
-    <div className="w-full px-4 md:px-8">
-      <div className="w-full">
-        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-md mt-8 w-full">
+    <div className="w-full px-4 md:px-8 py-6">
+      <div className="w-full max-w-6xl mx-auto mb-10">
+        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 overflow-hidden w-full">
 
           <div className="p-6 min-w-[280px]">
             {/* Encabezado */}

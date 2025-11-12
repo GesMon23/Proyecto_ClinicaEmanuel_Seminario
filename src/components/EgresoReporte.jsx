@@ -307,14 +307,14 @@ const EgresoReporte = () => {
                                 </select>
                         </div>
 
-                        <div className="flex gap-3">
-                            <button type="submit" className="bg-green-700 hover:bg-green-800 text-white font-medium px-4 py-2 rounded">Buscar</button>
-                            <button type="button" className="font-medium px-4 py-2 rounded border text-white bg-[#B91C1C] hover:bg-[#991B1B] border-[#991B1B]" onClick={() => { setFiltros({ fechaInicioPeriodo:'', fechaFinPeriodo:'', jornada:'', accesovascular:'', sexo:'', departamento:'' }); setPacientes([]); setPaginaActual(1); }}>Limpiar</button>
-                            <button type="button" onClick={exportarExcel} disabled={pacientes.length===0} className={`px-4 py-2 font-medium rounded border flex items-center gap-2 ${pacientes.length===0?'bg-gray-300 text-white cursor-not-allowed border-gray-400':'bg-[#107C41] hover:bg-[#0E6A39] text-white border-[#0E6A39]'}`}>
+                        <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:items-center sm:justify-start">
+                            <button type="submit" className="bg-green-700 hover:bg-green-800 text-white font-medium px-4 py-2 rounded w-full sm:w-auto">Buscar</button>
+                            <button type="button" className="font-medium px-4 py-2 rounded border text-white bg-[#B91C1C] hover:bg-[#991B1B] border-[#991B1B] w-full sm:w-auto" onClick={() => { setFiltros({ fechaInicioPeriodo:'', fechaFinPeriodo:'', jornada:'', accesovascular:'', sexo:'', departamento:'' }); setPacientes([]); setPaginaActual(1); }}>Limpiar</button>
+                            <button type="button" onClick={exportarExcel} disabled={pacientes.length===0} className={`px-4 py-2 font-medium rounded border flex items-center gap-2 w-full sm:w-auto ${pacientes.length===0?'bg-gray-300 text-white cursor-not-allowed border-gray-400':'bg-[#107C41] hover:bg-[#0E6A39] text-white border-[#0E6A39]'}`}>
                               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M4 3.5A1.5 1.5 0 0 1 5.5 2h8.879a1.5 1.5 0 0 1 1.06.44l3.121 3.121c.282.282.44.665.44 1.06V20.5A1.5 1.5 0 0 1 17.5 22h-12A1.5 1.5 0 0 1 4 20.5v-17Z"/><path d="M15 2.75V5a1 1 0 0 0 1 1h2.25" className="opacity-80"/><path d="M7.2 10h2l1.3 2.4L11.8 10h2l-2.2 4 2.2 4h-2l-1.3-2.4L9.2 18h-2l2.2-4-2.2-4Z" className="opacity-95"/></svg>
                               Excel
                             </button>
-                            <button type="button" onClick={descargarListadoPDF} disabled={pacientes.length===0} className={`px-4 py-2 font-medium rounded border flex items-center gap-2 ${pacientes.length===0?'bg-gray-300 text-white cursor-not-allowed border-gray-400':'bg-[#DC2626] hover:bg-[#B91C1C] text-white border-[#991B1B]'}`}>
+                            <button type="button" onClick={descargarListadoPDF} disabled={pacientes.length===0} className={`px-4 py-2 font-medium rounded border flex items-center gap-2 w-full sm:w-auto ${pacientes.length===0?'bg-gray-300 text-white cursor-not-allowed border-gray-400':'bg-[#DC2626] hover:bg-[#B91C1C] text-white border-[#991B1B]'}`}>
                               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M6 2h9.379a1.5 1.5 0 0 1 1.06.44L20 5v14a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3Z"/><path d="M7.5 10h2.25a2.25 2.25 0 1 1 0 4.5H7.5V10Zm1.5 1.5v1.5h.75a.75.75 0 0 0 0-1.5H9ZM12.75 10h2.25a.75.75 0 0 1 .75.75V15h-1.5v-1.125h-1.5V15h-1.5v-3.75a.75.75 0 0 1 .75-.75Zm1.5 1.5V12h-1.5v-.75h1.5Z" className="opacity-95"/></svg>
                               PDF
                             </button>
@@ -432,35 +432,36 @@ const EgresoReporte = () => {
                     </div>
                   </div>
                 )}
-                {/* Paginación */}
+                {/* Paginación (estilo ConsultaNutricion) */}
                 {totalPaginas > 1 && (
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }} className="mt-2">
-                        <Button
-                            size="sm"
-                            className="btn-buscar"
+                    <div className="flex flex-wrap justify-center items-center gap-2 mt-6">
+                        <button
+                            className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400 transition-colors"
                             disabled={paginaActual === 1}
                             onClick={() => handlePaginaChange(paginaActual - 1)}
                         >
                             Anterior
-                        </Button>
+                        </button>
                         {[...Array(totalPaginas)].map((_, i) => (
-                            <Button
+                            <button
                                 key={i}
-                                size="sm"
-                                variant={paginaActual === i + 1 ? 'success' : 'outline-success'}
+                                className={`px-3 py-2 rounded-lg transition-colors ${
+                                    paginaActual === i + 1
+                                    ? 'bg-green-600 text-white'
+                                    : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-slate-600'
+                                }`}
                                 onClick={() => handlePaginaChange(i + 1)}
                             >
                                 {i + 1}
-                            </Button>
+                            </button>
                         ))}
-                        <Button
-                            size="sm"
-                            className="btn-buscar"
+                        <button
+                            className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400 transition-colors"
                             disabled={paginaActual === totalPaginas}
                             onClick={() => handlePaginaChange(paginaActual + 1)}
                         >
                             Siguiente
-                        </Button>
+                        </button>
                     </div>
                 )}
         </div>

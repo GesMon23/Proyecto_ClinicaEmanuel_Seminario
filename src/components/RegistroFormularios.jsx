@@ -206,6 +206,13 @@ const RegistroFormularios = () => {
 
   // Handler para agregar paciente por número de afiliación
   const handleAgregarPaciente = async () => {
+    if (pacientesCargados.length >= 8) {
+      setModalTitle('Límite alcanzado');
+      setModalMessage('Solo puede agregar un máximo de 8 pacientes por formulario.');
+      setModalType('error');
+      setShowModal(true);
+      return;
+    }
     if (!nuevoPaciente.noafiliacion) return;
     try {
       // Lógica de búsqueda de paciente (AJAX)
@@ -314,9 +321,10 @@ const RegistroFormularios = () => {
                 <button
                   type="button"
                   onClick={handleAgregarPaciente}
-                  className="bg-green-700 hover:bg-green-800 text-white text-base font-semibold py-2 px-5 rounded"
+                  disabled={pacientesCargados.length >= 8}
+                  className={`text-white text-base font-semibold py-2 px-5 rounded ${pacientesCargados.length >= 8 ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-700 hover:bg-green-800'}`}
                 >
-                  Agregar Paciente
+                  {pacientesCargados.length >= 8 ? 'Máximo 8' : 'Agregar Paciente'}
                 </button>
                 <button
                   type="button"
@@ -327,7 +335,8 @@ const RegistroFormularios = () => {
                 </button>
               </div>
 
-              <table className="w-full mt-4 table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800">
+              <div className="w-full mt-4 overflow-x-auto">
+              <table className="min-w-[720px] w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800">
                 <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">
                   <tr>
                     <th className="p-2 border dark:border-gray-600">No. Afiliación</th>
@@ -364,6 +373,7 @@ const RegistroFormularios = () => {
                   )}
                 </tbody>
               </table>
+              </div>
             </div>
 
             <div className="flex flex-col gap-6">
@@ -372,7 +382,7 @@ const RegistroFormularios = () => {
                 {/* Número de Formulario */}
                 <div className="w-full md:w-1/2">
                   <Form.Group controlId="formNumeroFormulario">
-                    <Form.Label className="text-lg dark:text-white">Número de Formulario</Form.Label>
+                    <Form.Label className="text-lg dark:text-white">Número de Formulario <span className="text-rose-500">*</span></Form.Label>
                     <Form.Control
                       type="text"
                       name="numeroformulario"
@@ -388,7 +398,7 @@ const RegistroFormularios = () => {
                 {/* Sesiones autorizadas */}
                 <div className="w-full md:w-1/2 mt-6 md:mt-0">
                   <Form.Group controlId="formSesionesAutorizadasMes">
-                    <Form.Label className="text-lg dark:text-white">Sesiones autorizadas por mes</Form.Label>
+                    <Form.Label className="text-lg dark:text-white">Sesiones autorizadas por mes <span className="text-rose-500">*</span></Form.Label>
                     <Form.Control
                       type="number"
                       name="sesionesautorizadasmes"
@@ -398,7 +408,7 @@ const RegistroFormularios = () => {
                         setFormData(prev => ({ ...prev, sesionesautorizadasmes: digits }));
                       }}
                       placeholder="Ingrese cantidad de sesiones"
-                      min="0"
+                      min="1"
                       step="1"
                       inputMode="numeric"
                       onKeyDown={(e) => {
@@ -421,7 +431,7 @@ const RegistroFormularios = () => {
               {/* Segunda fila: Período de prestación */}
               <div className="w-full">
                 <Form.Group controlId="formPeriodoPrestServicios">
-                  <Form.Label className="text-lg dark:text-white">Período de prestación de servicios</Form.Label>
+                  <Form.Label className="text-lg dark:text-white">Período de prestación de servicios <span className="text-rose-500">*</span></Form.Label>
                   <div className="flex flex-col sm:flex-row gap-2 mt-1">
                     <Form.Control
                       type="date"

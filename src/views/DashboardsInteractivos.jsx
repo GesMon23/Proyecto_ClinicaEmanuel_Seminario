@@ -604,8 +604,8 @@ function DashboardsInteractivos() {
       
       
       
-      <div className="mt-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16, alignItems: 'stretch' }}>
-        <div>
+      <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+        <div className="w-full">
           <Card className="card-stats text-center" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : withAlpha(theme.success, 0.12), borderColor: isDark ? 'rgba(255,255,255,0.15)' : theme.success, color: isDark ? '#ffffff' : theme.success }}>
             <Card.Body className="text-center">
               <div className="numbers text-center">
@@ -618,7 +618,7 @@ function DashboardsInteractivos() {
             </Card.Body>
           </Card>
         </div>
-        <div>
+        <div className="w-full">
           <Card className="card-stats text-center" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(220,53,69,0.08)', borderColor: isDark ? 'rgba(255,255,255,0.15)' : theme.danger, color: isDark ? '#ffffff' : theme.danger }}>
             <Card.Body className="text-center">
               <div className="numbers text-center">
@@ -633,10 +633,18 @@ function DashboardsInteractivos() {
         </div>
       </div>
       
-      {/* Grid 1: Estado y Jornada con columnas iguales */}
-      <div className="mt-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16 }}>
+      {/* Regla CSS para leyendas en móvil */}
+      <style>{`
+        @media (max-width: 768px) {
+          .legend-hide-sm .recharts-default-legend, 
+          .legend-hide-sm .recharts-legend-wrapper { display: none !important; }
+        }
+      `}</style>
+
+      {/* Grid 1: Estado y Jornada con columnas iguales (responsivo) */}
+      <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Arriba: Estado (izq) y Jornada (der) */}
-        <div style={{ width: '100%', height: 340 }}>
+        <div className="w-full h-72 md:h-80 legend-hide-sm">
           <h6 style={{ fontWeight: 700, marginBottom: 8 }}>Pacientes por estado</h6>
           {Array.isArray(pacientesEstadoData) && pacientesEstadoData.length > 0 ? (
             <ResponsiveContainer>
@@ -655,7 +663,7 @@ function DashboardsInteractivos() {
           )}
         </div>
 
-        <div style={{ width: '100%', height: 320 }}>
+        <div className="w-full h-72 md:h-80">
           <h6 style={{ fontWeight: 700, marginBottom: 8 }}>Pacientes por jornada</h6>
           {Array.isArray(pacientesJornadaData) && pacientesJornadaData.length > 0 ? (
             <ResponsiveContainer>
@@ -677,14 +685,14 @@ function DashboardsInteractivos() {
         </div>
 
       </div>
-      <div className="mt-3" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
-        <div style={{ width: '100%', height: 380 }}>
+      <div className="mt-3 grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="w-full h-96 lg:col-span-2 legend-hide-sm">
           <h6 style={{ fontWeight: 700, marginBottom: 8 }}>Pacientes por acceso vascular</h6>
           {Array.isArray(pacientesAccesoData) && pacientesAccesoData.length > 0 ? (
             <ResponsiveContainer>
               <BarChart data={pacientesAccesoData} layout="vertical" margin={{ top: 10, right: 20, left: 20, bottom: 10 }}>
                 <XAxis type="number" />
-                <YAxis dataKey="name" type="category" width={220} />
+                <YAxis dataKey="name" type="category" width={140} />
                 <Legend />
                 <RTooltip content={(props) => <ChartTooltip total={calcTotal(pacientesAccesoData, 'total')} {...props} />} />
                 <Bar dataKey="total" name="Total">
@@ -698,7 +706,7 @@ function DashboardsInteractivos() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#888' }}>Sin datos disponibles</div>
           )}
         </div>
-        <div style={{ width: '100%', height: 300 }}>
+        <div className="w-full h-80 legend-hide-sm">
           <h6 style={{ fontWeight: 700, marginBottom: 8 }}>Pacientes por sexo</h6>
           {Array.isArray(pacientesSexoData) && pacientesSexoData.length > 0 ? (
             <ResponsiveContainer>
@@ -756,7 +764,7 @@ function DashboardsInteractivos() {
           .pac-filtros .btn-primary:focus { filter: brightness(1.05); }
         `}</style>
       )}
-      <div className="mt-3" style={{ width: '100%', height: 360, marginBottom: 24, overflow: 'hidden' }}>
+      <div className="mt-3 w-full h-80 md:h-96 mb-6 overflow-hidden legend-hide-sm">
         <h6 style={{ fontWeight: 700, marginBottom: 8 }}>Pacientes por departamento</h6>
         {Array.isArray(pacientesDeptoData) && pacientesDeptoData.length > 0 ? (
           <ResponsiveContainer>
@@ -887,7 +895,7 @@ function DashboardsInteractivos() {
                   </Card.Body>
                 </Card>
               </div>
-              <div className="mb-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16 }}>
+              <div className="mb-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <Card className="card-stats text-center" style={{ overflow: 'hidden', backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : withAlpha(theme.primary, 0.12), borderColor: isDark ? 'rgba(255,255,255,0.15)' : theme.primary, color: isDark ? '#ffffff' : theme.primary }}>
                     <Card.Body className="text-center">
@@ -919,9 +927,9 @@ function DashboardsInteractivos() {
                   </Card>
                 </div>
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'stretch' }}>
-                <div style={{ flex: '1 1 0' }}>
-                  <div style={{ width: "100%", height: 320 }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+                <div className="w-full h-80 legend-hide-sm">
+                  <div style={{ width: "100%", height: '100%' }}>
                     <ResponsiveContainer>
                       <PieChart>
                         <Pie
@@ -942,8 +950,8 @@ function DashboardsInteractivos() {
                     </ResponsiveContainer>
                   </div>
                 </div>
-                <div style={{ flex: '1 1 0', minWidth: 300, maxWidth: '50%' }}>
-                  <div style={{ width: "100%", height: 320 }}>
+                <div className="w-full h-80">
+                  <div style={{ width: "100%", height: '100%' }}>
                     <ResponsiveContainer>
                       <BarChart data={nutricionJornadaData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
                         <XAxis dataKey="name" interval={0} angle={-15} textAnchor="end" height={60} />
@@ -960,9 +968,9 @@ function DashboardsInteractivos() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'stretch', marginTop: 12 }}>
-                <div style={{ flex: '1 1 0', minWidth: 320 }}>
-                  <div style={{ width: '100%', height: 320 }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch mt-3">
+                <div className="w-full h-80">
+                  <div style={{ width: '100%', height: '100%' }}>
                     <ResponsiveContainer>
                       <BarChart data={nutricionMotivoData} layout="vertical" margin={{ top: 10, right: 20, left: 20, bottom: 10 }}>
                         <XAxis type="number" />
@@ -978,8 +986,8 @@ function DashboardsInteractivos() {
                     </ResponsiveContainer>
                   </div>
                 </div>
-                <div style={{ flex: '0 1 280px' }}>
-                  <div style={{ width: '100%', height: 320 }}>
+                <div className="w-full h-80 legend-hide-sm">
+                  <div style={{ width: '100%', height: '100%' }}>
                     <ResponsiveContainer>
                       <PieChart>
                         <Pie data={nutricionSexoData} dataKey="total" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={2}>

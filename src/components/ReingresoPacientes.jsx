@@ -212,13 +212,15 @@ const ReingresoPacientes = (props) => {
     if (!f?.numeroformulario || !f?.fechaReingreso) return false;
     const d = new Date(f.fechaReingreso);
     if (isNaN(d.getTime())) return false;
-    // Validaciones opcionales de periodo: si se llena uno, deben llenarse ambos y el inicio <= fin
-    const i = f.inicioPrestServicios ? new Date(f.inicioPrestServicios) : null;
-    const fn = f.finPrestServicios ? new Date(f.finPrestServicios) : null;
-    if ((i && !fn) || (!i && fn)) return false;
-    if (i && fn && i.getTime() > fn.getTime()) return false;
-    // sesiones debe ser entero >= 0 si viene
-    if (f.sesionesAutorizadasMes !== "" && (isNaN(Number(f.sesionesAutorizadasMes)) || Number(f.sesionesAutorizadasMes) < 0)) return false;
+    // Período requerido: ambas fechas y inicio <= fin
+    if (!f?.inicioPrestServicios || !f?.finPrestServicios) return false;
+    const i = new Date(f.inicioPrestServicios);
+    const fn = new Date(f.finPrestServicios);
+    if (isNaN(i.getTime()) || isNaN(fn.getTime())) return false;
+    if (i.getTime() > fn.getTime()) return false;
+    // Sesiones requerido: entero >= 1
+    if (f.sesionesAutorizadasMes === "") return false;
+    if (isNaN(Number(f.sesionesAutorizadasMes)) || Number(f.sesionesAutorizadasMes) < 1) return false;
     return true;
   };
 
@@ -228,7 +230,7 @@ const ReingresoPacientes = (props) => {
     const f = formsById[key] || initForm;
     if (!isFormValid(f)) {
       setModalMessage(
-        "Ingrese el número de formulario y una fecha de reingreso válida."
+        "Complete los campos requeridos: Número de formulario, Fecha de reingreso, Período de prestación (inicio y fin) y Sesiones autorizadas por mes (entero >= 1)."
       );
       setModalTitle("Campos incompletos");
       setModalType("error");
@@ -585,12 +587,11 @@ const ReingresoPacientes = (props) => {
                           />
                         </Form.Group>
 
-                        {/* Periodo Prestación de Servicios */}
                         <Form.Group controlId={`formPeriodo-${key}`}>
                           <Form.Label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-                            Período Prestación de Servicios
+                            Período Prestación de Servicios <span className="text-rose-500">*</span>
                           </Form.Label>
-                          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-center gap-2">
                             <Form.Control
                               type="date"
                               name="inicioPrestServicios"
@@ -599,6 +600,8 @@ const ReingresoPacientes = (props) => {
                                 handleFormChange(key, e.target.name, e.target.value)
                               }
                               placeholder="Inicio"
+                              required
+                              aria-required="true"
                               className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
                             />
                             <span className="text-sm text-slate-500">a</span>
@@ -610,9 +613,10 @@ const ReingresoPacientes = (props) => {
                                 handleFormChange(key, e.target.name, e.target.value)
                               }
                               placeholder="Fin"
-                              disabled={!f.inicioPrestServicios}
+                              required
+                              aria-required="true"
                               min={f.inicioPrestServicios || undefined}
-                              className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white disabled:opacity-60"
+                              className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
                             />
                           </div>
                           <small className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
@@ -620,14 +624,13 @@ const ReingresoPacientes = (props) => {
                           </small>
                         </Form.Group>
 
-                        {/* Sesiones autorizadas por mes */}
                         <Form.Group controlId={`formSesiones-${key}`}>
                           <Form.Label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-                            Sesiones autorizadas por mes
+                            Sesiones autorizadas por mes <span className="text-rose-500">*</span>
                           </Form.Label>
                           <Form.Control
                             type="number"
-                            min="0"
+                            min="1"
                             step="1"
                             inputMode="numeric"
                             name="sesionesAutorizadasMes"
@@ -644,6 +647,8 @@ const ReingresoPacientes = (props) => {
                             onWheel={(e) => e.currentTarget.blur()}
                             pattern="\\d*"
                             placeholder="Ingrese cantidad de sesiones"
+                            required
+                            aria-required="true"
                             className="w-full px-4 py-3 text-base border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                           />
                         </Form.Group>
