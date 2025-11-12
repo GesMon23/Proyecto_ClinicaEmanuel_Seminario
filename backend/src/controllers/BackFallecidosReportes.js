@@ -6,8 +6,8 @@ const fs = require('fs');
 const path = require('path');
 
 
-// GET /api/fallecidos - lista con filtros
-router.get('/api/fallecidos', async (req, res) => {
+// GET /fallecidos - lista con filtros (prefijo '/api' se agrega en server.js)
+router.get('/fallecidos', async (req, res) => {
   try {
     const { fechainicio, fechafin, jornada, accesovascular, sexo, departamento } = req.query;
     const client = await pool.connect();
@@ -38,8 +38,8 @@ router.get('/api/fallecidos', async (req, res) => {
   }
 });
 
-// GET /api/fallecidos/catalogos - catálogos para filtros
-router.get('/api/fallecidos/catalogos', async (_req, res) => {
+// GET /fallecidos/catalogos - catálogos para filtros
+router.get('/fallecidos/catalogos', async (_req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -73,8 +73,8 @@ router.get('/api/fallecidos/catalogos', async (_req, res) => {
   }
 });
 
-// GET /api/fallecidos/excel - exporta excel
-router.get('/api/fallecidos/excel', async (req, res) => {
+// GET /fallecidos/excel - exporta excel
+router.get('/fallecidos/excel', async (req, res) => {
   try {
     const { fechainicio, fechafin, jornada, accesovascular, sexo, departamento } = req.query;
     const client = await pool.connect();

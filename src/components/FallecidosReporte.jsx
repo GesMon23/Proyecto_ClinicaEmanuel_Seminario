@@ -70,7 +70,7 @@ const FallecidosReporte = () => {
     React.useEffect(() => {
         const cargar = async () => {
             try {
-                const { data } = await api.get('/api/fallecidos/catalogos');
+                const { data } = await api.get('/fallecidos/catalogos');
                 setCatalogos({
                     jornadas: data?.jornadas || [],
                     accesos: data?.accesos || [],
@@ -96,7 +96,7 @@ const FallecidosReporte = () => {
             if (filtros.accesovascular) params.accesovascular = filtros.accesovascular;
             if (filtros.sexo) params.sexo = filtros.sexo;
             if (filtros.departamento) params.departamento = filtros.departamento;
-            const res = await api.get('/api/fallecidos', { params });
+            const res = await api.get('/fallecidos', { params });
             setPacientes(Array.isArray(res.data) ? res.data : []);
             if (!res.data || res.data.length === 0) showErrorModal('No se encontraron pacientes fallecidos con los filtros seleccionados.');
         } catch (err) {
@@ -127,7 +127,8 @@ const FallecidosReporte = () => {
         if (filtros.accesovascular) params.append('accesovascular', filtros.accesovascular);
         if (filtros.sexo) params.append('sexo', filtros.sexo);
         if (filtros.departamento) params.append('departamento', filtros.departamento);
-        window.open(`/api/fallecidos/excel?${params.toString()}`);
+        const base = (api?.defaults?.baseURL || '').replace(/\/$/, '');
+        window.open(`${base}/fallecidos/excel?${params.toString()}`);
         showSuccessModal('Exportación a Excel iniciada. Si no se descarga, revise el bloqueador de ventanas emergentes.');
     };
 
