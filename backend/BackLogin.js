@@ -744,6 +744,38 @@ router.post('/auth/forgot-password', async (req, res) => {
           console.error('Error enviando correo forgot-password (async):', err);
         });
       }
+      try {
+        const correoUsuario = (user && (user.correo || user.email || user.correo_electronico || user.correo_usuario || user.email_usuario)) || null;
+        if (correoUsuario) {
+          const base = process.env.APP_BASE_URL || 'http://localhost:3000';
+          await enviarCorreo({
+            to: correoUsuario,
+            subject: 'Hemos recibido tu solicitud de recuperación de contraseña',
+            html: `
+              <!doctype html>
+              <html>
+                <body style="margin:0;background:#f5f7fb;font-family:Arial,Helvetica,sans-serif;color:#2d3748;">
+                  <div style="max-width:640px;margin:24px auto;padding:0 16px;">
+                    <div style="background:#16a34a;color:#fff;padding:16px 20px;border-top-left-radius:8px;border-top-right-radius:8px;">
+                      <h1 style="margin:0;font-size:18px;">Solicitud recibida</h1>
+                    </div>
+                    <div style="background:#ffffff;border:1px solid #e2e8f0;border-top:none;border-bottom-left-radius:8px;border-bottom-right-radius:8px;padding:20px;">
+                      <p style="margin:0 0 12px;">Hemos recibido tu solicitud para recuperar tu contraseña.</p>
+                      <p style="margin:0 0 12px;">El equipo de administración revisará tus datos y, de ser procedente, te enviará una nueva contraseña o un enlace para restablecerla.</p>
+                      <a href="${base}" style="display:inline-block;background:#16a34a;color:#ffffff;text-decoration:none;padding:10px 16px;border-radius:6px;font-weight:600;">Ir al inicio</a>
+                    </div>
+                    <div style="text-align:center;color:#94a3b8;font-size:12px;margin-top:10px;">
+                      Clínica Renal Emanuel — Soporte
+                    </div>
+                  </div>
+                </body>
+              </html>
+            `.trim(),
+          });
+        }
+      } catch (ee) {
+        console.error('Error enviando acuse a usuario (forgot-password):', ee);
+      }
     } catch (e) {
       console.error('Error enviando correo forgot-password:', e);
       // Continuamos con respuesta genérica
