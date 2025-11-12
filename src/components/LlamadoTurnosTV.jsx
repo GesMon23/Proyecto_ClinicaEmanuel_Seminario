@@ -195,10 +195,24 @@ const LlamadoTurnosTV = () => {
 
     // Sincronización por eventos para anunciar nuevo turno
     useEffect(() => {
-        // Helper común para procesar un evento { clinica, accion }
-        const procesarEvento = (clinica, accion, ts) => {
+        // Helper común para procesar un evento { clinica, accion, turno? }
+        const procesarEvento = (clinica, accion, ts, turnoEvt = null) => {
             if (!clinica) return;
             const force = accion === 're-llamar' || accion === 'llamar' || !accion;
+            // 1) Si en el evento viene el turno, úsalo de inmediato
+            if (turnoEvt && turnoEvt.id_turno_cod) {
+                setTurnosActuales(prev => ({ ...prev, [clinica]: turnoEvt }));
+                if (audioHabilitadoRef.current) {
+                    const ultimo = ultimosAnunciadosRef.current[clinica];
+                    if (force || turnoEvt.id_turno_cod !== ultimo) {
+                        hablarTurno(turnoEvt, clinica);
+                        ultimosAnunciadosRef.current[clinica] = turnoEvt.id_turno_cod;
+                    }
+                } else {
+                    setPendienteAnunciarClinica(clinica);
+                    if (force) forzarClinicaRef.current[clinica] = true;
+                }
+            }
             try {
                 const saved = localStorage.getItem('clinicasData');
                 const parsed = saved ? JSON.parse(saved) : {};
@@ -283,7 +297,7 @@ const LlamadoTurnosTV = () => {
                 try {
                     const data = JSON.parse(ev.data || '{}');
                     if (data && data.clinica) {
-                        procesarEvento(data.clinica, data.accion, Number(data.ts) || Date.now());
+                        procesarEvento(data.clinica, data.accion, Number(data.ts) || Date.now(), data.turno || null);
                     }
                 } catch (_) {}
             };
@@ -297,7 +311,7 @@ const LlamadoTurnosTV = () => {
                 const events = res?.data?.events || [];
                 if (Array.isArray(events) && events.length > 0) {
                     for (const e of events) {
-                        procesarEvento(e.clinica, e.accion, Number(e.ts) || Date.now());
+                        procesarEvento(e.clinica, e.accion, Number(e.ts) || Date.now(), e.turno || null);
                     }
                 }
                 const now = Number(res?.data?.now) || Date.now();
