@@ -151,8 +151,8 @@ router.get('/fallecidos/excel', async (req, res) => {
     worksheet.getCell(3, 1).font = { size: 11, color: { argb: 'FF475569' } };
     worksheet.getCell(3, 1).alignment = { horizontal: 'center' };
 
-    // Header de columnas verde
-    const headerRowIndex = 4;
+    // Header de columnas verde (comenzar desde la fila 7)
+    const headerRowIndex = 7;
     const headerValues = worksheet.columns.map(c => c.header);
     worksheet.insertRow(headerRowIndex, headerValues);
     const headerRow = worksheet.getRow(headerRowIndex);
