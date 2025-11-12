@@ -196,6 +196,12 @@ router.post('/auth/admin/reset-user-password', verifyJWT, async (req, res) => {
       if (to) {
         const baseApp = process.env.APP_BASE_URL || 'http://localhost:3000';
         const loginLink = `${baseApp}`;
+        const nuevaEscaped = String(nueva)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
         await enviarCorreo({
           to,
           subject: 'Credenciales actualizadas',
@@ -211,7 +217,7 @@ router.post('/auth/admin/reset-user-password', verifyJWT, async (req, res) => {
                     <p style="margin:0 0 12px;">Se ha restablecido tu contraseña en el sistema.</p>
                     <p style="margin:0 0 8px;font-weight:bold;">Nueva contraseña temporal:</p>
                     <div style="background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:6px;padding:10px 12px;margin:0 0 16px;">
-                      <code style="font-family:Consolas,Monaco,monospace;font-size:14px;">${nueva}</code>
+                      <code style="font-family:Consolas,Monaco,monospace;font-size:14px;">${nuevaEscaped}</code>
                     </div>
                     <a href="${loginLink}" style="display:inline-block;background:#16a34a;color:#ffffff;text-decoration:none;padding:10px 16px;border-radius:6px;font-weight:600;">Ir al inicio de sesión</a>
                     <p style="margin:16px 0 0;color:#64748b;">Por seguridad, cambia tu contraseña al iniciar sesión.</p>
@@ -311,7 +317,7 @@ router.post('/auth/admin/reset-user-password/token', async (req, res) => {
                     <p style="margin:0 0 12px;">Se ha restablecido tu contraseña en el sistema.</p>
                     <p style="margin:0 0 8px;font-weight:bold;">Nueva contraseña temporal:</p>
                     <div style="background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:6px;padding:10px 12px;margin:0 0 16px;">
-                      <code style="font-family:Consolas,Monaco,monospace;font-size:14px;">${plain}</code>
+                      <code style="font-family:Consolas,Monaco,monospace;font-size:14px;">${plainEscaped}</code>
                     </div>
                     <a href="${loginLink}" style="display:inline-block;background:#16a34a;color:#ffffff;text-decoration:none;padding:10px 16px;border-radius:6px;font-weight:600;">Ir al inicio de sesión</a>
                     <p style="margin:16px 0 0;color:#64748b;">Por seguridad, cambia tu contraseña al iniciar sesión.</p>
