@@ -40,7 +40,7 @@ function diffDMA(desdeStr, hastaStr) {
   let dias = hasta.getDate() - desde.getDate();
   if (dias < 0) { meses -= 1; const prev = new Date(hasta.getFullYear(), hasta.getMonth(), 0).getDate(); dias += prev; }
   if (meses < 0) { anios -= 1; meses += 12; }
-  return `${dias}-${meses}-${anios}`;
+  return `${anios}-${meses}-${dias}`;
 }
 
 function fechaCortePaciente(p) {
@@ -526,7 +526,6 @@ function PacientesReporte() {
               <th className="min-w-[60px] px-4 py-2">#</th>
               <th className="min-w-[140px] px-4 py-2">No. Afiliación</th>
               <th className="min-w-[130px] px-4 py-2">DPI</th>
-              <th className="min-w-[130px] px-4 py-2">Número Proveedor</th>
               <th className="min-w-[220px] px-4 py-2">Nombre Completo</th>
               <th className="min-w-[80px] px-4 py-2">Edad</th>
               <th className="min-w-[140px] px-4 py-2">Fecha de Nacimiento</th>
@@ -563,7 +562,6 @@ function PacientesReporte() {
                   <td className="px-4 py-2">{(paginaActual - 1) * filasPorPagina + idx + 1}</td>
                   <td className="px-4 py-2">{paciente.noafiliacion || ''}</td>
                   <td className="px-4 py-2">{paciente.dpi || ''}</td>
-                  <td className="px-4 py-2">{paciente.nopacienteproveedor || ''}</td>
                   <td className="px-4 py-2">
                     {[
                       paciente.primernombre,

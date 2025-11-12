@@ -39,7 +39,7 @@ function diffDMA(desdeStr, hastaStr) {
     let dias = hasta.getDate() - desde.getDate();
     if (dias < 0) { meses -= 1; const prev = new Date(hasta.getFullYear(), hasta.getMonth(), 0).getDate(); dias += prev; }
     if (meses < 0) { anios -= 1; meses += 12; }
-    return `${dias}-${meses}-${anios}`;
+    return `${anios}-${meses}-${dias}`;
 }
 
 function fechaCortePaciente(p) {
@@ -207,7 +207,7 @@ const NuevoIngresoReportes = () => {
                   <th>Jornada</th>
                   <th>Acceso</th>
                   <th>No. Formulario</th>
-                  <th>Estancia (D-M-A)</th>
+                  <th>Estancia (A-M-D)</th>
                 </tr>
               </thead>
               <tbody>
@@ -487,8 +487,6 @@ const NuevoIngresoReportes = () => {
                             <th className="min-w-[180px] px-4 py-2">Número de Formulario</th>
                             <th className="min-w-[200px] px-4 py-2">Periodo</th>
                             <th className="min-w-[120px] px-4 py-2">Sesiones Autorizadas Mes</th>
-                            <th className="min-w-[120px] px-4 py-2">Sesiones Realizadas Mes</th>
-                            <th className="min-w-[150px] px-4 py-2">Sesiones No Realizadas Mes</th>
                             <th className="min-w-[220px] px-4 py-2">Observaciones</th>
                             <th className="min-w-[120px] px-4 py-2">Acciones</th>
                         </tr>
@@ -526,8 +524,6 @@ const NuevoIngresoReportes = () => {
                                     <td className="px-4 py-2">{paciente.numeroformulario || ''}</td>
                                     <td className="px-4 py-2">{formatearPeriodo(paciente.fechainicioperiodo, paciente.fechafinperiodo)}</td>
                                     <td className="px-4 py-2">{paciente.sesionesautorizadasmes || ''}</td>
-                                    <td className="px-4 py-2">{paciente.sesionesrealizadasmes || ''}</td>
-                                    <td className="px-4 py-2">{(Number(paciente.sesionesautorizadasmes || 0) - Number(paciente.sesionesrealizadasmes || 0))}</td>
                                     <td className="px-4 py-2">{paciente.observaciones || ''}</td>
                                     <td className="px-4 py-2">
                                         <button type="button" onClick={() => abrirDetalle(paciente)} className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm">Ver detalle</button>
@@ -564,7 +560,7 @@ const NuevoIngresoReportes = () => {
                                             <div><span className="font-semibold">Dirección:</span> {it.direccion || ''}</div>
                                             <div><span className="font-semibold">Departamento:</span> {it.departamento || ''}</div>
                                             <div><span className="font-semibold">Fecha Ingreso:</span> {it.fechaingreso || ''}</div>
-                                            <div><span className="font-semibold">Estancia (D-M-A):</span> {estancia || ''}</div>
+                                            <div><span className="font-semibold">Estancia (A-M-D):</span> {estancia || ''}</div>
                                             <div><span className="font-semibold">Estado:</span> {it.estadopaciente || it.estado || ''}</div>
                                             <div><span className="font-semibold">Jornada:</span> {it.jornada || ''}</div>
                                             <div><span className="font-semibold">Acceso Vascular:</span> {it.accesovascular || ''}</div>
