@@ -56,6 +56,7 @@ const LlamadoTurnosTV = () => {
     const audioHabilitadoRef = useRef(audioHabilitado);
     const forzarClinicaRef = useRef({}); // { [clinica]: true }
     const [sseConectado, setSseConectado] = useState(false);
+    const sseConectadoRef = useRef(false);
     const ultimoEventoTsRef = useRef(0);
 
     // Lista de clínicas a mostrar (se intentará cargar del backend)
@@ -67,7 +68,7 @@ const LlamadoTurnosTV = () => {
             const resultados = await Promise.all(
                 clinicas.map(async (clinica) => {
                     try {
-                        const response = await api.get(`/Gturno-actual/${clinica}`);
+                        const response = await api.get(`/Gturno-actual/${encodeURIComponent(clinica)}`);
                         if (response && response.data) {
                             const data = Array.isArray(response.data) ? response.data[0] : response.data;
                             return { clinica, turno: data?.id_turno_cod ? data : null };
@@ -124,7 +125,7 @@ const LlamadoTurnosTV = () => {
 
     useEffect(() => {
         cargarTurnos();
-        const intervalo = setInterval(cargarTurnos, 30000);
+        const intervalo = setInterval(cargarTurnos, 5000);
         return () => clearInterval(intervalo);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [clinicas]);
@@ -202,6 +203,10 @@ const LlamadoTurnosTV = () => {
                 const saved = localStorage.getItem('clinicasData');
                 const parsed = saved ? JSON.parse(saved) : {};
                 const turnoLS = parsed?.[clinica]?.turnoLlamado;
+                // Actualizar visual inmediatamente con lo que haya en localStorage
+                if (turnoLS?.id_turno_cod) {
+                    setTurnosActuales(prev => ({ ...prev, [clinica]: turnoLS }));
+                }
                 if (turnoLS?.id_turno_cod && audioHabilitadoRef.current) {
                     const ultimo = ultimosAnunciadosRef.current[clinica];
                     if (force || turnoLS.id_turno_cod !== ultimo) {
@@ -213,6 +218,26 @@ const LlamadoTurnosTV = () => {
                     if (force) {
                         forzarClinicaRef.current[clinica] = true;
                     }
+                    // Consulta inmediata al backend para esa clínica para obtener datos frescos
+                    (async () => {
+                        try {
+                            const resp = await api.get(`/Gturno-actual/${encodeURIComponent(clinica)}`);
+                            const data = Array.isArray(resp.data) ? resp.data[0] : resp.data;
+                            const turno = data?.id_turno_cod ? data : null;
+                            if (turno) {
+                                setTurnosActuales(prev => ({ ...prev, [clinica]: turno }));
+                                if (audioHabilitadoRef.current) {
+                                    const ultimo = ultimosAnunciadosRef.current[clinica];
+                                    if (force || turno.id_turno_cod !== ultimo) {
+                                        hablarTurno(turno, clinica);
+                                        ultimosAnunciadosRef.current[clinica] = turno.id_turno_cod;
+                                        forzarClinicaRef.current[clinica] = false;
+                                        setPendienteAnunciarClinica(null);
+                                    }
+                                }
+                            }
+                        } catch (_) { /* noop */ }
+                    })();
                 }
             } catch (_) {
                 setPendienteAnunciarClinica(clinica);
@@ -252,8 +277,8 @@ const LlamadoTurnosTV = () => {
         let es;
         try {
             es = new EventSource('/api/turnos/llamado-sse');
-            es.onopen = () => setSseConectado(true);
-            es.onerror = () => { setSseConectado(false); try { es.close(); } catch {} };
+            es.onopen = () => { setSseConectado(true); sseConectadoRef.current = true; };
+            es.onerror = () => { setSseConectado(false); sseConectadoRef.current = false; try { es.close(); } catch {} };
             es.onmessage = (ev) => {
                 try {
                     const data = JSON.parse(ev.data || '{}');
@@ -262,11 +287,10 @@ const LlamadoTurnosTV = () => {
                     }
                 } catch (_) {}
             };
-        } catch (_) { setSseConectado(false); }
+        } catch (_) { setSseConectado(false); sseConectadoRef.current = false; }
 
-        // Polling de respaldo cuando no hay SSE
+        // Polling periódico (si hay SSE también, no afecta)
         const poll = setInterval(async () => {
-            if (sseConectado) return; // si SSE está bien, no hace falta poll
             try {
                 const since = ultimoEventoTsRef.current || 0;
                 const res = await api.get('/turnos/llamado-events', { params: { since, max: 100 } });

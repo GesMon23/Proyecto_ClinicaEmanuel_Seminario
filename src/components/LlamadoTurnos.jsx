@@ -410,6 +410,15 @@ const LlamadoTurnos = () => {
                         accion: 'abandonar'
                     }
                 }));
+                // Publicar evento backend
+                try {
+                    await api.post('/turnos/llamado', {
+                        clinica: clinica,
+                        accion: 'abandonar',
+                        turnoId: null,
+                        ts: Date.now(),
+                    });
+                } catch (_) {}
                 
                 showSuccessModal(response.data.message || 'Turno marcado como abandonado');
             } else {
@@ -432,6 +441,19 @@ const LlamadoTurnos = () => {
         try {
             await api.put(`/turnoLlamado/${turno.idturno}`, { idturnoestado: 3 });
             showSuccessModal('Turno llamado nuevamente');
+            // Asegurar que la TV lea datos frescos desde localStorage
+            try {
+                const updatedData = {
+                    ...clinicasData,
+                    [selectedClinica]: {
+                        ...(clinicasData[selectedClinica] || {}),
+                        turnoLlamado: turno,
+                        turnoMasAntiguo: turno,
+                        botonLlamarHabilitado: true,
+                    }
+                };
+                localStorage.setItem('clinicasData', JSON.stringify(updatedData));
+            } catch {}
             
             // Disparar eventos para que Turnos TV realice el anuncio por voz
             try {
@@ -574,6 +596,15 @@ const LlamadoTurnos = () => {
                         accion: 'finalizar'
                     }
                 }));
+                // Publicar evento backend
+                try {
+                    await api.post('/turnos/llamado', {
+                        clinica: clinica,
+                        accion: 'finalizar',
+                        turnoId: null,
+                        ts: Date.now(),
+                    });
+                } catch (_) {}
                 
                 showSuccessModal(response.data.message || 'Turno finalizado exitosamente');
             } else {
