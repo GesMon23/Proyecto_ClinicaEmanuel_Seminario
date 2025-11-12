@@ -121,13 +121,13 @@ router.get('/fallecidos/excel', async (req, res) => {
 
     // Encabezado compacto con logo
     worksheet.spliceRows(1, 0, [], [], []);
-    for (let r = 1; r <= 3; r++) worksheet.getRow(r).height = 22;
+    for (let r = 1; r <= 6; r++) worksheet.getRow(r).height = 22;
     try {
       const logoPath = path.join(__dirname, '../../assets/img/logoClinica.png');
       if (fs.existsSync(logoPath)) {
         const imageId = workbook.addImage({ filename: logoPath, extension: 'png' });
-        // Ubicar el logo un poco más ancho para mejor proporción
-        worksheet.addImage(imageId, 'A1:C3');
+        // Ubicar el logo más alto (hasta la fila 6) y un poco más ancho
+        worksheet.addImage(imageId, 'A1:C6');
       }
     } catch {}
     const colCount = worksheet.columns.length;
