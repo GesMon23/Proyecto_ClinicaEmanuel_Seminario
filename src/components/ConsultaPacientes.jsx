@@ -1165,7 +1165,7 @@ const ConsultaPacientes = () => {
         printPair('Edad:', `${calcularEdad(paciente.fecha_nacimiento)}`, true);
         printPair('Sexo:', `${paciente.sexo || ''}`, true);
         printPair('Fecha Ingreso:', `${formatearFecha(paciente.fecha_ingreso) || ''}`, true);
-        printPair('Estancia Programa:', `${calcularEstanciaRango(paciente.fecha_ingreso, new Date())}` , true);
+        printPair('Estancia Programa:', `${calcularEstanciaRango(paciente.fecha_ingreso)}` , true);
         printPair('Jornada:', `${paciente.jornada_descripcion || ''}`, true);
         printPair('Sesiones Autorizadas:', `${paciente.sesiones_autorizadas_mes || ''}`, true);
         printPair('Dirección:', `${paciente.direccion || ''}`, true);
@@ -2003,7 +2003,7 @@ const ConsultaPacientes = () => {
                                             { label: 'Fecha Creación', value: formatearFecha(paciente.fecha_creacion) || '' },
                                             { label: 'Inicio Prestación Servicios', value: formatearFecha(paciente.inicio_prest_servicios) || '' },
                                             { label: 'Fin Prestación Servicios', value: formatearFecha(paciente.fin_prest_servicios) || '' },
-                                            { label: 'Estancia Programa', value: calcularEstanciaRango(paciente.fecha_ingreso, new Date()) },
+                                            { label: 'Estancia Programa', value: calcularEstanciaRango(paciente.fecha_ingreso) },
                                         ];
                                         let campos = [...camposBase];
                                         const mitad = Math.ceil(campos.length / 2);
