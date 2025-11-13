@@ -75,13 +75,13 @@ const ActualizacionPacientes = () => {
   const construirUrlFoto = async (p) => {
     try {
       const id = (p?.no_afiliacion || '').toString().trim();
-      // 1) Intentar resolver con /check-photo/:id (devuelve {exists, url: '/fotos/xx.ext'})
+      // 1) Intentar resolver con /Acheck-photo/:id (devuelve {exists})
       if (id) {
         try {
-          const { data } = await api.get(`/check-photo/${encodeURIComponent(id)}`);
-          if (data && data.exists && data.url) {
-            const served = data.url.startsWith('/api') ? data.url : `/api${data.url}`;
-            return served;
+          const { data } = await api.get(`/Acheck-photo/${encodeURIComponent(id)}`);
+          if (data && data.exists) {
+            // Si existe, asumimos nombre por convención <id>.jpg en carpeta /api/fotos
+            return `/api/fotos/${id}.jpg`;
           }
         } catch (_) {}
       }
@@ -89,7 +89,8 @@ const ActualizacionPacientes = () => {
       const filename = (p?.url_foto || p?.urlfoto || '').toString().split(/[\\\/]/).pop();
       if (filename) return `/api/fotos/${filename}`;
       // 3) Último recurso: endpoint resolutivo por id
-      if (id) return `/api/foto/${encodeURIComponent(id)}`;
+      // No hay endpoint /foto/:id, retornar null
+      if (id) return null;
       return null;
     } catch (_) {
       return null;
@@ -216,7 +217,8 @@ const ActualizacionPacientes = () => {
 
       // Si se tomÃ³ una nueva foto en base64, subirla primero
       if (formData.urlfoto && formData.urlfoto.startsWith('data:image')) {
-        const resFoto = await api.post(`/Aupload-foto/${formData.no_afiliacion}`, { imagenBase64: formData.urlfoto });
+        const naf = String(formData.no_afiliacion || '').replace(/\D+/g, '');
+        const resFoto = await api.post(`/Aupload-foto/${naf}`, { imagenBase64: formData.urlfoto });
         if (resFoto.data && resFoto.data.success) {
           payload.url_foto = resFoto.data.url; // url devuelta por backend
           setFormData(f => ({ ...f, url_foto: resFoto.data.url }));
@@ -230,7 +232,8 @@ const ActualizacionPacientes = () => {
       }
 
       // Hacer update del paciente
-      const response = await api.put(`/Apacientes/${formData.no_afiliacion}`, payload);
+      const naf = String(formData.no_afiliacion || '').replace(/\D+/g, '');
+      const response = await api.put(`/Apacientes/${naf}`, payload);
 
       if (response.data && response.data.success) {
         setShowModal(true);
