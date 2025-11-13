@@ -148,17 +148,56 @@ router.put('/Apacientes/:no_afiliacion', async (req, res) => {
   } = req.body;
 
   try {
-    // Prevalidación: DPI único excluyendo al propio paciente
+    // Prevalidación: DPI único (solo si intenta cambiarlo respecto al actual)
+    let currentDpi = null;
     try {
-      const dpiClean = dpi ? String(dpi).trim() : null;
-      if (dpiClean && dpiClean.length === 13) {
-        const q = await pool.query('SELECT no_afiliacion FROM public.tbl_pacientes WHERE dpi = $1 LIMIT 1', [dpiClean]);
-        const holder = q.rows?.[0]?.no_afiliacion || null;
-        if (holder && String(holder) !== String(no_afiliacion)) {
+      const cur = await pool.query('SELECT dpi FROM public.tbl_pacientes WHERE no_afiliacion = $1', [no_afiliacion]);
+      currentDpi = cur.rows?.[0]?.dpi ? String(cur.rows[0].dpi).replace(/\D+/g, '').trim() : null;
+    } catch (_) {}
+    try {
+      const dpiClean = dpi ? String(dpi).replace(/\D+/g, '').trim() : null;
+      if (dpiClean && dpiClean.length === 13 && dpiClean !== currentDpi) {
+        const q = await pool.query('SELECT no_afiliacion FROM public.tbl_pacientes WHERE dpi = $1', [dpiClean]);
+        const holders = (q.rows || []).map(r => String(r.no_afiliacion));
+        const includesSelf = holders.includes(String(no_afiliacion));
+        if (!includesSelf && holders.length > 0) {
           return res.status(409).json({ success: false, detail: 'El DPI ya está registrado para otro paciente.' });
         }
       }
     } catch (_) { /* si falla la prevalidación, continuar y que el SP decida */ }
+
+    // Si el DPI no cambia respecto al actual, hacer UPDATE directo sin tocar DPI
+    try {
+      if (currentDpi === null) {
+        const cur2 = await pool.query('SELECT dpi FROM public.tbl_pacientes WHERE no_afiliacion = $1', [no_afiliacion]);
+        currentDpi = cur2.rows?.[0]?.dpi ? String(cur2.rows[0].dpi).replace(/\D+/g, '').trim() : null;
+      }
+      const dpiClean = dpi ? String(dpi).replace(/\D+/g, '').trim() : null;
+      if (currentDpi && dpiClean && currentDpi === dpiClean) {
+        const u = await pool.query(
+          `UPDATE public.tbl_pacientes
+           SET primer_nombre=$1, segundo_nombre=$2, otros_nombres=$3,
+               primer_apellido=$4, segundo_apellido=$5, apellido_casada=$6,
+               edad=$7, fecha_nacimiento=$8, sexo=$9, direccion=$10,
+               fecha_ingreso=$11, id_departamento=$12, id_acceso=$13,
+               numero_formulario_activo=$14, id_jornada=$15,
+               sesiones_autorizadas_mes=$16, url_foto=$17
+           WHERE no_afiliacion=$18
+           RETURNING *`,
+          [
+            primer_nombre, segundo_nombre, otros_nombres,
+            primer_apellido, segundo_apellido, apellido_casada,
+            edad, fecha_nacimiento, sexo, direccion,
+            fecha_ingreso, id_departamento, id_acceso,
+            numero_formulario_activo, id_jornada,
+            sesiones_autorizadas_mes, url_foto,
+            no_afiliacion
+          ]
+        );
+        const row = u.rows?.[0] || null;
+        return res.json({ success: true, paciente: row });
+      }
+    } catch (_) { /* continuar con SP si no se pudo determinar */ }
 
     // Derivar usuario/actor
     let userName = 'web';
@@ -211,11 +250,11 @@ router.put('/Apacientes/:no_afiliacion', async (req, res) => {
       const isDup = e && (e.code === '23505' || /ya está registrado para otro paciente/i.test(e.message || ''));
       if (isDup) {
         try {
-          const dpiClean = dpi ? String(dpi).trim() : null;
+          const dpiClean = dpi ? String(dpi).replace(/\D+/g, '').trim() : null;
           if (dpiClean) {
-            const q2 = await pool.query('SELECT no_afiliacion FROM public.tbl_pacientes WHERE dpi = $1 LIMIT 1', [dpiClean]);
-            const holder = q2.rows?.[0]?.no_afiliacion || null;
-            if (holder && String(holder) === String(no_afiliacion)) {
+            const q2 = await pool.query('SELECT no_afiliacion FROM public.tbl_pacientes WHERE dpi = $1', [dpiClean]);
+            const holders = (q2.rows || []).map(r => String(r.no_afiliacion));
+            if (holders.includes(String(no_afiliacion))) {
               // El DPI pertenece a este mismo paciente: hacer UPDATE directo sin tocar DPI
               const u = await pool.query(
                 `UPDATE public.tbl_pacientes
