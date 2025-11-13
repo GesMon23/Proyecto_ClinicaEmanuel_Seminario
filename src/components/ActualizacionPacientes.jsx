@@ -74,23 +74,22 @@ const ActualizacionPacientes = () => {
 
   const construirUrlFoto = async (p) => {
     try {
-      const id = (p?.no_afiliacion || '').toString().trim();
-      // 1) Intentar resolver con /Acheck-photo/:id (devuelve {exists})
-      if (id) {
-        try {
-          const { data } = await api.get(`/Acheck-photo/${encodeURIComponent(id)}`);
-          if (data && data.exists) {
-            // Si existe, asumimos nombre por convención <id>.jpg en carpeta /api/fotos
-            return `/api/fotos/${id}.jpg`;
-          }
-        } catch (_) {}
+      const naf = (p?.no_afiliacion || '').toString().replace(/\D+/g, '').trim();
+      // 1) Probar con naf normalizado y varias extensiones usando /Acheck-photo
+      if (naf) {
+        const exts = ['jpg', 'jpeg', 'png'];
+        for (const ext of exts) {
+          try {
+            const { data } = await api.get(`/Acheck-photo/${encodeURIComponent(`${naf}.${ext}`)}`);
+            if (data && data.exists) {
+              return `/api/fotos/${naf}.${ext}`;
+            }
+          } catch (_) { /* ignorar y probar siguiente */ }
+        }
       }
-      // 2) Fallback por filename conocido
-      const filename = (p?.url_foto || p?.urlfoto || '').toString().split(/[\\\/]/).pop();
-      if (filename) return `/api/fotos/${filename}`;
-      // 3) Último recurso: endpoint resolutivo por id
-      // No hay endpoint /foto/:id, retornar null
-      if (id) return null;
+      // 2) Fallback final: resolver en backend tolerante a sufijos/espacios
+      if (naf) return `/api/Afoto/${encodeURIComponent(naf)}`;
+      // 3) Sin resolución
       return null;
     } catch (_) {
       return null;
@@ -130,9 +129,9 @@ const ActualizacionPacientes = () => {
         console.log("📸 url_foto crudo desde backend:", pacienteData.url_foto);
         // Resolver URL de foto de forma robusta
         const urlResuelta = await construirUrlFoto(pacienteData);
+        // Setear ambas propiedades únicamente si existe archivo; si no, limpiar para evitar 404
         pacienteData.url_foto = urlResuelta || null;
-        // Alinear también urlfoto para que el <img> use la misma ruta
-        if (urlResuelta) pacienteData.urlfoto = urlResuelta;
+        pacienteData.urlfoto = urlResuelta || null;
         console.log("✅ url_foto procesado:", pacienteData.url_foto);
         setPaciente(pacienteData);
         setFormData(pacienteData);
@@ -717,14 +716,6 @@ const ActualizacionPacientes = () => {
                     }
                     className="w-full h-full object-cover"
                     onError={e => {
-                      // Intentar un fallback adicional por id si falla la ruta calculada
-                      const id = (formData.no_afiliacion || '').toString().trim();
-                      const tried = e.target.getAttribute('data-tried-fallback');
-                      if (id && !tried) {
-                        e.target.setAttribute('data-tried-fallback', '1');
-                        e.target.src = `/api/foto/${encodeURIComponent(id)}`;
-                        return;
-                      }
                       e.target.onerror = null;
                       e.target.src = defaultAvatar;
                     }}
