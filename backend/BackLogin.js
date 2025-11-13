@@ -440,9 +440,9 @@ router.post('/auth/confirm-password', verifyJWT, async (req, res) => {
     try {
       await client.query('BEGIN');
 
-      // 1) Buscar usuario por nombre
-      const curUser = 'cur_buscar_usuario_auth';
-      await client.query('CALL public.sp_buscar_usuario_auth($1, $2)', [sub, curUser]);
+      // 1) Buscar usuario por ID (sub del JWT)
+      const curUser = 'cur_usuario_auth_by_id';
+      await client.query('CALL public.sp_usuario_autenticado($1, $2)', [sub, curUser]);
       const userRes = await client.query(`FETCH ALL FROM "${curUser}"`);
       rows = userRes.rows;
       await client.query('COMMIT');
@@ -452,14 +452,47 @@ router.post('/auth/confirm-password', verifyJWT, async (req, res) => {
     } finally {
       client.release();
     }
-    const user = rows[0];
+    let user = rows[0];
     if (!user || user.estado === false) return res.status(401).json({ error: 'No autorizado' });
 
     let ok = false;
-    if (user.contrasenia && user.contrasenia.startsWith('$2')) {
-      ok = await bcrypt.compare(password, user.contrasenia);
+    let storedPwd = (
+      user.contrasenia ??
+      user.contrasena ??
+      user.password_hash ??
+      user.password ??
+      null
+    );
+
+    // Fallback: si no vino contraseña con sp_usuario_autenticado, buscar por nombre_usuario
+    if (!storedPwd && req.user && req.user.nombre_usuario) {
+      try {
+        const client2 = await pool.connect();
+        try {
+          await client2.query('BEGIN');
+          const cur2 = 'cur_buscar_usuario_auth_confirm';
+          await client2.query('CALL public.sp_buscar_usuario_auth($1, $2)', [req.user.nombre_usuario, cur2]);
+          const r2 = await client2.query(`FETCH ALL FROM "${cur2}"`);
+          user = r2.rows?.[0] || user;
+          storedPwd = (
+            user?.contrasenia ??
+            user?.contrasena ??
+            user?.password_hash ??
+            user?.password ??
+            null
+          );
+          await client2.query('COMMIT');
+        } catch (e2) {
+          try { await client2.query('ROLLBACK'); } catch (_) {}
+        } finally {
+          try { client2.release(); } catch (_) {}
+        }
+      } catch (_) { /* noop */ }
+    }
+    if (typeof storedPwd === 'string' && storedPwd.startsWith('$2')) {
+      ok = await bcrypt.compare(password, storedPwd);
     } else {
-      ok = user.contrasenia === password;
+      ok = storedPwd === password;
     }
     if (!ok) return res.status(401).json({ error: 'Contraseña incorrecta' });
     return res.json({ ok: true });
