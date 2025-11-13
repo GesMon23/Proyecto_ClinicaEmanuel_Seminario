@@ -148,6 +148,18 @@ router.put('/Apacientes/:no_afiliacion', async (req, res) => {
   } = req.body;
 
   try {
+    // Prevalidación: DPI único excluyendo al propio paciente
+    try {
+      const dpiClean = dpi ? String(dpi).trim() : null;
+      if (dpiClean && dpiClean.length === 13) {
+        const q = await pool.query('SELECT no_afiliacion FROM public.tbl_pacientes WHERE dpi = $1 LIMIT 1', [dpiClean]);
+        const holder = q.rows?.[0]?.no_afiliacion || null;
+        if (holder && String(holder) !== String(no_afiliacion)) {
+          return res.status(409).json({ success: false, detail: 'El DPI ya está registrado para otro paciente.' });
+        }
+      }
+    } catch (_) { /* si falla la prevalidación, continuar y que el SP decida */ }
+
     // Derivar usuario/actor
     let userName = 'web';
     try {
@@ -195,8 +207,43 @@ router.put('/Apacientes/:no_afiliacion', async (req, res) => {
       return res.json({ success: true, paciente: rows[0] });
     } catch (e) {
       try { await client.query('ROLLBACK'); } catch (_) {}
-      // Mapear errores de validación
-      if (e && (e.code === '23505' || /ya está registrado para otro paciente/i.test(e.message || ''))) {
+      // Mapear errores de validación y resolver duplicado propio
+      const isDup = e && (e.code === '23505' || /ya está registrado para otro paciente/i.test(e.message || ''));
+      if (isDup) {
+        try {
+          const dpiClean = dpi ? String(dpi).trim() : null;
+          if (dpiClean) {
+            const q2 = await pool.query('SELECT no_afiliacion FROM public.tbl_pacientes WHERE dpi = $1 LIMIT 1', [dpiClean]);
+            const holder = q2.rows?.[0]?.no_afiliacion || null;
+            if (holder && String(holder) === String(no_afiliacion)) {
+              // El DPI pertenece a este mismo paciente: hacer UPDATE directo sin tocar DPI
+              const u = await pool.query(
+                `UPDATE public.tbl_pacientes
+                 SET primer_nombre=$1, segundo_nombre=$2, otros_nombres=$3,
+                     primer_apellido=$4, segundo_apellido=$5, apellido_casada=$6,
+                     edad=$7, fecha_nacimiento=$8, sexo=$9, direccion=$10,
+                     fecha_ingreso=$11, id_departamento=$12, id_acceso=$13,
+                     numero_formulario_activo=$14, id_jornada=$15,
+                     sesiones_autorizadas_mes=$16, url_foto=$17
+                 WHERE no_afiliacion=$18
+                 RETURNING *`,
+                [
+                  primer_nombre, segundo_nombre, otros_nombres,
+                  primer_apellido, segundo_apellido, apellido_casada,
+                  edad, fecha_nacimiento, sexo, direccion,
+                  fecha_ingreso, id_departamento, id_acceso,
+                  numero_formulario_activo, id_jornada,
+                  sesiones_autorizadas_mes, url_foto,
+                  no_afiliacion
+                ]
+              );
+              const row = u.rows?.[0] || null;
+              return res.json({ success: true, paciente: row });
+            }
+          }
+        } catch (e2) {
+          // si también falla, continuar con 409 genérico
+        }
         return res.status(409).json({ success: false, detail: 'El DPI ya está registrado para otro paciente.' });
       }
       if (e && /DPI inválido/i.test(e.message || '')) {
