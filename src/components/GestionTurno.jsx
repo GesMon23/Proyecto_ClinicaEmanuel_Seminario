@@ -411,7 +411,7 @@ const GestionTurno = () => {
         onConfirm={onConfirmEliminar}
       />
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Izquierda: formulario + tabla */}
         <div className="bg-white dark:bg-slate-900 rounded-xl shadow-md p-6">
           <div className="text-center mb-4">
@@ -422,18 +422,18 @@ const GestionTurno = () => {
             <hr className="border-slate-300 dark:border-slate-700 my-4" />
           </div>
 
-          <div className="flex gap-3 mb-4">
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
             <input
               type="text"
               placeholder="Número de Afiliación"
               value={numeroAfiliacion}
               onChange={(e) => setNumeroAfiliacion(e.target.value)}
-              className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+              className="w-full sm:flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
             />
             <button
               onClick={handleBuscar}
               disabled={buscando || !numeroAfiliacion}
-              className={`px-4 py-2 rounded-lg text-white ${buscando ? 'bg-gray-500 cursor-not-allowed' : 'bg-green-700 hover:bg-green-800'}`}
+              className={`w-full sm:w-auto px-4 py-2 rounded-lg text-white ${buscando ? 'bg-gray-500 cursor-not-allowed' : 'bg-green-700 hover:bg-green-800'}`}
             >
               {buscando ? (
                 <span className="inline-flex items-center gap-2">
@@ -509,7 +509,7 @@ const GestionTurno = () => {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
+            <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-xs sm:text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
               <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">
                 <tr>
                   <th className="p-3 border dark:border-gray-600 font-semibold">ID Turno</th>
@@ -615,23 +615,23 @@ const GestionTurno = () => {
             </select>
           </div>
 
-          <div className="flex justify-between mt-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:justify-between mt-4">
             <button
-              className="px-4 py-2 rounded-lg bg-red-700 text-white hover:bg-red-800"
+              className="w-full sm:w-auto px-4 py-2 rounded-lg bg-red-700 text-white hover:bg-red-800"
               onClick={handleCancelar}
             >
               Cancelar
             </button>
             {modoEdicion ? (
               <button
-                className="px-4 py-2 rounded-lg bg-green-700 text-white hover:bg-green-800"
+                className="w-full sm:w-auto px-4 py-2 rounded-lg bg-green-700 text-white hover:bg-green-800"
                 onClick={handleGuardar}
               >
                 Guardar
               </button>
             ) : (
               <button
-                className="px-4 py-2 rounded-lg bg-green-700 text-white hover:bg-green-800"
+                className="w-full sm:w-auto px-4 py-2 rounded-lg bg-green-700 text-white hover:bg-green-800"
                 onClick={handleAceptar}
               >
                 Aceptar

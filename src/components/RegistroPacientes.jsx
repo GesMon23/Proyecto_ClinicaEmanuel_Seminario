@@ -452,7 +452,7 @@ const RegistroPacientes = () => {
                       htmlFor="noAfiliacion"
                       className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200"
                     >
-                      No. Afiliación *
+                      No. Afiliación <span className="text-red-600" aria-hidden="true">*</span>
                     </label>
                     <input
                       type="text"
@@ -471,7 +471,7 @@ const RegistroPacientes = () => {
                       htmlFor="dpi"
                       className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200"
                     >
-                      DPI *
+                      DPI <span className="text-red-600" aria-hidden="true">*</span>
                     </label>
                     <input
                       type="text"
@@ -504,7 +504,7 @@ const RegistroPacientes = () => {
                       htmlFor="noPacienteProveedor"
                       className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200"
                     >
-                      No. Paciente Proveedor *
+                      No. Paciente Proveedor <span className="text-red-600" aria-hidden="true">*</span>
                     </label>
                     <input
                       type="text"
@@ -523,7 +523,7 @@ const RegistroPacientes = () => {
                       htmlFor="primerNombre"
                       className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200"
                     >
-                      Primer Nombre *
+                      Primer Nombre <span className="text-red-600" aria-hidden="true">*</span>
                     </label>
                     <input
                       type="text"
@@ -578,7 +578,7 @@ const RegistroPacientes = () => {
                       htmlFor="primerApellido"
                       className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200"
                     >
-                      Primer Apellido *
+                      Primer Apellido <span className="text-red-600" aria-hidden="true">*</span>
                     </label>
                     <input
                       type="text"
@@ -654,7 +654,7 @@ const RegistroPacientes = () => {
                       htmlFor="sexo"
                       className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200"
                     >
-                      Género *
+                      Género <span className="text-red-600" aria-hidden="true">*</span>
                     </label>
                     <select
                       id="sexo"
@@ -675,7 +675,7 @@ const RegistroPacientes = () => {
                       htmlFor="direccion"
                       className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200"
                     >
-                      Dirección *
+                      Dirección <span className="text-red-600" aria-hidden="true">*</span>
                     </label>
                     <input
                       type="text"
@@ -694,7 +694,7 @@ const RegistroPacientes = () => {
                       htmlFor="fechaIngreso"
                       className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200"
                     >
-                      Fecha de Ingreso *
+                      Fecha de Ingreso <span className="text-red-600" aria-hidden="true">*</span>
                     </label>
                     <input
                       type="date"
@@ -712,7 +712,7 @@ const RegistroPacientes = () => {
                       htmlFor="idDepartamento"
                       className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200"
                     >
-                      Departamento *
+                      Departamento <span className="text-red-600" aria-hidden="true">*</span>
                     </label>
                     <select
                       id="idDepartamento"
@@ -736,7 +736,7 @@ const RegistroPacientes = () => {
                       htmlFor="idAcceso"
                       className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200"
                     >
-                      Acceso Vascular *
+                      Acceso Vascular <span className="text-red-600" aria-hidden="true">*</span>
                     </label>
                     <select
                       id="idAcceso"
@@ -760,7 +760,7 @@ const RegistroPacientes = () => {
                       htmlFor="numeroFormulario"
                       className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200"
                     >
-                      Número de Formulario *
+                      Número de Formulario <span className="text-red-600" aria-hidden="true">*</span>
                     </label>
                     <input
                       type="text"
@@ -776,7 +776,7 @@ const RegistroPacientes = () => {
 
                   <div>
                     <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
-                      Periodo Prestación Servicios *
+                      Periodo Prestación Servicios <span className="text-red-600" aria-hidden="true">*</span>
                     </label>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Del</span>
@@ -810,7 +810,7 @@ const RegistroPacientes = () => {
                       htmlFor="sesionesAutorizadasMes"
                       className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200"
                     >
-                      Sesiones Autorizadas por Mes *
+                      Sesiones Autorizadas por Mes <span className="text-red-600" aria-hidden="true">*</span>
                     </label>
                     <input
                       type="number"
@@ -830,7 +830,7 @@ const RegistroPacientes = () => {
                       htmlFor="idjornada"
                       className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200"
                     >
-                      Jornada *
+                      Jornada <span className="text-red-600" aria-hidden="true">*</span>
                     </label>
                     <select
                       id="idjornada"
