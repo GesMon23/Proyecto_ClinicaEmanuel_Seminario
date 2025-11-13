@@ -86,13 +86,41 @@ router.get('/Ajornada', async (req, res) => {
 
 // Endpoint para verificar si existe una foto
 router.get('/Acheck-photo/:filename', (req, res) => {
-  const filename = req.params.filename;
-  const filePath = path.join(fotosDir, filename);
-  if (fs.existsSync(filePath)) {
-    res.json({ exists: true });
-  } else {
-    res.json({ exists: false });
+  const filename = String(req.params.filename || '');
+  // Si viene un id sin extensión, buscar cualquier archivo que empiece con ese id
+  if (!filename.includes('.')) {
+    try {
+      const files = fs.readdirSync(fotosDir);
+      const hit = files.find(f => path.parse(f).name.startsWith(filename));
+      return res.json({ exists: Boolean(hit) });
+    } catch (_) {
+      return res.json({ exists: false });
+    }
   }
+  const filePath = path.join(fotosDir, filename);
+  return res.json({ exists: fs.existsSync(filePath) });
+});
+
+// Servir foto por número de afiliación tolerante a nombres con sufijos/espacios
+router.get('/Afoto/:id', (req, res) => {
+  const id = String(req.params.id || '').trim();
+  if (!id) return res.status(400).json({ error: 'id requerido' });
+  try {
+    const files = fs.readdirSync(fotosDir);
+    // Priorizar extensiones comunes
+    const preferred = ['jpg','jpeg','png','JPG','JPEG','PNG'];
+    // Primero: id.ext exactos
+    for (const ext of preferred) {
+      const name = `${id}.${ext}`;
+      if (files.includes(name)) return res.sendFile(path.join(fotosDir, name));
+    }
+    // Segundo: cualquier archivo cuyo basename comience con id (maneja "id AF.jpg")
+    const hit = files.find(f => path.parse(f).name.startsWith(id));
+    if (hit) return res.sendFile(path.join(fotosDir, hit));
+  } catch (e) {
+    /* continue */
+  }
+  return res.status(404).json({ error: 'foto_no_encontrada' });
 });
 
 // Actualizar paciente por No. Afiliación con validación de DPI
