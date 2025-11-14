@@ -180,6 +180,12 @@ const RegistroFormularios = () => {
             } else {
               paciente.urlfoto = null;
             }
+            // Asignar jornada de forma robusta
+            try {
+              const pidJ = paciente.idjornada ?? paciente.id_jornada ?? paciente.idJornada;
+              const jor = Array.isArray(jornadas) ? jornadas.find(j => (j.idjornada ?? j.id_jornada) === pidJ) : null;
+              paciente.jornada = jor?.descripcion || '';
+            } catch (_) { paciente.jornada = paciente.jornada || ''; }
             setResultados([paciente]);
           }
         } else {
@@ -247,11 +253,12 @@ const RegistroFormularios = () => {
         setNuevoPaciente({ ...nuevoPaciente, noafiliacion: '' });
         return;
       }
-      // Buscar la descripción de la jornada
+      // Buscar la descripción de la jornada (tolerar idjornada o id_jornada en ambas fuentes)
       let jornadaDescripcion = '';
-      if (paciente.idjornada && jornadas && Array.isArray(jornadas)) {
-        const jor = jornadas.find(j => j.idjornada === paciente.idjornada);
-        if (jor) jornadaDescripcion = jor.descripcion;
+      const pidJ = paciente.idjornada ?? paciente.id_jornada ?? paciente.idJornada;
+      if (pidJ && Array.isArray(jornadas)) {
+        const jor = jornadas.find(j => (j.idjornada ?? j.id_jornada) === pidJ);
+        if (jor && jor.descripcion) jornadaDescripcion = jor.descripcion;
       }
       setPacientesCargados([
         ...pacientesCargados,
