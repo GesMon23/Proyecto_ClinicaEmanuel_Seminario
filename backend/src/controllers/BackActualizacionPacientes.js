@@ -158,9 +158,11 @@ router.put('/Apacientes/:no_afiliacion', async (req, res) => {
       const dpiClean = dpi ? String(dpi).replace(/\D+/g, '').trim() : null;
       if (dpiClean && dpiClean.length === 13 && dpiClean !== currentDpi) {
         const q = await pool.query('SELECT no_afiliacion FROM public.tbl_pacientes WHERE dpi = $1', [dpiClean]);
-        const holders = (q.rows || []).map(r => String(r.no_afiliacion));
-        const includesSelf = holders.includes(String(no_afiliacion));
-        if (!includesSelf && holders.length > 0) {
+        const holders = (q.rows || []).map(r => String(r.no_afiliacion || ''));
+        const normalizeAf = (s) => String(s || '').replace(/\D+/g, '').trim();
+        const holdersNorm = holders.map(normalizeAf);
+        const includesSelf = holdersNorm.includes(normalizeAf(no_afiliacion));
+        if (!includesSelf && holdersNorm.length > 0) {
           return res.status(409).json({ success: false, detail: 'El DPI ya está registrado para otro paciente.' });
         }
       }
@@ -253,8 +255,10 @@ router.put('/Apacientes/:no_afiliacion', async (req, res) => {
           const dpiClean = dpi ? String(dpi).replace(/\D+/g, '').trim() : null;
           if (dpiClean) {
             const q2 = await pool.query('SELECT no_afiliacion FROM public.tbl_pacientes WHERE dpi = $1', [dpiClean]);
-            const holders = (q2.rows || []).map(r => String(r.no_afiliacion));
-            if (holders.includes(String(no_afiliacion))) {
+            const holders = (q2.rows || []).map(r => String(r.no_afiliacion || ''));
+            const normalizeAf = (s) => String(s || '').replace(/\D+/g, '').trim();
+            const holdersNorm = holders.map(normalizeAf);
+            if (holdersNorm.includes(normalizeAf(no_afiliacion))) {
               // El DPI pertenece a este mismo paciente: hacer UPDATE directo sin tocar DPI
               const u = await pool.query(
                 `UPDATE public.tbl_pacientes
