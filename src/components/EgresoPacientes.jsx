@@ -354,7 +354,7 @@ const EgresoPacientes = () => {
                       className="w-full text-lg px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-700 dark:bg-slate-800 dark:text-white disabled:opacity-60"
                       inputMode="numeric"
                       maxLength={13}
-                      pattern="\\d{13}"
+                      pattern="\d{13}"
                       onKeyDown={(e) => {
                         if (["e","E","+","-",".",","," "].includes(e.key)) e.preventDefault();
                       }}

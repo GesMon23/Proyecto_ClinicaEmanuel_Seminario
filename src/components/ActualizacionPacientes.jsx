@@ -314,7 +314,7 @@ const ActualizacionPacientes = () => {
                   disabled={Boolean(busqueda.no_afiliacion)} className="w-full text-lg px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 disabled:opacity-60"
                   inputMode="numeric"
                   maxLength={13}
-                  pattern="\\d{13}"
+                  pattern="[0-9]{13}"
                   onKeyDown={(e) => {
                     if (["e","E","+","-",".",","," "].includes(e.key)) e.preventDefault();
                   }}
@@ -581,7 +581,7 @@ const ActualizacionPacientes = () => {
                     }`}
                   inputMode="numeric"
                   maxLength={13}
-                  pattern="\\d{13}"
+                  pattern="[0-9]{13}"
                   onKeyDown={(e) => {
                     if (["e","E","+","-",".",","," "].includes(e.key)) e.preventDefault();
                   }}
