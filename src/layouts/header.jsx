@@ -2,7 +2,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth-context";
-import { ChevronsLeft, Moon, Search, Sun, User as UserIcon, Settings, SquareArrowOutUpRight } from "lucide-react";
+import { ChevronsLeft, Moon, Search, Sun, User as UserIcon, Settings, SquareArrowOutUpRight, CircleHelp } from "lucide-react";
 import api from "@/config/api";
 import { navbarLinks } from "@/constants";
 import PropTypes from "prop-types";
@@ -154,6 +154,14 @@ export const Header = ({ collapsed, setCollapsed }) => {
                 >
                     <SquareArrowOutUpRight size={18} />
                 </button>
+                <a
+                    href="/ManualUsuario.pdf"
+                    download
+                    className="btn-ghost size-10 text-white"
+                    title="Descargar Manual de Usuario"
+                >
+                    <CircleHelp size={18} />
+                </a>
             </div>
             <div className="flex items-center gap-x-3">
                 {/* Bloque Usuario: ícono + nombre en dos líneas */}

@@ -81,6 +81,17 @@ function Header({ routes }) {
           <Nav className="ml-auto" navbar style={{marginRight: '32px'}}>
             <Nav.Item>
               <Nav.Link
+                href="/ManualUsuario.pdf"
+                download
+                className="m-0"
+                style={{ color: '#fff' }}
+              >
+                <i className="nc-icon nc-cloud-download-93" style={{ marginRight: 8 }} />
+                Manual
+              </Nav.Link>
+            </Nav.Item>
+            <Nav.Item>
+              <Nav.Link
                 className="m-0"
                 href="#pablo"
                 onClick={(e) => e.preventDefault()}
