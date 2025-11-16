@@ -119,10 +119,28 @@ const ActualizacionPacientes = () => {
 
       if (response.data.length > 0) {
         let pacienteData = response.data[0]; // tu backend devuelve un array
-        if (pacienteData.id_estado === 3) {
+        // Detección robusta de estado inactivo
+        const idEstado = Number(pacienteData.id_estado ?? pacienteData.idestado ?? pacienteData.estado_id ?? 0);
+        const idCausa = Number(pacienteData.id_causa ?? pacienteData.idcausa ?? 0);
+        const estadoTxt = String(pacienteData.estado_descripcion ?? pacienteData.estado ?? '').toLowerCase();
+        const causaTxt = String(pacienteData.causaegreso_descripcion ?? pacienteData.causa_egreso_descripcion ?? pacienteData.descripcion ?? '').toLowerCase();
+        const esEgresado = idEstado === 3 || estadoTxt.includes('egres');
+        const esFallecido = idEstado === 5 || idCausa === 1 || estadoTxt.includes('falle') || causaTxt.includes('falle') || causaTxt.includes('defunc');
+        // Fallback: inspeccionar todas las cadenas del registro por palabras clave
+        let esInactivoPorTexto = false;
+        if (!esEgresado && !esFallecido) {
+          try {
+            const allTxt = Object.values(pacienteData)
+              .filter(v => typeof v === 'string')
+              .join(' ') 
+              .toLowerCase();
+            esInactivoPorTexto = /\bfalle|defunc|egres/.test(allTxt);
+          } catch (_) { esInactivoPorTexto = false; }
+        }
+        if (esEgresado || esFallecido || esInactivoPorTexto) {
           setPaciente(null);
           setShowModal(true);
-          setModalMessage('No se puede actualizar un paciente egresado.');
+          setModalMessage(esFallecido ? 'No se puede actualizar un paciente fallecido.' : 'No se puede actualizar un paciente egresado.');
           setModalType('error');
           return;
         }

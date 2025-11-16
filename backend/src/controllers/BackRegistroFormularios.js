@@ -55,6 +55,52 @@ router.put('/api/pacientes/masivo', async (req, res) => {
     } catch (_) {}
 
     try {
+        // Prevalidación: NO permitir formularios si algún paciente está egresado o fallecido
+        try {
+            const client = await pool.connect();
+            const bloqueados = [];
+            try {
+                await client.query('BEGIN');
+                for (const item of (Array.isArray(pacientes) ? pacientes : [])) {
+                    const af = String(item?.noafiliacion || item?.no_afiliacion || '').trim();
+                    if (!af) continue;
+                    const cur = 'cur_pac_form_estado';
+                    await client.query('CALL public.sp_paciente_por_afiliacion($1,$2)', [af, cur]);
+                    const r = await client.query(`FETCH ALL FROM "${cur}"`);
+                    // No usar el mismo cursor name repetido en un loop sin cerrar, pero aquí hacemos FETCH y sobreescribimos en cada iter.
+                    const pac = r.rows?.[0] || null;
+                    if (!pac) {
+                        bloqueados.push({ noafiliacion: af, motivo: 'Paciente no encontrado' });
+                        continue;
+                    }
+                    const idEstado = Number(pac.id_estado ?? pac.idestado ?? 0);
+                    const idCausa = Number(pac.id_causa ?? pac.idcausa ?? 0);
+                    const estadoDesc = String(pac.estado_descripcion ?? pac.estado ?? '').toLowerCase();
+                    const causaDesc = String(pac.causaegreso_descripcion ?? pac.causa_egreso_descripcion ?? pac.descripcion ?? '').toLowerCase();
+                    const esEgresado = idEstado === 3 || estadoDesc.includes('egres');
+                    const esFallecido = idCausa === 1 || estadoDesc.includes('fallec') || causaDesc.includes('fallec');
+                    if (esEgresado || esFallecido) {
+                        bloqueados.push({ noafiliacion: af, motivo: esFallecido ? 'Fallecido' : 'Egresado' });
+                    }
+                }
+                await client.query('COMMIT');
+            } catch (e) {
+                try { await client.query('ROLLBACK'); } catch (_) {}
+                // Si falla la validación, devolver error controlado
+                return res.status(500).json({ error: 'Error al validar estado de pacientes.', detalle: e.message });
+            } finally {
+                try { client.release(); } catch (_) {}
+            }
+            if (bloqueados.length > 0) {
+                return res.status(400).json({
+                    error: 'Hay pacientes que no pueden recibir registro de formulario por estado Egresado o Fallecido.',
+                    bloqueados
+                });
+            }
+        } catch (_) {
+            return res.status(500).json({ error: 'Error al validar estado de pacientes.' });
+        }
+
         // Ejecutar dentro de runWithUser para que triggers usen app.current_user
         await runWithUser(String(userName), async (client) => {
             await client.query('CALL sp_registro_formularios($1, $2)', [

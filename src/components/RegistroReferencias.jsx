@@ -46,10 +46,15 @@ const RegistroReferencias = () => {
     try {
       const response = await api.get(`/pacientes/${form.noafiliacion}`);
       if (response.data && response.data.primer_nombre) {
-        if (response.data.id_estado === 3) {
-          setBusquedaError('El paciente está egresado y no puede ser referenciado.');
+        const idEstado = Number(response.data.id_estado ?? response.data.idestado ?? 0);
+        const idCausa = Number(response.data.id_causa ?? response.data.idcausa ?? 0);
+        const estadoDesc = String(response.data.estado_descripcion ?? response.data.estado ?? '').toLowerCase();
+        const causaDesc = String(response.data.causaegreso_descripcion ?? response.data.causa_egreso_descripcion ?? response.data.descripcion ?? '').toLowerCase();
+        const esEgresado = idEstado === 3 || estadoDesc.includes('egres');
+        const esFallecido = idCausa === 1 || estadoDesc.includes('fallec') || causaDesc.includes('fallec');
+        if (esEgresado || esFallecido) {
           setPaciente(null);
-          return;
+          return showModal('Paciente no disponible', 'No se puede registrar referencias para pacientes egresados o fallecidos.', 'error');
         }
         const nombreCompleto = [
           response.data.primer_nombre,
