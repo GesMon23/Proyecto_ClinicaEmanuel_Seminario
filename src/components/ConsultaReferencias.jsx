@@ -4,6 +4,34 @@ import api from '../config/api';
 import logoClinica from "@/assets/logoClinica2.png"
 
 const ConsultaReferencias = () => {
+  // Helper para formatear fechas de manera local sin desfase (evitar parsear 'YYYY-MM-DD' como UTC)
+  const formatFechaLocal = (v) => {
+    if (!v) return '';
+    const s = String(v);
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) {
+      return `${m[3]}/${m[2]}/${m[1]}`;
+    }
+    try {
+      return new Date(s).toLocaleDateString();
+    } catch (_) {
+      return s;
+    }
+  };
+
+  const formatFechaHoraLocal = (v) => {
+    if (!v) return '';
+    const s = String(v);
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) {
+      return `${m[3]}/${m[2]}/${m[1]} 00:00`;
+    }
+    try {
+      return new Date(s).toLocaleString();
+    } catch (_) {
+      return s;
+    }
+  };
   const [referencias, setReferencias] = useState([]);
   const [filtro, setFiltro] = useState('');
   const [loading, setLoading] = useState(true);
@@ -58,7 +86,7 @@ const ConsultaReferencias = () => {
   const descargarPDF = (item) => {
     const it = item || {};
     const paciente = [it.primernombre, it.segundonombre, it.primerapellido, it.segundoapellido].filter(Boolean).join(' ');
-    const fecha = it.fechareferencia ? new Date(it.fechareferencia).toLocaleString() : '';
+    const fecha = it.fechareferencia ? formatFechaHoraLocal(it.fechareferencia) : '';
 
     const html = `
       <html>
@@ -111,7 +139,7 @@ const ConsultaReferencias = () => {
     const fechaGen = new Date().toLocaleString();
     const htmlRows = rows.map((it, idx) => {
       const paciente = [it.primernombre, it.segundonombre, it.primerapellido, it.segundoapellido].filter(Boolean).join(' ');
-      const fecha = it.fechareferencia ? new Date(it.fechareferencia).toLocaleDateString() : '';
+      const fecha = it.fechareferencia ? formatFechaLocal(it.fechareferencia) : '';
       return `
         <tr>
           <td>${idx + 1}</td>
@@ -403,7 +431,7 @@ const ConsultaReferencias = () => {
                         </td>
                         <td className="px-3 py-2">{ref.sexo}</td>
                         <td className="px-3 py-2">
-                          {ref.fechareferencia ? new Date(ref.fechareferencia).toLocaleDateString() : ''}
+                          {ref.fechareferencia ? formatFechaLocal(ref.fechareferencia) : ''}
                         </td>
                         <td className="px-3 py-2">{ref.motivotraslado}</td>
                         <td className="px-3 py-2">{ref.nombremedico}</td>
@@ -452,7 +480,7 @@ const ConsultaReferencias = () => {
                           <div><span className="font-semibold">No. Afiliación:</span> {it.noafiliacion || ''}</div>
                           <div className="md:col-span-2"><span className="font-semibold">Paciente:</span> {paciente || ''}</div>
                           <div><span className="font-semibold">Sexo:</span> {it.sexo || ''}</div>
-                          <div><span className="font-semibold">Fecha:</span> {it.fechareferencia ? new Date(it.fechareferencia).toLocaleString() : ''}</div>
+                          <div><span className="font-semibold">Fecha:</span> {it.fechareferencia ? formatFechaHoraLocal(it.fechareferencia) : ''}</div>
                         </div>
                         <hr className="border-slate-200 dark:border-slate-700" />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
