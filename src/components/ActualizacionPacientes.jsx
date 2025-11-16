@@ -284,8 +284,8 @@ const ActualizacionPacientes = () => {
         setFormData(f => ({ ...f, url_foto: filename }));
       }
 
-      // Hacer update del paciente (usar no_afiliacion exacto, algunos llevan sufijo como 'PG')
-      const naf = encodeURIComponent(String(formData.no_afiliacion || '').trim());
+      // Hacer update del paciente
+      const naf = String(formData.no_afiliacion || '').replace(/\D+/g, '');
       const response = await api.put(`/Apacientes/${naf}`, payload);
 
       if (response.data && response.data.success) {
