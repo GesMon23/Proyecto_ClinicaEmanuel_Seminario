@@ -79,6 +79,7 @@ const GestionTurno = () => {
   const [modalMessage, setModalMessage] = useState("");
   const [modalType, setModalType] = useState("info");
   const [idTurnoAEliminar, setIdTurnoAEliminar] = useState(null);
+  const [clearOnModalClose, setClearOnModalClose] = useState(false);
   const [onConfirmEliminar, setOnConfirmEliminar] = useState(null);
   // UX estados
   const [buscando, setBuscando] = useState(false);
@@ -97,7 +98,13 @@ const GestionTurno = () => {
     setPaginaActual(1);
   };
 
-  const handleCloseModal = () => setShowModal(false);
+  const handleCloseModal = () => {
+    setShowModal(false);
+    if (clearOnModalClose) {
+      setClearOnModalClose(false);
+      handleCancelar();
+    }
+  };
 
   const showSuccessModal = (message) => {
     setModalMessage(message);
@@ -212,6 +219,21 @@ const GestionTurno = () => {
         return;
       }
 
+      // Validación de estado: bloquear EGRESADO o FALLECIDO
+      const idEstado = Number(paciente.id_estado ?? paciente.idestado ?? paciente.estado_id ?? 0);
+      const idCausa = Number(paciente.id_causa ?? paciente.idcausa ?? 0);
+      const estadoDesc = String(paciente.estado_descripcion ?? paciente.estado ?? '').toLowerCase();
+      const causaDesc = String(paciente.causaegreso_descripcion ?? paciente.causa_egreso_descripcion ?? paciente.descripcion ?? '').toLowerCase();
+      const esEgresado = idEstado === 3 || estadoDesc.includes('egres');
+      const esFallecido = idEstado === 5 || idCausa === 1 || estadoDesc.includes('fallec') || causaDesc.includes('fallec') || causaDesc.includes('defunc');
+      if (esEgresado || esFallecido) {
+        setClearOnModalClose(true);
+        showErrorModal('No se pueden crear turnos para pacientes egresados o fallecidos.');
+        setNombrePaciente('');
+        setCalendarioHabilitado(false);
+        return;
+      }
+
       setNombrePaciente(paciente.nombrepaciente || `${paciente.primer_nombre || ''} ${paciente.segundo_nombre || ''} ${paciente.primer_apellido || ''} ${paciente.segundo_apellido || ''}`.trim());
       setCalendarioHabilitado(true);
       // Resaltar el nombre brevemente
@@ -252,8 +274,9 @@ const GestionTurno = () => {
       console.log("Error al buscar paciente:", error);
       showErrorModal("Error al buscar paciente");
       setCalendarioHabilitado(false);
+    } finally {
+      setBuscando(false);
     }
-    setBuscando(false);
   };
 
   const handleCancelar = () => {
