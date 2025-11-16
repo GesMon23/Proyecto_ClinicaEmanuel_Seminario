@@ -113,7 +113,6 @@ router.get('/pacientes/excel', async (req, res) => {
     worksheet.columns = [
       { header: 'No. Afiliación', key: 'noafiliacion', width: 18 },
       { header: 'DPI', key: 'dpi', width: 16 },
-      { header: 'No. Proveedor', key: 'nopacienteproveveedor', width: 18 },
       { header: 'Primer Nombre', key: 'primernombre', width: 18 },
       { header: 'Segundo Nombre', key: 'segundonombre', width: 18 },
       { header: 'Otros Nombres', key: 'otrosnombres', width: 18 },
@@ -233,7 +232,6 @@ router.get('/pacientes/excel', async (req, res) => {
       worksheet.addRow({
         noafiliacion: r.noafiliacion || '',
         dpi: r.dpi || '',
-        nopacienteproveedor: r.nopacienteproveedor || '',
         primernombre: r.primernombre || '',
         segundonombre: r.segundonombre || '',
         otrosnombres: r.otrosnombres || '',
