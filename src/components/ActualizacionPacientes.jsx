@@ -187,11 +187,9 @@ const ActualizacionPacientes = () => {
     const clean = (v) => (v ?? '').toString().trim();
     const isEmpty = (v) => clean(v) === '';
 
-    // DPI: exigir 13 dígitos solo si cambia respecto al actual
-    const currentDpi = clean(paciente?.dpi || '').replace(/\D+/g, '');
-    const newDpi = clean(formData.dpi).replace(/\D+/g, '');
-    const dpiCambia = currentDpi !== newDpi;
-    if (dpiCambia && !/^\d{13}$/.test(newDpi)) {
+    // DPI: exactamente 13 dígitos
+    const dpiStr = clean(formData.dpi);
+    if (!/^\d{13}$/.test(dpiStr)) {
       errores.push('DPI debe contener exactamente 13 dígitos numéricos.');
     }
 
@@ -214,15 +212,6 @@ const ActualizacionPacientes = () => {
     setLoading(true);
 
     try {
-      // Normalizar tipos: enviar null en numéricos si vienen vacíos para evitar errores de BD
-      const toNumOrNull = (v) => {
-        if (v === undefined || v === null) return null;
-        const s = String(v).trim();
-        if (s === '') return null;
-        const n = Number(s);
-        return Number.isFinite(n) ? n : null;
-      };
-
       let payload = {
         dpi: formData.dpi || '',
         primer_nombre: formData.primer_nombre || '',
@@ -231,61 +220,36 @@ const ActualizacionPacientes = () => {
         primer_apellido: formData.primer_apellido || '',
         segundo_apellido: formData.segundo_apellido || '',
         apellido_casada: formData.apellido_casada || '',
-        edad: toNumOrNull(formData.edad),
+        edad: formData.edad || null,
         fecha_nacimiento: formData.fecha_nacimiento || null,
         sexo: formData.sexo || '',
         direccion: formData.direccion || '',
         fecha_ingreso: formData.fecha_ingreso || null,
-        id_departamento: toNumOrNull(formData.id_departamento),
-        id_acceso: toNumOrNull(formData.id_acceso),
-        // numero_formulario_activo podría ser numérico en BD; enviar null si está vacío
-        numero_formulario_activo: toNumOrNull(formData.numero_formulario_activo),
-        id_jornada: toNumOrNull(formData.id_jornada),
-        sesiones_autorizadas_mes: toNumOrNull(formData.sesiones_autorizadas_mes),
-        url_foto: formData.url_foto || null
+        id_departamento: formData.id_departamento || null,
+        id_acceso: formData.id_acceso || null,
+        numero_formulario_activo: formData.numero_formulario_activo || '',
+        id_jornada: formData.id_jornada || null,
+        sesiones_autorizadas_mes: formData.sesiones_autorizadas_mes || null
       };
 
-      // Si se tomó una nueva foto en base64, subirla primero
+      // Si se tomÃ³ una nueva foto en base64, subirla primero
       if (formData.urlfoto && formData.urlfoto.startsWith('data:image')) {
-        const naf = encodeURIComponent(String(formData.no_afiliacion || '').trim());
-        let resFoto;
-        try {
-          // Intento 1: endpoint de Actualización (usa SP)
-          resFoto = await api.post(`/Aupload-foto/${naf}`, { imagenBase64: formData.urlfoto });
-        } catch (e1) {
-          try {
-            // Intento 2 (fallback prod): endpoint general montado en server.js
-            resFoto = await api.post(`/upload-foto/${naf}`, { imagenBase64: formData.urlfoto });
-          } catch (e2) {
-            setShowModal(true);
-            const msg = e2?.response?.data?.detail || e2?.message || 'Error al subir la foto.';
-            setModalMessage(`No se pudo subir la foto: ${msg}`);
-            setModalType('error');
-            setLoading(false);
-            return;
-          }
-        }
-        const ok = resFoto?.data?.success;
-        const returnedUrl = resFoto?.data?.url || '';
-        if (!ok) {
+        const naf = String(formData.no_afiliacion || '').replace(/\D+/g, '');
+        const resFoto = await api.post(`/Aupload-foto/${naf}`, { imagenBase64: formData.urlfoto });
+        if (resFoto.data && resFoto.data.success) {
+          payload.url_foto = resFoto.data.url; // url devuelta por backend
+          setFormData(f => ({ ...f, url_foto: resFoto.data.url }));
+        } else {
           setShowModal(true);
           setModalMessage('Error al subir la foto.');
           setModalType('error');
           setLoading(false);
           return;
         }
-        // Normalizar a filename para guardar en BD
-        let filename = returnedUrl;
-        try {
-          // puede venir como '/fotos/xxx.jpg' o 'xxx.jpg'
-          filename = String(returnedUrl).split('/').pop();
-        } catch (_) {}
-        payload.url_foto = filename;
-        setFormData(f => ({ ...f, url_foto: filename }));
       }
 
-      // Hacer update del paciente
-      const naf = String(formData.no_afiliacion || '').replace(/\D+/g, '');
+      // Hacer update del paciente (usar no_afiliacion exacto, algunos llevan sufijo como 'PG')
+      const naf = encodeURIComponent(String(formData.no_afiliacion || '').trim());
       const response = await api.put(`/Apacientes/${naf}`, payload);
 
       if (response.data && response.data.success) {
@@ -744,61 +708,61 @@ const ActualizacionPacientes = () => {
                   ))}
                 </select>
               </div>
-            </div>
 
-            {/* Separador */}
-            <div className="border-t border-gray-200 dark:border-slate-700 my-8"></div>
+            {false && (
+              <>
+                {/* Sección de foto */}
+                <div className="flex flex-col items-center space-y-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Fotografía del Paciente
+                  </h3>
 
-            {/* SecciÃ³n de foto */}
-            <div className="flex flex-col items-center space-y-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Fotografía del Paciente
-              </h3>
-
-              {/* Contenedor de la foto */}
-              <div className="relative">
-                <div className="w-48 h-48 sm:w-56 sm:h-56 lg:w-64 lg:h-64 rounded-2xl overflow-hidden border-4 border-green-600 dark:border-green-400 shadow-xl bg-gray-100 dark:bg-slate-800">
-                  {console.log("ðŸ–¼ï¸ URL usada para mostrar foto:", formData.urlfoto || formData.url_foto)}
-                  <img
-                    alt="Foto del paciente"
-                    src={
-                      formData.urlfoto
-                        ? formData.urlfoto
-                        : formData.url_foto
-                          ? `${formData.url_foto}`
-                          : defaultAvatar
-                    }
-                    className="w-full h-full object-cover"
-                    onError={e => {
-                      e.target.onerror = null;
-                      e.target.src = defaultAvatar;
-                    }}
-                  />
-                </div>
-                {editando && (
-                  <div className="absolute -bottom-2 -right-2">
-                    <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
-                      <span className="text-white text-xs font-bold"></span>
+                  {/* Contenedor de la foto */}
+                  <div className="relative">
+                    <div className="w-48 h-48 sm:w-56 sm:h-56 lg:w-64 lg:h-64 rounded-2xl overflow-hidden border-4 border-green-600 dark:border-green-400 shadow-xl bg-gray-100 dark:bg-slate-800">
+                      {console.log("ðŸ–¼ï¸ URL usada para mostrar foto:", formData.urlfoto || formData.url_foto)}
+                      <img
+                        alt="Foto del paciente"
+                        src={
+                          formData.urlfoto
+                            ? formData.urlfoto
+                            : formData.url_foto
+                              ? `${formData.url_foto}`
+                              : defaultAvatar
+                        }
+                        className="w-full h-full object-cover"
+                        onError={e => {
+                          e.target.onerror = null;
+                          e.target.src = defaultAvatar;
+                        }}
+                      />
                     </div>
+                    {editando && (
+                      <div className="absolute -bottom-2 -right-2">
+                        <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
+                          <span className="text-white text-xs font-bold"></span>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
 
-              {/* BotÃ³n para tomar nueva foto */}
-              <button
-                onClick={() => setShowWebcam(true)}
-                disabled={!editando}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-900 ${editando
-                  ? 'bg-blue-900 hover:bg-blue-700 text-white focus:ring-blue-600 shadow-md'
-                  : 'bg-gray-300 dark:bg-slate-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                  }`}
-              >
-                <Image /> Tomar Nueva Foto
-              </button>
-            </div>
+                  {/* Botón para tomar nueva foto */}
+                  <button
+                    onClick={() => setShowWebcam(true)}
+                    disabled={!editando}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-900 ${editando
+                      ? 'bg-blue-900 hover:bg-blue-700 text-white focus:ring-blue-600 shadow-md'
+                      : 'bg-gray-300 dark:bg-slate-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                      }`}
+                  >
+                    <Image /> Tomar Nueva Foto
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
-      )}
+</div>      )}
 
       {/* Modal para la cÃ¡mara */}
       {showWebcam && (
