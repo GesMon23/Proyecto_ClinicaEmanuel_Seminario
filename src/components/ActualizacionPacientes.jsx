@@ -187,9 +187,11 @@ const ActualizacionPacientes = () => {
     const clean = (v) => (v ?? '').toString().trim();
     const isEmpty = (v) => clean(v) === '';
 
-    // DPI: exactamente 13 dígitos
-    const dpiStr = clean(formData.dpi);
-    if (!/^\d{13}$/.test(dpiStr)) {
+    // DPI: exigir 13 dígitos solo si cambia respecto al actual
+    const currentDpi = clean(paciente?.dpi || '').replace(/\D+/g, '');
+    const newDpi = clean(formData.dpi).replace(/\D+/g, '');
+    const dpiCambia = currentDpi !== newDpi;
+    if (dpiCambia && !/^\d{13}$/.test(newDpi)) {
       errores.push('DPI debe contener exactamente 13 dígitos numéricos.');
     }
 
@@ -212,6 +214,15 @@ const ActualizacionPacientes = () => {
     setLoading(true);
 
     try {
+      // Normalizar tipos: enviar null en numéricos si vienen vacíos para evitar errores de BD
+      const toNumOrNull = (v) => {
+        if (v === undefined || v === null) return null;
+        const s = String(v).trim();
+        if (s === '') return null;
+        const n = Number(s);
+        return Number.isFinite(n) ? n : null;
+      };
+
       let payload = {
         dpi: formData.dpi || '',
         primer_nombre: formData.primer_nombre || '',
@@ -220,16 +231,18 @@ const ActualizacionPacientes = () => {
         primer_apellido: formData.primer_apellido || '',
         segundo_apellido: formData.segundo_apellido || '',
         apellido_casada: formData.apellido_casada || '',
-        edad: formData.edad || null,
+        edad: toNumOrNull(formData.edad),
         fecha_nacimiento: formData.fecha_nacimiento || null,
         sexo: formData.sexo || '',
         direccion: formData.direccion || '',
         fecha_ingreso: formData.fecha_ingreso || null,
-        id_departamento: formData.id_departamento || null,
-        id_acceso: formData.id_acceso || null,
-        numero_formulario_activo: formData.numero_formulario_activo || '',
-        id_jornada: formData.id_jornada || null,
-        sesiones_autorizadas_mes: formData.sesiones_autorizadas_mes || null
+        id_departamento: toNumOrNull(formData.id_departamento),
+        id_acceso: toNumOrNull(formData.id_acceso),
+        // numero_formulario_activo podría ser numérico en BD; enviar null si está vacío
+        numero_formulario_activo: toNumOrNull(formData.numero_formulario_activo),
+        id_jornada: toNumOrNull(formData.id_jornada),
+        sesiones_autorizadas_mes: toNumOrNull(formData.sesiones_autorizadas_mes),
+        url_foto: formData.url_foto || null
       };
 
       // Si se tomó una nueva foto en base64, subirla primero
