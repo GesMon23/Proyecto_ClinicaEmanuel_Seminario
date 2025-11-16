@@ -379,9 +379,18 @@ function LaboratorioParametros({ onSubmit }) {
                         const response = await api.get(`/pacientes/${noafiliacion}`);
                         const p = response.data;
                         if (p && (p.primer_nombre || p.primer_apellido)) {
-                          // Si el estado indica egreso, bloquear (usamos descripcion si está disponible)
-                          if ((p.estado_descripcion || '').toString().toLowerCase() === 'egreso') {
-                            setBusquedaError('El paciente está egresado y no puede ser consultado.');
+                          // Bloquear si es EGRESADO o FALLECIDO (por ids o descripciones)
+                          const idEstado = Number(p.id_estado ?? p.idestado ?? 0);
+                          const idCausa = Number(p.id_causa ?? p.idcausa ?? 0);
+                          const causaDesc = String(p.causaegreso_descripcion ?? p.causa_egreso_descripcion ?? p.descripcion ?? '').toLowerCase();
+                          const estadoDesc = String(p.estado_descripcion ?? p.estado ?? '').toLowerCase();
+                          const esEgresado = idEstado === 3 || estadoDesc.includes('egres');
+                          const esFallecido = idCausa === 1 || causaDesc.includes('fallec') || estadoDesc.includes('fallec');
+                          if (esEgresado || esFallecido) {
+                            setModalTitle('Paciente no disponible');
+                            setModalMessage('No se puede registrar laboratorios para pacientes egresados o fallecidos.');
+                            setModalType('error');
+                            setShowModal(true);
                             setPaciente(null);
                             return;
                           }

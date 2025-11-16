@@ -86,8 +86,14 @@ const Psicologia = () => {
     try {
       const response = await api.get(`/pacientes/${noafiliacion}`);
       if (response.data && response.data.primer_nombre) {
-        if (response.data.id_estado === 3) {
-          showModal('Paciente no disponible', 'El paciente está egresado y no puede ser consultado.', 'error');
+        const idEstado = Number(response.data.id_estado ?? response.data.idestado ?? 0);
+        const idCausa = Number(response.data.id_causa ?? response.data.idcausa ?? 0);
+        const causaDesc = String(response.data.causaegreso_descripcion ?? response.data.causa_egreso_descripcion ?? response.data.descripcion ?? '').toLowerCase();
+        const estadoDesc = String(response.data.estado_descripcion ?? response.data.estado ?? '').toLowerCase();
+        const esEgresado = idEstado === 3 || estadoDesc.includes('egres');
+        const esFallecido = idCausa === 1 || causaDesc.includes('fallec') || estadoDesc.includes('fallec');
+        if (esEgresado || esFallecido) {
+          showModal('Paciente no disponible', 'No se puede registrar psicología para pacientes egresados o fallecidos.', 'error');
           setPaciente(null);
           return;
         }

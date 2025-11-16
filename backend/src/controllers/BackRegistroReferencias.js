@@ -28,6 +28,35 @@ router.post('/api/referencias', async (req, res) => {
     return res.status(400).json({ detail: 'Todos los campos son obligatorios.' });
   }
   try {
+    // Prevalidación: bloquear egresados o fallecidos
+    try {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const cur = 'cur_pac_ref_reg';
+        await client.query('CALL public.sp_paciente_por_afiliacion($1,$2)', [String(noafiliacion).trim(), cur]);
+        const r = await client.query(`FETCH ALL FROM "${cur}"`);
+        await client.query('COMMIT');
+        const pac = r.rows?.[0] || null;
+        if (!pac) return res.status(404).json({ detail: 'Paciente no encontrado.' });
+        const idEstado = Number(pac.id_estado ?? pac.idestado ?? 0);
+        const idCausa = Number(pac.id_causa ?? pac.idcausa ?? 0);
+        const estadoDesc = String(pac.estado_descripcion ?? pac.estado ?? '').toLowerCase();
+        const causaDesc = String(pac.causaegreso_descripcion ?? pac.causa_egreso_descripcion ?? pac.descripcion ?? '').toLowerCase();
+        const esEgresado = idEstado === 3 || estadoDesc.includes('egres');
+        const esFallecido = idCausa === 1 || estadoDesc.includes('fallec') || causaDesc.includes('fallec');
+        if (esEgresado || esFallecido) {
+          return res.status(400).json({ detail: 'No se puede registrar referencias para pacientes egresados o fallecidos.' });
+        }
+      } catch (e) {
+        try { await client.query('ROLLBACK'); } catch (_) {}
+        return res.status(500).json({ detail: 'Error al validar estado del paciente.' });
+      } finally {
+        try { client.release(); } catch (_) {}
+      }
+    } catch (_) {
+      return res.status(500).json({ detail: 'Error al validar estado del paciente.' });
+    }
     // Derivar usuario autenticado para GUC app.current_user
     let userName = 'web';
     try {

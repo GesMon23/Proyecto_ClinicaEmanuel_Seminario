@@ -134,8 +134,12 @@ const EgresoPacientes = () => {
       }
       const { data } = await api.get('/pacientes/egreso', { params });
       if (data && data.length > 0) {
-        const noActivo = data.filter(p => p.idestado === 3);
-        if (noActivo.length > 0) {
+        const bloqueados = (data || []).filter(p => {
+          const id = Number(p.idestado ?? p.id_estado ?? 0);
+          const estadoTxt = String(p.estado_descripcion ?? p.estado ?? '').toLowerCase();
+          return id === 3 || id === 5 || estadoTxt.includes('egres') || estadoTxt.includes('falle');
+        });
+        if (bloqueados.length > 0) {
           setModalMessage('El paciente no está activo');
           setModalTitle('Paciente no activo');
           setModalType('error');

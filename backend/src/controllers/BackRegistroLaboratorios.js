@@ -106,6 +106,36 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'no_afiliacion, idperlaboratorio y fecha_laboratorio son requeridos' });
     }
 
+    // Prevalidación: NO permitir registro si paciente está egresado o fallecido
+    try {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const cur = 'cur_pac_lab_reg';
+        await client.query('CALL public.sp_paciente_por_afiliacion($1,$2)', [no_afiliacion, cur]);
+        const r = await client.query(`FETCH ALL FROM "${cur}"`);
+        await client.query('COMMIT');
+        const pac = r.rows?.[0] || null;
+        if (!pac) return res.status(404).json({ error: 'Paciente no encontrado' });
+        const idEstado = Number(pac.id_estado ?? pac.idestado ?? 0);
+        const idCausa = Number(pac.id_causa ?? pac.idcausa ?? 0);
+        const causaDesc = String(pac.causaegreso_descripcion ?? pac.causa_egreso_descripcion ?? pac.descripcion ?? '').toLowerCase();
+        const estadoDesc = String(pac.estado_descripcion ?? pac.estado ?? '').toLowerCase();
+        const esEgresado = idEstado === 3 || estadoDesc.includes('egres');
+        const esFallecido = idCausa === 1 || causaDesc.includes('fallec') || estadoDesc.includes('fallec');
+        if (esEgresado || esFallecido) {
+          return res.status(400).json({ error: 'No se puede registrar laboratorios para pacientes egresados o fallecidos.' });
+        }
+      } catch (e) {
+        try { await client.query('ROLLBACK'); } catch (_) {}
+        return res.status(500).json({ error: 'Error al validar estado del paciente.' });
+      } finally {
+        try { client.release(); } catch (_) {}
+      }
+    } catch (_) {
+      return res.status(500).json({ error: 'Error al validar estado del paciente.' });
+    }
+
     const payload = await runWithUser(String(userName), async (client) => {
       await client.query('BEGIN');
       const cur = 'cur_ins_lab';

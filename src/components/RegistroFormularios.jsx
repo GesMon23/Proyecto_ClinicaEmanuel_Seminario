@@ -161,7 +161,7 @@ const RegistroFormularios = () => {
           const idEstado = Number(response.data.idestado ?? response.data.id_estado);
           const estadoTexto = (response.data.estado_descripcion || response.data.estado || '').toString().toLowerCase();
           const esEgresado = idEstado === 3 || estadoTexto.includes('egres');
-          const esFallecido = estadoTexto.includes('falle') || estadoTexto.includes('defunc');
+          const esFallecido = idEstado === 5 || estadoTexto.includes('falle') || estadoTexto.includes('defunc');
           // Reingreso (id 4) debe ser permitido
           if (esEgresado || esFallecido) {
             setModalMessage('El paciente no está activo');
@@ -237,7 +237,7 @@ const RegistroFormularios = () => {
         const idEstadoRaw = paciente.idestado ?? paciente.id_estado ?? paciente.estado_id;
         const idEstado = Number(idEstadoRaw);
         const esEgresado = idEstado === 3 || estadoTexto.includes('egres');
-        const esFallecido = estadoTexto.includes('falle') || estadoTexto.includes('defunc');
+        const esFallecido = idEstado === 5 || estadoTexto.includes('falle') || estadoTexto.includes('defunc');
         // Importante: permitir Reingreso (id 4) y no bloquear por egreso histórico
         if (esEgresado || esFallecido) {
           setModalTitle('Paciente no disponible');
