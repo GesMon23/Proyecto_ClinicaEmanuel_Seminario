@@ -232,20 +232,43 @@ const ActualizacionPacientes = () => {
         sesiones_autorizadas_mes: formData.sesiones_autorizadas_mes || null
       };
 
-      // Si se tomÃ³ una nueva foto en base64, subirla primero
+      // Si se tomó una nueva foto en base64, subirla primero
       if (formData.urlfoto && formData.urlfoto.startsWith('data:image')) {
-        const naf = String(formData.no_afiliacion || '').replace(/\D+/g, '');
-        const resFoto = await api.post(`/Aupload-foto/${naf}`, { imagenBase64: formData.urlfoto });
-        if (resFoto.data && resFoto.data.success) {
-          payload.url_foto = resFoto.data.url; // url devuelta por backend
-          setFormData(f => ({ ...f, url_foto: resFoto.data.url }));
-        } else {
+        const naf = encodeURIComponent(String(formData.no_afiliacion || '').trim());
+        let resFoto;
+        try {
+          // Intento 1: endpoint de Actualización (usa SP)
+          resFoto = await api.post(`/Aupload-foto/${naf}`, { imagenBase64: formData.urlfoto });
+        } catch (e1) {
+          try {
+            // Intento 2 (fallback prod): endpoint general montado en server.js
+            resFoto = await api.post(`/upload-foto/${naf}`, { imagenBase64: formData.urlfoto });
+          } catch (e2) {
+            setShowModal(true);
+            const msg = e2?.response?.data?.detail || e2?.message || 'Error al subir la foto.';
+            setModalMessage(`No se pudo subir la foto: ${msg}`);
+            setModalType('error');
+            setLoading(false);
+            return;
+          }
+        }
+        const ok = resFoto?.data?.success;
+        const returnedUrl = resFoto?.data?.url || '';
+        if (!ok) {
           setShowModal(true);
           setModalMessage('Error al subir la foto.');
           setModalType('error');
           setLoading(false);
           return;
         }
+        // Normalizar a filename para guardar en BD
+        let filename = returnedUrl;
+        try {
+          // puede venir como '/fotos/xxx.jpg' o 'xxx.jpg'
+          filename = String(returnedUrl).split('/').pop();
+        } catch (_) {}
+        payload.url_foto = filename;
+        setFormData(f => ({ ...f, url_foto: filename }));
       }
 
       // Hacer update del paciente (usar no_afiliacion exacto, algunos llevan sufijo como 'PG')
