@@ -65,6 +65,26 @@ const CustomModal = ({ show, onClose, title, message, type, onConfirm }) => {
 };
 
 const GestionTurno = () => {
+  // Helpers de fecha para evitar desfases por UTC
+  const formatDateToYMDLocal = (date) => {
+    if (!date) return '';
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+  const parseYMDToLocalDate = (ymd) => {
+    if (!ymd) return null;
+    const m = String(ymd).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return null;
+    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  };
+  const addDaysYMD = (ymd, days) => {
+    const dt = parseYMDToLocalDate(ymd);
+    if (!dt) return ymd;
+    dt.setDate(dt.getDate() + days);
+    return formatDateToYMDLocal(dt);
+  };
   const [numeroAfiliacion, setNumeroAfiliacion] = useState("");
   const [opcionSeleccionada, setOpcionSeleccionada] = useState("");
   const [nombrePaciente, setNombrePaciente] = useState("");
@@ -251,10 +271,9 @@ const GestionTurno = () => {
 
         const eventos = turnosPaciente.map((turno) => ({
           title: `Clínica: ${turno.nombre_clinica}`,
-          start: new Date(turno.fecha_turno),
-          end: new Date(
-            new Date(turno.fecha_turno).getTime() + 24 * 60 * 60 * 1000
-          ),
+          // Pasar YMD como string para allDay y evitar desfase
+          start: turno.fecha_turno,
+          end: addDaysYMD(turno.fecha_turno, 1), // end exclusivo
           allDay: true,
           extendedProps: {
             turnoId: turno.id_turno,
@@ -298,7 +317,8 @@ const GestionTurno = () => {
       setModoEdicion(true);
       setTurnoEditando(turno);
       setOpcionSeleccionada(turno.nombre_clinica);
-      setFechaSeleccionada(new Date(turno.fecha_turno));
+      // Construir Date local desde YMD
+      setFechaSeleccionada(parseYMDToLocalDate(turno.fecha_turno));
     }
   };
 
@@ -324,10 +344,8 @@ const GestionTurno = () => {
         
         const eventosActualizados = turnosActualizados.map((turno) => ({
           title: `Clínica: ${turno.nombre_clinica}`,
-          start: new Date(turno.fecha_turno),
-          end: new Date(
-            new Date(turno.fecha_turno).getTime() + 24 * 60 * 60 * 1000
-          ),
+          start: turno.fecha_turno,
+          end: addDaysYMD(turno.fecha_turno, 1),
           allDay: true,
           extendedProps: {
             turnoId: turno.id_turno,
@@ -356,12 +374,14 @@ const GestionTurno = () => {
         `Paciente: ${props.paciente}\n` +
         `No. Afiliación: ${props.noAfiliacion}\n` +
         `Clínica: ${props.clinica}\n` +
-        `Fecha: ${evento.start.toLocaleDateString()}`
+        `Fecha: ${evento.startStr || formatDateToYMDLocal(evento.start)}`
     );
   };
 
   const handleSelectDate = (selectInfo) => {
-    setFechaSeleccionada(selectInfo.start);
+    // Usar startStr que viene como YMD para allDay y convertir a Date local
+    const localDate = parseYMDToLocalDate(selectInfo.startStr || selectInfo.start);
+    setFechaSeleccionada(localDate);
   };
 
   const handleAceptar = async () => {
@@ -374,7 +394,8 @@ const GestionTurno = () => {
       const response = await api.post("/Gcrear-turnoT", {
         noAfiliacion: numeroAfiliacion,
         clinica: opcionSeleccionada,
-        fechaTurno: fechaSeleccionada.toISOString().split('T')[0]
+        // Enviar YMD local para evitar desfase en el backend
+        fechaTurno: formatDateToYMDLocal(fechaSeleccionada)
       });
 
       if (response.data.success) {
@@ -399,7 +420,7 @@ const GestionTurno = () => {
 
     try {
       const response = await api.put(`/Gactualizar-turnoT/${turnoEditando.id_turno}`, {
-        fechaTurno: fechaSeleccionada.toISOString().split('T')[0],
+        fechaTurno: formatDateToYMDLocal(fechaSeleccionada),
         clinica: opcionSeleccionada
       });
 
