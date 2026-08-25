@@ -18,6 +18,7 @@ import Psicologia from "@/views/Psicologia.jsx";
 import AdminResetUser from "@/pages/AdminResetUser.jsx";
 import DashboardsInteractivos from "@/views/DashboardsInteractivos.jsx";
 import TurnosTVPage from "@/routes/turnos-tv/page";
+import CerrarSesion from "@/routes/CerrarSesion";
 function App() {
     const router = createBrowserRouter([
         {
@@ -122,7 +123,7 @@ function App() {
                 },
                 {
                     path: "cerrarsesion",
-                    element: <h1 className="title">Serrar Sesion</h1>,
+                    element: <CerrarSesion />,
                 }
             ],
         },
