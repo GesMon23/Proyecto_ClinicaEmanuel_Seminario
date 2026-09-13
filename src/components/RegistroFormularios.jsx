@@ -3,6 +3,7 @@ import { Card, Form, Button, Alert, Row, Col } from 'react-bootstrap';
 import api from '../config/api';
 import CustomModal from '@/components/CustomModal.jsx';
 import logoClinica from "@/assets/logoClinica2.png"
+import defaultAvatar from "@/assets/img/default-avatar.png"
 
 // Calcula la edad a partir de la fecha de nacimiento (YYYY-MM-DD)
 function calcularEdad(fechaNacimiento) {
@@ -503,11 +504,11 @@ const RegistroFormularios = () => {
                 }}>
                   <img
                     alt="Foto del paciente"
-                    src={p.urlfoto ? `/fotos/${p.urlfoto.split(/[\\\/]/).pop()}?${Date.now()}` : require("assets/img/default-avatar.png")}
+                    src={p.urlfoto ? `/fotos/${p.urlfoto.split(/[\\\/]/).pop()}?${Date.now()}` : defaultAvatar}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     onError={e => {
                       e.target.onerror = null;
-                      e.target.src = require("assets/img/default-avatar.png");
+                      e.target.src = defaultAvatar;
                     }}
                   />
                 </div>
