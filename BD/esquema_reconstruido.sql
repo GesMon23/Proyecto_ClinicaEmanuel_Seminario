@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS public.tbl_departamento (
 
 CREATE TABLE IF NOT EXISTS public.tbl_estados_paciente (
   id_estado bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-  descripcion text,
+  descripcion text UNIQUE,
   estado boolean,
   usuario_creacion text,
   fecha_creacion timestamp,
@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS public.tbl_acceso_vascular (
 
 CREATE TABLE IF NOT EXISTS public.tbl_causa_egreso (
   id_causa bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-  descripcion text,
+  descripcion text UNIQUE,
   estado boolean,
   usuario_creacion text,
   fecha_creacion timestamp,
@@ -122,7 +122,7 @@ CREATE TABLE IF NOT EXISTS public.tbl_medicos (
 -- 8=Abandonado son SUPUESTOS [INFERIDO] (no hay evidencia directa de esos 2).
 CREATE TABLE IF NOT EXISTS public.tbl_estados_turno (
   id_estado_turno bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-  descripcion text,
+  descripcion text UNIQUE,
   estado boolean,
   usuario_creacion text,
   fecha_creacion timestamp,
@@ -171,7 +171,7 @@ CREATE TABLE IF NOT EXISTS public.tbl_empleados (
 
 CREATE TABLE IF NOT EXISTS public.tbl_roles (
   id_rol bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-  nombre text NOT NULL,
+  nombre text NOT NULL UNIQUE,
   descripcion text,
   estado boolean DEFAULT true,
   usuario_creacion text,
@@ -494,7 +494,7 @@ INSERT INTO public.tbl_roles (nombre, descripcion, estado) VALUES
   ('RolReportes','Generacion de reportes de la gestion e informacion clinica del paciente', true),
   ('RolEstadistica','Visualizar estadisticas y dashboards', true),
   ('RolGestionUsuarios','Gestion de usuarios y roles', true)
-ON CONFLICT DO NOTHING;
+ON CONFLICT (nombre) DO NOTHING;
 
 -- id_estado_turno: 1 y 4 y 7 confirmados por comentarios del backend.
 INSERT INTO public.tbl_estados_turno (descripcion, estado) VALUES
@@ -506,7 +506,7 @@ INSERT INTO public.tbl_estados_turno (descripcion, estado) VALUES
   ('Cancelado', true),  -- id 6
   ('Faltante', true),   -- id 7 [REAL]
   ('Abandonado', true)  -- id 8 [INFERIDO]
-ON CONFLICT DO NOTHING;
+ON CONFLICT (descripcion) DO NOTHING;
 
 -- id_estado (tbl_estados_paciente): 1=Activo y 3=Egresado confirmados por
 -- comentarios/logica del backend (id_estado=3 se compara literalmente con
@@ -516,7 +516,7 @@ INSERT INTO public.tbl_estados_paciente (descripcion, estado) VALUES
   ('Nuevo ingreso', true), -- id 2 [INFERIDO]
   ('Egresado', true),    -- id 3 [REAL]
   ('Reingreso', true)    -- id 4 [INFERIDO]
-ON CONFLICT DO NOTHING;
+ON CONFLICT (descripcion) DO NOTHING;
 
 -- id_causa (tbl_causa_egreso): 1=Fallecido confirmado por comparacion literal
 -- en el backend (idCausa === 1 -> "Fallecido").
@@ -525,7 +525,7 @@ INSERT INTO public.tbl_causa_egreso (descripcion, estado) VALUES
   ('Alta medica', true),
   ('Traslado', true),
   ('Abandono de tratamiento', true)
-ON CONFLICT DO NOTHING;
+ON CONFLICT (descripcion) DO NOTHING;
 
 -- ============================================================================
 -- SECCION 3: FUNCIONES ESCALARES (fn_*)
