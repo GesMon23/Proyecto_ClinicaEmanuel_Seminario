@@ -561,7 +561,7 @@ $$;
 -- SECCION 4: CATALOGOS (todos [REAL] - lecturas simples de una tabla)
 -- ============================================================================
 
-CREATE OR REPLACE PROCEDURE public.sp_mostrar_medicos(OUT ref refcursor)
+CREATE OR REPLACE PROCEDURE public.sp_mostrar_medicos(INOUT ref refcursor)
 LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -570,21 +570,21 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE public.sp_catalogo_departamentos(OUT ref refcursor)
+CREATE OR REPLACE PROCEDURE public.sp_catalogo_departamentos(INOUT ref refcursor)
 LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT id_departamento, nombre FROM public.tbl_departamento ORDER BY nombre ASC;
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE public.sp_departamentos_lista(OUT ref refcursor)
+CREATE OR REPLACE PROCEDURE public.sp_departamentos_lista(INOUT ref refcursor)
 LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT id_departamento, nombre FROM public.tbl_departamento ORDER BY nombre ASC;
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE public.sp_catalogo_estados_paciente(OUT ref refcursor)
+CREATE OR REPLACE PROCEDURE public.sp_catalogo_estados_paciente(INOUT ref refcursor)
 LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT id_estado, descripcion FROM public.tbl_estados_paciente
@@ -592,7 +592,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE public.sp_pacientes_catalogo_estados(OUT ref refcursor)
+CREATE OR REPLACE PROCEDURE public.sp_pacientes_catalogo_estados(INOUT ref refcursor)
 LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT descripcion FROM public.tbl_estados_paciente
@@ -600,7 +600,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE public.sp_catalogo_accesos_vascular(OUT ref refcursor)
+CREATE OR REPLACE PROCEDURE public.sp_catalogo_accesos_vascular(INOUT ref refcursor)
 LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT id_acceso, descripcion FROM public.tbl_acceso_vascular
@@ -608,7 +608,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE public.sp_accesos_vasculares_activos(OUT ref refcursor)
+CREATE OR REPLACE PROCEDURE public.sp_accesos_vasculares_activos(INOUT ref refcursor)
 LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT id_acceso, descripcion FROM public.tbl_acceso_vascular
@@ -616,7 +616,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE public.sp_catalogo_jornadas(OUT ref refcursor)
+CREATE OR REPLACE PROCEDURE public.sp_catalogo_jornadas(INOUT ref refcursor)
 LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT id_jornada, descripcion, dias FROM public.tbl_jornadas
@@ -624,7 +624,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE public.sp_jornadas_activas(OUT ref refcursor)
+CREATE OR REPLACE PROCEDURE public.sp_jornadas_activas(INOUT ref refcursor)
 LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT id_jornada, descripcion, dias FROM public.tbl_jornadas
@@ -632,7 +632,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE public.sp_causas_egreso_activas(OUT ref refcursor)
+CREATE OR REPLACE PROCEDURE public.sp_causas_egreso_activas(INOUT ref refcursor)
 LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT id_causa, descripcion FROM public.tbl_causa_egreso
@@ -640,7 +640,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE public.sp_egreso_catalogo_causas(OUT ref refcursor)
+CREATE OR REPLACE PROCEDURE public.sp_egreso_catalogo_causas(INOUT ref refcursor)
 LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT descripcion FROM public.tbl_causa_egreso
@@ -648,7 +648,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE public.sp_laboratorios_catalogo_periodicidades(OUT ref refcursor)
+CREATE OR REPLACE PROCEDURE public.sp_laboratorios_catalogo_periodicidades(INOUT ref refcursor)
 LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT descripcion FROM public.tbl_periodicidadlaboratorio
@@ -658,70 +658,70 @@ $$;
 
 -- [INFERIDO] No hay tabla de catalogo de sexos; se devuelven los 2 valores
 -- literales que usa el resto del sistema.
-CREATE OR REPLACE PROCEDURE public.sp_laboratorios_catalogo_sexos(OUT ref refcursor)
+CREATE OR REPLACE PROCEDURE public.sp_laboratorios_catalogo_sexos(INOUT ref refcursor)
 LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT unnest(ARRAY['Masculino','Femenino']) AS sexo;
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE public.sp_nuevo_ingreso_catalogo_jornadas(OUT ref refcursor)
+CREATE OR REPLACE PROCEDURE public.sp_nuevo_ingreso_catalogo_jornadas(INOUT ref refcursor)
 LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT descripcion FROM public.tbl_jornadas WHERE estado = true ORDER BY descripcion ASC;
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE public.sp_nuevo_ingreso_catalogo_accesos(OUT ref refcursor)
+CREATE OR REPLACE PROCEDURE public.sp_nuevo_ingreso_catalogo_accesos(INOUT ref refcursor)
 LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT descripcion FROM public.tbl_acceso_vascular WHERE estado = true ORDER BY descripcion ASC;
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE public.sp_nuevo_ingreso_catalogo_departamentos(OUT ref refcursor)
+CREATE OR REPLACE PROCEDURE public.sp_nuevo_ingreso_catalogo_departamentos(INOUT ref refcursor)
 LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT nombre FROM public.tbl_departamento ORDER BY nombre ASC;
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE public.sp_nuevo_ingreso_catalogo_sexos(OUT ref refcursor)
+CREATE OR REPLACE PROCEDURE public.sp_nuevo_ingreso_catalogo_sexos(INOUT ref refcursor)
 LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT unnest(ARRAY['Masculino','Femenino']) AS sexo;
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE public.sp_faltistas_catalogo_clinicas(OUT ref refcursor)
+CREATE OR REPLACE PROCEDURE public.sp_faltistas_catalogo_clinicas(INOUT ref refcursor)
 LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT descripcion FROM public.tbl_clinica WHERE estado = true ORDER BY descripcion ASC;
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE public.sp_mostrar_estados_turno(OUT ref refcursor)
+CREATE OR REPLACE PROCEDURE public.sp_mostrar_estados_turno(INOUT ref refcursor)
 LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT * FROM public.tbl_estados_turno ORDER BY id_estado_turno ASC;
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE public.sp_mostrar_jornadas_turnos(OUT ref refcursor)
+CREATE OR REPLACE PROCEDURE public.sp_mostrar_jornadas_turnos(INOUT ref refcursor)
 LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT * FROM public.tbl_jornadas WHERE estado = true ORDER BY descripcion ASC;
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE public.sp_mostrar_clinicas(OUT ref refcursor)
+CREATE OR REPLACE PROCEDURE public.sp_mostrar_clinicas(INOUT ref refcursor)
 LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT * FROM public.tbl_clinica WHERE estado = true ORDER BY descripcion ASC;
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE public.sp_roles_activos(OUT ref refcursor)
+CREATE OR REPLACE PROCEDURE public.sp_roles_activos(INOUT ref refcursor)
 LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT id_rol, nombre, descripcion FROM public.tbl_roles
@@ -756,7 +756,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_usuario_flag_force_change_get(
-  IN p_id_usuario bigint, OUT ref refcursor
+  IN p_id_usuario bigint, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT usuario_actualizacion FROM public.tbl_usuarios WHERE id_usuario = p_id_usuario;
@@ -764,7 +764,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_usuario_email_by_id(
-  IN p_id_usuario bigint, OUT ref refcursor
+  IN p_id_usuario bigint, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -775,7 +775,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_usuario_autenticado(
-  IN p_id_usuario bigint, OUT ref refcursor
+  IN p_id_usuario bigint, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -785,7 +785,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_confirmar_pasword_usuario(
-  IN p_id_usuario bigint, OUT ref refcursor
+  IN p_id_usuario bigint, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -795,7 +795,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_buscar_usuario_auth(
-  IN p_nombre_usuario text, OUT ref refcursor
+  IN p_nombre_usuario text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -805,7 +805,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_buscar_usuario_por_nombre(
-  IN p_nombre_usuario text, OUT ref refcursor
+  IN p_nombre_usuario text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -817,7 +817,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE public.sp_usuarios_activos(OUT ref refcursor)
+CREATE OR REPLACE PROCEDURE public.sp_usuarios_activos(INOUT ref refcursor)
 LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -830,7 +830,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_usuario_empleado_estado_get(
-  IN p_id_usuario bigint, OUT ref refcursor
+  IN p_id_usuario bigint, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -841,7 +841,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_roles_usuario(
-  IN p_id_usuario bigint, OUT ref refcursor
+  IN p_id_usuario bigint, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -852,7 +852,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_roles_usuario_detalle(
-  IN p_id_usuario bigint, OUT ref refcursor
+  IN p_id_usuario bigint, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -883,7 +883,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE public.sp_empleados_sin_usuario(OUT ref refcursor)
+CREATE OR REPLACE PROCEDURE public.sp_empleados_sin_usuario(INOUT ref refcursor)
 LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -894,7 +894,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_usuario_existe(
-  IN p_nombre_usuario text, OUT ref refcursor
+  IN p_nombre_usuario text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -904,7 +904,7 @@ $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_crear_usuario_con_roles(
   IN p_usuario text, IN p_id_empleado bigint, IN p_hash text,
-  IN p_roles bigint[], IN p_usuario_creacion text, OUT ref refcursor
+  IN p_roles bigint[], IN p_usuario_creacion text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 DECLARE
   v_id_usuario bigint;
@@ -925,7 +925,7 @@ $$;
 -- ============================================================================
 
 CREATE OR REPLACE PROCEDURE public.sp_listar_empleados(
-  IN p_q text, IN p_estado boolean, IN p_limit integer, IN p_offset integer, OUT ref refcursor
+  IN p_q text, IN p_estado boolean, IN p_limit integer, IN p_offset integer, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -941,7 +941,7 @@ $$;
 -- [INFERIDO] UPDATE parcial dinamico desde JSONB. Deja propagar la violacion
 -- de unicidad de dpi (23505) tal cual, como espera el backend.
 CREATE OR REPLACE PROCEDURE public.sp_actualizar_empleado(
-  IN p_dpi_actual text, IN p_datos jsonb, IN p_actor text, OUT ref refcursor
+  IN p_dpi_actual text, IN p_datos jsonb, IN p_actor text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 DECLARE
   v_count integer;
@@ -970,7 +970,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_cambiar_estado_empleado(
-  IN p_dpi text, IN p_activo boolean, IN p_actor text, OUT ref refcursor
+  IN p_dpi text, IN p_activo boolean, IN p_actor text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 DECLARE
   v_count integer;
@@ -1042,7 +1042,7 @@ CREATE OR REPLACE PROCEDURE public.sp_actualizar_paciente_por_noafiliacion(
   IN p_edad integer, IN p_fecha_nacimiento date, IN p_sexo text, IN p_direccion text,
   IN p_fecha_ingreso date, IN p_id_departamento char(2), IN p_id_acceso bigint,
   IN p_numero_formulario_activo text, IN p_id_jornada bigint, IN p_sesiones_autorizadas_mes integer,
-  IN p_url_foto text, IN p_actor text, OUT ref refcursor
+  IN p_url_foto text, IN p_actor text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   IF p_dpi IS NOT NULL AND p_dpi !~ '^[0-9]{13}$' THEN
@@ -1093,7 +1093,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_paciente_para_actualizacion(
-  IN p_dpi text, IN p_no_afiliacion text, OUT ref refcursor
+  IN p_dpi text, IN p_no_afiliacion text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -1111,7 +1111,7 @@ $$;
 -- Referencias/Nutricion/Psicologia/Formularios para bloquear pacientes
 -- egresados/fallecidos. id_estado=3 y id_causa=1 confirmados por el backend.
 CREATE OR REPLACE PROCEDURE public.sp_paciente_por_afiliacion(
-  IN p_no_afiliacion text, OUT ref refcursor
+  IN p_no_afiliacion text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -1129,7 +1129,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_paciente_por_dpi(
-  IN p_dpi text, OUT ref refcursor
+  IN p_dpi text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -1147,7 +1147,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_resolver_no_afiliacion_por_dpi(
-  IN p_dpi text, OUT ref refcursor
+  IN p_dpi text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT no_afiliacion FROM public.tbl_pacientes WHERE dpi = p_dpi;
@@ -1155,7 +1155,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_paciente_url_foto(
-  IN p_no_afiliacion text, OUT ref refcursor
+  IN p_no_afiliacion text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT url_foto FROM public.tbl_pacientes WHERE no_afiliacion = p_no_afiliacion;
@@ -1163,7 +1163,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_referencias_por_afiliacion(
-  IN p_no_afiliacion text, OUT ref refcursor
+  IN p_no_afiliacion text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -1176,7 +1176,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_nutricion_por_afiliacion(
-  IN p_no_afiliacion text, OUT ref refcursor
+  IN p_no_afiliacion text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT * FROM public.tbl_informe_nutricion
@@ -1185,7 +1185,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_psicologia_por_afiliacion(
-  IN p_no_afiliacion text, OUT ref refcursor
+  IN p_no_afiliacion text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT * FROM public.tbl_informes_psicologia
@@ -1194,7 +1194,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_formularios_por_afiliacion(
-  IN p_no_afiliacion text, OUT ref refcursor
+  IN p_no_afiliacion text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT * FROM public.tbl_historial_formularios
@@ -1203,7 +1203,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_faltistas_por_afiliacion(
-  IN p_no_afiliacion text, OUT ref refcursor
+  IN p_no_afiliacion text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT * FROM public.tbl_faltistas
@@ -1212,7 +1212,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_consulta_turnos_por_afiliacion(
-  IN p_no_afiliacion text, OUT ref refcursor
+  IN p_no_afiliacion text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -1226,7 +1226,7 @@ $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_egreso_crear(
   IN p_no_afiliacion text, IN p_id_causa_egreso bigint, IN p_descripcion text,
-  IN p_fecha_egreso date, IN p_observaciones text, IN p_usuario_creacion text, OUT ref refcursor
+  IN p_fecha_egreso date, IN p_observaciones text, IN p_usuario_creacion text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   INSERT INTO public.tbl_egresos (no_afiliacion, id_causa_egreso, descripcion, fecha_egreso, observaciones, usuario_creacion, fecha_creacion)
@@ -1241,7 +1241,7 @@ CREATE OR REPLACE PROCEDURE public.sp_historial_formulario_crear(
   IN p_no_afiliacion text, IN p_numero_formulario text, IN p_sesiones_autorizadas_mes integer,
   IN p_sesiones_realizadas_mes integer, IN p_sesiones_no_realizadas_mes integer,
   IN p_usuario_creacion text, IN p_inicio_prest_servicios date, IN p_fin_prest_servicios date,
-  OUT ref refcursor
+  INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   INSERT INTO public.tbl_historial_formularios (
@@ -1261,7 +1261,7 @@ $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_reingreso_crear(
   IN p_no_afiliacion text, IN p_numero_formulario text, IN p_fecha_reingreso date,
-  IN p_observaciones text, IN p_usuario_creacion text, OUT ref refcursor
+  IN p_observaciones text, IN p_usuario_creacion text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   INSERT INTO public.tbl_reingresos (no_afiliacion, numero_formulario, fecha_reingreso, observaciones, usuario_creacion, fecha_creacion)
@@ -1275,7 +1275,7 @@ $$;
 -- --- Registro de pacientes nuevos (BackRegistroPacientes.api.js) ---
 
 CREATE OR REPLACE PROCEDURE public.sp_pacientes_existe_dpi(
-  IN p_dpi text, OUT ref refcursor
+  IN p_dpi text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT EXISTS(SELECT 1 FROM public.tbl_pacientes WHERE dpi = p_dpi) AS existe;
@@ -1283,7 +1283,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_pacientes_existe_noafiliacion(
-  IN p_no_afiliacion text, OUT ref refcursor
+  IN p_no_afiliacion text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT EXISTS(SELECT 1 FROM public.tbl_pacientes WHERE no_afiliacion = p_no_afiliacion) AS existe;
@@ -1303,7 +1303,7 @@ CREATE OR REPLACE PROCEDURE public.sp_paciente_insertar(
   IN p_id_acceso bigint, IN p_numero_formulario text, IN p_id_jornada bigint,
   IN p_sesiones_autorizadas_mes integer, IN p_saved_file_name text,
   IN p_usuario_creacion_legacy text, IN p_inicio_periodo date, IN p_fin_periodo date,
-  IN p_user_name text, OUT ref refcursor
+  IN p_user_name text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   INSERT INTO public.tbl_pacientes (
@@ -1325,7 +1325,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_paciente_carnet_datos(
-  IN p_noaf text, OUT ref refcursor
+  IN p_noaf text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -1341,7 +1341,7 @@ $$;
 -- ============================================================================
 
 CREATE OR REPLACE PROCEDURE public.sp_laboratorios_por_afiliacion(
-  IN p_no_afiliacion text, OUT ref refcursor
+  IN p_no_afiliacion text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT * FROM public.tbl_laboratorios
@@ -1353,7 +1353,7 @@ $$;
 -- en el backend prioriza la forma sin guion bajo). parametros: json agregado
 -- de tbl_parametros_laboratorio.
 CREATE OR REPLACE PROCEDURE public.sp_laboratorios_historial_por_afiliacion(
-  IN p_no_afiliacion text, OUT ref refcursor
+  IN p_no_afiliacion text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -1376,7 +1376,7 @@ $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_laboratorios_historial_filtrado(
   IN p_desde date, IN p_hasta date, IN p_noafiliacion text, IN p_idlaboratorio bigint,
-  IN p_sexo text, IN p_periodicidad text, OUT ref refcursor
+  IN p_sexo text, IN p_periodicidad text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -1403,7 +1403,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_laboratorios_parametros_ultimo(
-  IN p_no_afiliacion text, OUT ref refcursor
+  IN p_no_afiliacion text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -1421,7 +1421,7 @@ CREATE OR REPLACE PROCEDURE public.sp_laboratorios_insertar(
   IN p_infeccion_acceso text, IN p_complicacion_acceso text, IN p_observacion text,
   IN p_examen_realizado boolean, IN p_causa_no_realizado text, IN p_virologia text,
   IN p_antigeno_hepatitis_c boolean, IN p_antigeno_superficie boolean, IN p_hiv text,
-  IN p_fecha_registro timestamp, IN p_parametros jsonb, OUT ref refcursor
+  IN p_fecha_registro timestamp, IN p_parametros jsonb, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 DECLARE
   v_id bigint;
@@ -1457,7 +1457,7 @@ $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_consultar_referencias_filtrado(
   IN p_desde date, IN p_hasta date, IN p_idmedico bigint, IN p_noafiliacion text,
-  IN p_idreferencia text, IN p_sexo text, OUT ref refcursor
+  IN p_idreferencia text, IN p_sexo text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -1482,7 +1482,7 @@ $$;
 CREATE OR REPLACE PROCEDURE public.sp_registrar_referencia(
   IN p_noafiliacion text, IN p_fechareferencia date, IN p_motivotraslado text,
   IN p_idmedico bigint, IN p_especialidadreferencia text, IN p_usuario_nombre text,
-  OUT ref refcursor
+  INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 DECLARE
   v_id text;
@@ -1513,7 +1513,7 @@ $$;
 -- ============================================================================
 
 CREATE OR REPLACE PROCEDURE public.sp_pacientes_para_egreso(
-  IN p_dpi text, IN p_noafiliacion text, OUT ref refcursor
+  IN p_dpi text, IN p_noafiliacion text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -1602,7 +1602,7 @@ BEGIN
 END;
 $$;
 
--- [INFERIDO] 3 cursores OUT declarados (cur_paciente, cur_egreso, cur_tipo);
+-- [INFERIDO] 3 cursores INOUT declarados (cur_paciente, cur_egreso, cur_tipo);
 -- el backend solo consume los 2 primeros. Usa un bloqueo explicito sobre el
 -- paciente para producir el error 55P03 (lock_not_available) que el backend
 -- mapea a HTTP 409 cuando el paciente esta siendo editado simultaneamente.
@@ -1610,7 +1610,7 @@ CREATE OR REPLACE PROCEDURE public.sp_paciente_registrar_egreso(
   IN p_no_afiliacion text, IN p_id_causa_egreso bigint, IN p_descripcion text,
   IN p_fecha_egreso date, IN p_observaciones text, IN p_comorbilidades text,
   IN p_fechafallecimiento date, IN p_lugarfallecimiento text, IN p_causafallecimiento text,
-  IN p_usuario text, OUT cur_paciente refcursor, OUT cur_egreso refcursor, OUT cur_tipo refcursor
+  IN p_usuario text, INOUT cur_paciente refcursor, INOUT cur_egreso refcursor, INOUT cur_tipo refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   PERFORM 1 FROM public.tbl_pacientes WHERE no_afiliacion = p_no_afiliacion FOR UPDATE NOWAIT;
@@ -1641,7 +1641,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_pacientes_para_reingreso(
-  IN p_dpi text, IN p_noafiliacion text, OUT ref refcursor
+  IN p_dpi text, IN p_noafiliacion text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -1661,7 +1661,7 @@ $$;
 CREATE OR REPLACE PROCEDURE public.sp_paciente_reingreso_insertar(
   IN p_no_afiliacion text, IN p_numero_formulario text, IN p_sesiones_mes integer,
   IN p_inicio_prest date, IN p_fin_prest date, IN p_fecha_reingreso date,
-  IN p_observaciones text, OUT ref refcursor
+  IN p_observaciones text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 DECLARE
   v_actor text := COALESCE(current_setting('app.current_user', true), 'sistema');
@@ -1692,7 +1692,7 @@ $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_reingreso_insertar(
   IN p_no_afiliacion text, IN p_numero_formulario text, IN p_fecha_reingreso date,
-  IN p_observaciones text, IN p_usuario text, OUT ref refcursor
+  IN p_observaciones text, IN p_usuario text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   INSERT INTO public.tbl_reingresos (no_afiliacion, numero_formulario, fecha_reingreso, observaciones, usuario_creacion, fecha_creacion)
@@ -1714,7 +1714,7 @@ $$;
 -- Devuelve una sola columna "result" (jsonb) porque asi la lee el backend.
 CREATE OR REPLACE PROCEDURE public.sp_guardar_informe_nutricion(
   IN p_no_afiliacion text, IN p_motivo_consulta text, IN p_altura_cm numeric,
-  IN p_peso_kg numeric, IN p_observaciones text, IN p_usuario_nombre text, OUT ref refcursor
+  IN p_peso_kg numeric, IN p_observaciones text, IN p_usuario_nombre text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 DECLARE
   v_id text;
@@ -1749,7 +1749,7 @@ CREATE OR REPLACE PROCEDURE public.sp_guardar_evaluacion_psicologia(
   IN p_tipo_atencion text, IN p_pronostico_paciente text, IN p_aplicacion_kdqol boolean,
   IN p_fisico_mental integer, IN p_enfermedad_renal integer, IN p_sintomas_problemas integer,
   IN p_efectos_enfermedad integer, IN p_vida_diaria integer, IN p_observaciones text,
-  IN p_usuario_nombre text, OUT ref refcursor
+  IN p_usuario_nombre text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 DECLARE
   v_id text;
@@ -1843,7 +1843,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_mostrar_pacientes_tabla_formularios(
-  IN p_noafiliacion text, OUT ref refcursor
+  IN p_noafiliacion text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -1865,7 +1865,7 @@ $$;
 -- ============================================================================
 
 CREATE OR REPLACE PROCEDURE public.sp_mostrar_paciente_detalle(
-  IN p_noafiliacion text, OUT ref refcursor
+  IN p_noafiliacion text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -1881,7 +1881,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_mostrar_turnos_t(
-  IN p_noafiliacion text, OUT ref refcursor
+  IN p_noafiliacion text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT * FROM public.tbl_turnos WHERE no_afiliacion = p_noafiliacion ORDER BY fecha_turno DESC;
@@ -1889,7 +1889,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_mostrar_turnos_faltantes_t(
-  IN p_noafiliacion text, OUT ref refcursor
+  IN p_noafiliacion text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT * FROM public.tbl_turnos
@@ -1929,7 +1929,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_mostrar_turnos_todos(
-  IN p_numeroafiliacion text, IN p_fecha date, IN p_clinica text, IN p_estado text, OUT ref refcursor
+  IN p_numeroafiliacion text, IN p_fecha date, IN p_clinica text, IN p_estado text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -1977,7 +1977,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_siguiente_turno(
-  IN p_descripcion_clinica text, OUT ref refcursor
+  IN p_descripcion_clinica text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -1989,7 +1989,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_turno_actual(
-  IN p_descripcion_clinica text, OUT ref refcursor
+  IN p_descripcion_clinica text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2008,7 +2008,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_actualizar_estado_llamado(
-  IN p_idturno text, OUT ref refcursor
+  IN p_idturno text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   UPDATE public.tbl_turnos SET id_estado_turno = 4 WHERE id_turno = p_idturno;
@@ -2017,7 +2017,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_abandonar_turno(
-  IN p_idturno text, OUT ref refcursor
+  IN p_idturno text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   UPDATE public.tbl_turnos SET id_estado_turno = 8 WHERE id_turno = p_idturno;
@@ -2026,7 +2026,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_finalizar_turno(
-  IN p_idturno text, OUT ref refcursor
+  IN p_idturno text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   UPDATE public.tbl_turnos SET id_estado_turno = 5, fecha_finalizacion = now() WHERE id_turno = p_idturno;
@@ -2035,7 +2035,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_siguientes_turnos(
-  IN p_clinica text, OUT ref refcursor
+  IN p_clinica text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2055,7 +2055,7 @@ $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_fallecidos_filtrado(
   IN p_fechainicio date, IN p_fechafin date, IN p_jornada text, IN p_accesovascular text,
-  IN p_sexo text, IN p_departamento text, OUT ref refcursor
+  IN p_sexo text, IN p_departamento text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2081,7 +2081,7 @@ $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_egreso_filtrado(
   IN p_fechainicio date, IN p_fechafin date, IN p_causa text, IN p_jornada text,
-  IN p_accesovascular text, IN p_sexo text, IN p_departamento text, OUT ref refcursor
+  IN p_accesovascular text, IN p_sexo text, IN p_departamento text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2106,7 +2106,7 @@ $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_nuevo_ingreso_filtrado(
   IN p_fechainicio date, IN p_fechafin date, IN p_numeroformulario text, IN p_jornada text,
-  IN p_accesovascular text, IN p_sexo text, IN p_departamento text, OUT ref refcursor
+  IN p_accesovascular text, IN p_sexo text, IN p_departamento text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2139,7 +2139,7 @@ $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_pacientes_reporte_filtrado(
   IN p_fechainicio date, IN p_fechafin date, IN p_estado text, IN p_numeroformulario text,
-  IN p_jornada text, IN p_accesovascular text, IN p_sexo text, IN p_departamento text, OUT ref refcursor
+  IN p_jornada text, IN p_accesovascular text, IN p_sexo text, IN p_departamento text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2172,7 +2172,7 @@ $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_faltistas_filtrado(
   IN p_fechainicio date, IN p_fechafin date, IN p_noafiliacion text, IN p_sexo text,
-  IN p_clinica text, IN p_jornada text, IN p_accesovascular text, IN p_departamento text, OUT ref refcursor
+  IN p_clinica text, IN p_jornada text, IN p_accesovascular text, IN p_departamento text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2207,7 +2207,7 @@ $$;
 -- dejan como [PENDIENTE] con la firma correcta, sin inventar la agregacion.
 -- ============================================================================
 
-CREATE OR REPLACE PROCEDURE public.sp_pacientes_total(OUT ref refcursor)
+CREATE OR REPLACE PROCEDURE public.sp_pacientes_total(INOUT ref refcursor)
 LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR SELECT COUNT(*) AS total FROM public.tbl_pacientes;
@@ -2216,7 +2216,7 @@ $$;
 
 -- [REAL] Logica confirmada por comentario explicito en el backend: "Dentro
 -- del programa: Reingreso(4), Activo(1), Nuevo ingreso(2) / Fuera: Egresado(3)".
-CREATE OR REPLACE PROCEDURE public.sp_pacientes_programa_resumen(OUT ref refcursor)
+CREATE OR REPLACE PROCEDURE public.sp_pacientes_programa_resumen(INOUT ref refcursor)
 LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2228,7 +2228,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_pacientes_por_departamento_filtros(
-  IN p_acceso text, IN p_estado text, IN p_jornada text, IN p_sexo char(1), OUT ref refcursor
+  IN p_acceso text, IN p_estado text, IN p_jornada text, IN p_sexo char(1), INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2247,7 +2247,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_pacientes_por_jornada(
-  IN p_acceso text, IN p_estado text, IN p_jornada text, IN p_sexo char(1), OUT ref refcursor
+  IN p_acceso text, IN p_estado text, IN p_jornada text, IN p_sexo char(1), INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2265,7 +2265,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_pacientes_por_sexo(
-  IN p_acceso text, IN p_estado text, IN p_jornada text, IN p_sexo char(1), OUT ref refcursor
+  IN p_acceso text, IN p_estado text, IN p_jornada text, IN p_sexo char(1), INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2283,7 +2283,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_pacientes_por_acceso(
-  IN p_acceso text, IN p_estado text, IN p_jornada text, IN p_sexo char(1), OUT ref refcursor
+  IN p_acceso text, IN p_estado text, IN p_jornada text, IN p_sexo char(1), INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2301,7 +2301,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_pacientes_por_estado(
-  IN p_acceso text, IN p_estado text, IN p_jornada text, IN p_sexo char(1), OUT ref refcursor
+  IN p_acceso text, IN p_estado text, IN p_jornada text, IN p_sexo char(1), INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2319,7 +2319,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_nutricion_por_tipo(
-  IN p_desde date, IN p_hasta date, IN p_sexo text, IN p_motivo text, OUT ref refcursor
+  IN p_desde date, IN p_hasta date, IN p_sexo text, IN p_motivo text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2335,7 +2335,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_nutricion_por_sexo(
-  IN p_desde date, IN p_hasta date, IN p_motivo text, OUT ref refcursor
+  IN p_desde date, IN p_hasta date, IN p_motivo text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2350,7 +2350,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_nutricion_por_jornada(
-  IN p_desde date, IN p_hasta date, IN p_sexo text, IN p_motivo text, OUT ref refcursor
+  IN p_desde date, IN p_hasta date, IN p_sexo text, IN p_motivo text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2367,7 +2367,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_nutricion_por_motivo(
-  IN p_desde date, IN p_hasta date, IN p_sexo text, OUT ref refcursor
+  IN p_desde date, IN p_hasta date, IN p_sexo text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2382,7 +2382,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_nutricion_detalle(
-  IN p_desde date, IN p_hasta date, IN p_estado text, IN p_sexo text, IN p_motivo text, OUT ref refcursor
+  IN p_desde date, IN p_hasta date, IN p_estado text, IN p_sexo text, IN p_motivo text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2400,7 +2400,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_psicologia_por_tipo(
-  IN p_desde date, IN p_hasta date, IN p_sexo char(1), OUT ref refcursor
+  IN p_desde date, IN p_hasta date, IN p_sexo char(1), INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2415,7 +2415,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_psicologia_por_atencion(
-  IN p_desde date, IN p_hasta date, IN p_sexo char(1), OUT ref refcursor
+  IN p_desde date, IN p_hasta date, IN p_sexo char(1), INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2430,7 +2430,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_psicologia_por_pronostico(
-  IN p_desde date, IN p_hasta date, IN p_sexo char(1), OUT ref refcursor
+  IN p_desde date, IN p_hasta date, IN p_sexo char(1), INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2445,7 +2445,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_psico_informes_por_sexo(
-  IN p_desde date, IN p_hasta date, OUT ref refcursor
+  IN p_desde date, IN p_hasta date, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2459,7 +2459,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_psico_informes_por_jornada(
-  IN p_desde date, IN p_hasta date, OUT ref refcursor
+  IN p_desde date, IN p_hasta date, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2474,7 +2474,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_psicologia_kdqol_por_jornada(
-  IN p_desde date, IN p_hasta date, IN p_sexo char(1), OUT ref refcursor
+  IN p_desde date, IN p_hasta date, IN p_sexo char(1), INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2491,7 +2491,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_psicologia_kdqol_por_sexo(
-  IN p_desde date, IN p_hasta date, OUT ref refcursor
+  IN p_desde date, IN p_hasta date, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2506,7 +2506,7 @@ END;
 $$;
 
 CREATE OR REPLACE PROCEDURE public.sp_psicologia_kdqol_total(
-  IN p_desde date, IN p_hasta date, IN p_sexo char(1), OUT ref refcursor
+  IN p_desde date, IN p_hasta date, IN p_sexo char(1), INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2529,7 +2529,7 @@ $$;
 -- correcto (posiblemente consultando la literatura del cuestionario KDQOL-36
 -- o los formularios en src/components/Psicologia.jsx) antes de usarlo.
 CREATE OR REPLACE PROCEDURE public.sp_psicologia_kdqol_promedios(
-  IN p_desde date, IN p_hasta date, IN p_sexo char(1), OUT ref refcursor
+  IN p_desde date, IN p_hasta date, IN p_sexo char(1), INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
@@ -2547,10 +2547,10 @@ $$;
 -- etc.) no se reconstruyeron - se perdieron con el servidor original.
 CREATE OR REPLACE PROCEDURE public.sp_estadisticas_resumen(
   IN p_desde30 date, IN p_hastahoy date,
-  OUT cur_pac_act refcursor, OUT cur_ing_mes refcursor, OUT cur_egr_mes refcursor,
-  OUT cur_faltas refcursor, OUT cur_turnos refcursor, OUT cur_ocup_hoy refcursor,
-  OUT cur_rei_30d refcursor, OUT cur_psico_30d refcursor, OUT cur_nutri_90d refcursor,
-  OUT cur_causas_eg refcursor, OUT cur_est_nutri refcursor
+  INOUT cur_pac_act refcursor, INOUT cur_ing_mes refcursor, INOUT cur_egr_mes refcursor,
+  INOUT cur_faltas refcursor, INOUT cur_turnos refcursor, INOUT cur_ocup_hoy refcursor,
+  INOUT cur_rei_30d refcursor, INOUT cur_psico_30d refcursor, INOUT cur_nutri_90d refcursor,
+  INOUT cur_causas_eg refcursor, INOUT cur_est_nutri refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN cur_pac_act FOR SELECT COUNT(*) AS c FROM public.tbl_pacientes WHERE id_estado IN (1,2,4);
