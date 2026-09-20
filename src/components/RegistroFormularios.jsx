@@ -344,32 +344,33 @@ const RegistroFormularios = () => {
                 </button>
               </div>
 
-              <div className="w-full mt-4 overflow-x-auto">
-              <table className="min-w-[720px] w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800">
-                <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">
+              <div className="w-full mt-4 bg-white dark:bg-slate-800 shadow overflow-hidden sm:rounded-lg">
+              <div className="overflow-x-auto">
+              <table className="min-w-[720px] w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-slate-700">
                   <tr>
-                    <th className="p-2 border dark:border-gray-600">No. Afiliación</th>
-                    <th className="p-2 border dark:border-gray-600">DPI</th>
-                    <th className="p-2 border dark:border-gray-600">Nombre</th>
-                    <th className="p-2 border dark:border-gray-600">Sexo</th>
-                    <th className="p-2 border dark:border-gray-600">Jornada</th>
-                    <th className="p-2 border dark:border-gray-600">Eliminar</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">No. Afiliación</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">DPI</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Nombre</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Sexo</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Jornada</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Eliminar</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {pacientesCargados.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="text-gray-500 py-3">No hay pacientes cargados</td>
+                      <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">No hay pacientes cargados</td>
                     </tr>
                   ) : (
                     pacientesCargados.map((p, idx) => (
-                      <tr key={p.noafiliacion + '-' + p.dpi + '-' + idx} className="border-t dark:border-gray-600">
-                        <td className="p-2 border dark:border-gray-600">{p.noafiliacion}</td>
-                        <td className="p-2 border dark:border-gray-600">{p.dpi}</td>
-                        <td className="p-2 border dark:border-gray-600">{p.nombre}</td>
-                        <td className="p-2 border dark:border-gray-600">{p.sexo}</td>
-                        <td className="p-2 border dark:border-gray-600">{p.jornada}</td>
-                        <td className="p-2 border dark:border-gray-600">
+                      <tr key={p.noafiliacion + '-' + p.dpi + '-' + idx} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{p.noafiliacion}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{p.dpi}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{p.nombre}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{p.sexo}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{p.jornada}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <button
                             onClick={() => setPacientesCargados(pacientesCargados.filter((_, i) => i !== idx))}
                             className="bg-red-600 hover:bg-red-700 text-white text-xs font-medium py-1 px-3 rounded"
@@ -382,6 +383,7 @@ const RegistroFormularios = () => {
                   )}
                 </tbody>
               </table>
+              </div>
               </div>
             </div>
 
@@ -640,31 +642,33 @@ const RegistroFormularios = () => {
               <Row>
                 <Col md={12}>
                   <Form.Label style={{ fontSize: 18, marginTop: 10 }}>Pacientes</Form.Label>
-                  <table className="table table-bordered" style={{ background: '#fff', marginBottom: 20 }}>
-                    <thead>
+                  <div className="mb-5 bg-white dark:bg-slate-800 shadow overflow-hidden sm:rounded-lg">
+                  <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-slate-700">
                       <tr>
-                        <th>No. Afiliación</th>
-                        <th>DPI</th>
-                        <th>Nombre</th>
-                        <th>Sexo</th>
-                        <th>Jornada</th>
-                        <th>Eliminar</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">No. Afiliación</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">DPI</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Nombre</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Sexo</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Jornada</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Eliminar</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
                       {resultados.length === 0 ? (
                         <tr>
-                          <td colSpan="6" style={{ textAlign: 'center', color: '#888' }}>No hay pacientes agregados</td>
+                          <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">No hay pacientes agregados</td>
                         </tr>
                       ) : (
                         resultados.map((p, idx) => (
-                          <tr key={p.idpaciente || p.dpi || idx}>
-                            <td>{p.noafiliacion}</td>
-                            <td>{p.dpi}</td>
-                            <td>{`${p.primernombre || ''} ${p.segundonombre || ''} ${p.otrosnombres || ''} ${p.primerapellido || ''} ${p.segundoapellido || ''} ${p.apellidocasada || ''}`.replace(/ +/g, ' ').trim()}</td>
-                            <td>{p.sexo}</td>
-                            <td>{p.jornada || ''}</td>
-                            <td>
+                          <tr key={p.idpaciente || p.dpi || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{p.noafiliacion}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{p.dpi}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{`${p.primernombre || ''} ${p.segundonombre || ''} ${p.otrosnombres || ''} ${p.primerapellido || ''} ${p.segundoapellido || ''} ${p.apellidocasada || ''}`.replace(/ +/g, ' ').trim()}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{p.sexo}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{p.jornada || ''}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
                               <Button variant="danger" size="sm" onClick={() => {
                                 setResultados(resultados.filter((_, i) => i !== idx));
                               }}>
@@ -676,6 +680,8 @@ const RegistroFormularios = () => {
                       )}
                     </tbody>
                   </table>
+                  </div>
+                  </div>
                 </Col>
               </Row>
             </React.Fragment>

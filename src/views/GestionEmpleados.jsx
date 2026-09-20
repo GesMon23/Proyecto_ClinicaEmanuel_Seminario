@@ -164,45 +164,46 @@ const GestionEmpleados = () => {
             )}
 
             {/* Tabla */}
+            <div className="bg-white dark:bg-slate-800 shadow overflow-hidden sm:rounded-lg">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                <thead className="bg-slate-50 dark:bg-slate-800">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-slate-700">
                   <tr>
-                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">ID</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">DPI</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">Nombre</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">Teléfono</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">Email</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">Estado</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">Acciones</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">DPI</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Nombre</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Teléfono</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Email</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Estado</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {loading ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-6 text-center text-slate-600 dark:text-slate-300">Cargando...</td>
+                      <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">Cargando...</td>
                     </tr>
                   ) : filtrados.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-6 text-center text-slate-600 dark:text-slate-300">No hay empleados para mostrar.</td>
+                      <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">No hay empleados para mostrar.</td>
                     </tr>
                   ) : (
                     empleadosPaginados.map((e) => {
                       const nombre = `${e.primer_nombre || ''} ${e.segundo_nombre || ''} ${e.otros_nombres || ''} ${e.primer_apellido || ''} ${e.segundo_apellido || ''}`.replace(/\s+/g, ' ').trim();
                       return (
-                        <tr key={e.dpi} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
-                          <td className="px-4 py-2 text-slate-700 dark:text-slate-200">{e.id_empleado}</td>
-                          <td className="px-4 py-2 text-slate-700 dark:text-slate-200">{e.dpi}</td>
-                          <td className="px-4 py-2 text-slate-700 dark:text-slate-200">{nombre || '—'}</td>
-                          <td className="px-4 py-2 text-slate-700 dark:text-slate-200">{e.telefono || '—'}</td>
-                          <td className="px-4 py-2 text-slate-700 dark:text-slate-200">{e.email || '—'}</td>
-                          <td className="px-4 py-2">
+                        <tr key={e.dpi} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 dark:text-blue-400">{e.id_empleado}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{e.dpi}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{nombre || '—'}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{e.telefono || '—'}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{e.email || '—'}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
                             <span className={`px-2 py-0.5 rounded text-xs font-medium ${e.activo === false ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'}`}>
                               {e.activo === false ? 'Inactivo' : 'Activo'}
                             </span>
                           </td>
-                          <td className="px-4 py-2 text-right">
-                            <div className="flex gap-2 justify-end">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            <div className="flex gap-2">
                               <button
                                 type="button"
                                 disabled={e.activo === false}
@@ -231,6 +232,7 @@ const GestionEmpleados = () => {
                   )}
                 </tbody>
               </table>
+            </div>
             </div>
             {/* Paginación (estilo ConsultaNutricion) */}
             {totalPaginas > 1 && (

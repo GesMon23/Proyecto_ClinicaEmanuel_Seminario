@@ -2043,36 +2043,36 @@ const ConsultaPacientes = () => {
                                                 </div>
                                             </div>
                                             <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 shadow-sm overflow-x-auto md:overflow-hidden" style={{ maxHeight: 420, overflowY: 'auto' }}>
-                                                <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
-                                                    <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                                                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                                    <thead className="bg-gray-50 dark:bg-slate-700" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                                                         <tr>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Numero de Gestión</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Estado</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">No. Formulario</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Fecha</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Observaciones</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Periodo</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Causa Egreso</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Descripcion</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Numero de Gestión</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Estado</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">No. Formulario</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Fecha</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Observaciones</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Periodo</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Causa Egreso</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Descripcion</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                                                    <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
                                                         {histPageItems && histPageItems.length > 0 ? (
                                                             histPageItems.map((h, idx) => (
-                                                                <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{h.numero_gestion ?? ((pageHistorial - 1) * pageSizeHistorial + idx + 1)}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{h.estado || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{h.no_formulario || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{formatearFecha(h.fecha) || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{h.observaciones || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{h.periodo || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{h.causa_egreso || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{h.descripcion || ''}</td>
+                                                                <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{h.numero_gestion ?? ((pageHistorial - 1) * pageSizeHistorial + idx + 1)}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{h.estado || ''}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{h.no_formulario || ''}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{formatearFecha(h.fecha) || ''}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{h.observaciones || ''}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{h.periodo || ''}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{h.causa_egreso || ''}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{h.descripcion || ''}</td>
                                                                 </tr>
                                                             ))
                                                         ) : (
                                                             <tr>
-                                                                <td colSpan={8} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
+                                                                <td colSpan={8} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">Sin registros por el momento</td>
                                                             </tr>
                                                         )}
                                                     </tbody>
@@ -2112,30 +2112,30 @@ const ConsultaPacientes = () => {
                                                 </div>
                                             </div>
                                             <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 shadow-sm overflow-x-auto md:overflow-hidden" style={{ maxHeight: 420, overflowY: 'auto' }}>
-                                                <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
-                                                    <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                                                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                                    <thead className="bg-gray-50 dark:bg-slate-700" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                                                         <tr>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">ID Referencia</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Fecha Referencia</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Motivo Traslado</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Médico</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Especialidad Referencia</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID Referencia</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Fecha Referencia</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Motivo Traslado</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Médico</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Especialidad Referencia</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                                                    <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
                                                         {refPageItems && refPageItems.length > 0 ? (
                                                             refPageItems.map((r, idx) => (
-                                                                <tr key={r.id_referencia || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{r.id_referencia || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{formatearFecha(r.fecha_referencia) || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{r.motivo_traslado || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{r.nombre_medico || r.id_medico || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{r.especialidad_referencia || ''}</td>
+                                                                <tr key={r.id_referencia || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{r.id_referencia || ''}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{formatearFecha(r.fecha_referencia) || ''}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{r.motivo_traslado || ''}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{r.nombre_medico || r.id_medico || ''}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{r.especialidad_referencia || ''}</td>
                                                                 </tr>
                                                             ))
                                                         ) : (
                                                             <tr>
-                                                                <td colSpan={5} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
+                                                                <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">Sin registros por el momento</td>
                                                             </tr>
                                                         )}
                                                     </tbody>
@@ -2174,42 +2174,42 @@ const ConsultaPacientes = () => {
                                                 </div>
                                             </div>
                                             <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 shadow-sm overflow-x-auto md:overflow-hidden" style={{ maxHeight: 420, overflowY: 'auto' }}>
-                                                <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
-                                                    <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                                                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                                    <thead className="bg-gray-50 dark:bg-slate-700" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                                                         <tr>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">ID Informe</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Motivo Consulta</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Estado Nutricional</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Observaciones</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Altura (Cm)</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Peso (kg)</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">IMC</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Fecha</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Usuario</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Acciones</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID Informe</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Motivo Consulta</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Estado Nutricional</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Observaciones</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Altura (Cm)</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Peso (kg)</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">IMC</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Fecha</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Usuario</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Acciones</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                                                    <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
                                                         {nutPageItems && nutPageItems.length > 0 ? (
                                                             nutPageItems.map((n, idx) => (
-                                                                <tr key={n.id_informe || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{n.id_informe || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{n.motivo_consulta || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{n.estado_nutricional || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{n.observaciones || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{n.altura_cm ?? ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{n.peso_kg ?? ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{n.imc ?? ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{formatearFecha(n.fecha_creacion) || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{n.usuario_creacion || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600">
+                                                                <tr key={n.id_informe || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{n.id_informe || ''}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{n.motivo_consulta || ''}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{n.estado_nutricional || ''}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{n.observaciones || ''}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{n.altura_cm ?? ''}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{n.peso_kg ?? ''}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{n.imc ?? ''}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{formatearFecha(n.fecha_creacion) || ''}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{n.usuario_creacion || ''}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm">
                                                                         <button className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white" onClick={() => openNutDetail(n)}>Ver detalle</button>
                                                                     </td>
                                                                 </tr>
                                                             ))
                                                         ) : (
                                                             <tr>
-                                                                <td colSpan={10} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
+                                                                <td colSpan={10} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">Sin registros por el momento</td>
                                                             </tr>
                                                         )}
                                                     </tbody>
@@ -2248,24 +2248,24 @@ const ConsultaPacientes = () => {
                                                 </div>
                                             </div>
                                             <div className="mt-2 overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 shadow-sm">
-                                                <table className="min-w-full divide-y divide-gray-300 dark:divide-slate-700 text-sm text-left text-gray-800 dark:text-gray-100">
-                                                    <thead className="bg-gray-100 dark:bg-slate-800 text-xs uppercase font-semibold text-gray-700 dark:text-gray-200">
+                                                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                                    <thead className="bg-gray-50 dark:bg-slate-700">
                                                         <tr>
-                                                            <th className="px-4 py-2 text-left">#</th>
-                                                            <th className="px-4 py-2 text-left">ID Informe</th>
-                                                            <th className="px-4 py-2 text-left">Fecha</th>
-                                                            <th className="px-4 py-2 text-left">Motivo</th>
-                                                            <th className="px-4 py-2 text-left">Tipo Consulta</th>
-                                                            <th className="px-4 py-2 text-left">Tipo Atención</th>
-                                                            <th className="px-4 py-2 text-left">Pronóstico</th>
-                                                            <th className="px-4 py-2 text-left">Usuario</th>
-                                                            <th className="px-4 py-2 text-left">Acciones</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">#</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID Informe</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Fecha</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Motivo</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Tipo Consulta</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Tipo Atención</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pronóstico</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Usuario</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Acciones</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody>
+                                                    <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
                                                         {(!psiPageItems || psiPageItems.length === 0) ? (
                                                             <tr>
-                                                                <td colSpan={9} className="text-center py-4 text-gray-600 dark:text-gray-300">No hay informes para mostrar.</td>
+                                                                <td colSpan={9} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">No hay informes para mostrar.</td>
                                                             </tr>
                                                         ) : (
                                                             psiPageItems.map((it, idx) => {
@@ -2276,16 +2276,16 @@ const ConsultaPacientes = () => {
                                                                 const sexo = it.sexo ?? it.Sexo ?? '';
                                                                 const nombre = [pn, sn, pa, sa].filter(Boolean).join(' ');
                                                                 return (
-                                                                    <tr key={it.id_informe || idx} className="border-t border-gray-200 dark:border-slate-700">
-                                                                        <td className="px-3 py-2">{(pagePsicologia - 1) * pageSizePsicologia + idx + 1}</td>
-                                                                        <td className="px-3 py-2">{it.id_informe ?? ''}</td>
-                                                                        <td className="px-3 py-2">{formatearFecha(it.fecha_creacion)}</td>
-                                                                        <td className="px-3 py-2">{it.motivo_consulta ?? ''}</td>
-                                                                        <td className="px-3 py-2">{it.tipo_consulta ?? ''}</td>
-                                                                        <td className="px-3 py-2">{it.tipo_atencion ?? ''}</td>
-                                                                        <td className="px-3 py-2">{it.pronostico_paciente ?? it.pronostico ?? ''}</td>
-                                                                        <td className="px-3 py-2">{it.usuario_creacion ?? ''}</td>
-                                                                        <td className="px-3 py-2">
+                                                                    <tr key={it.id_informe || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{(pagePsicologia - 1) * pageSizePsicologia + idx + 1}</td>
+                                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{it.id_informe ?? ''}</td>
+                                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{formatearFecha(it.fecha_creacion)}</td>
+                                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{it.motivo_consulta ?? ''}</td>
+                                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{it.tipo_consulta ?? ''}</td>
+                                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{it.tipo_atencion ?? ''}</td>
+                                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{it.pronostico_paciente ?? it.pronostico ?? ''}</td>
+                                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{it.usuario_creacion ?? ''}</td>
+                                                                        <td className="px-6 py-4 whitespace-nowrap text-sm">
                                                                             <button type="button" onClick={() => openPsiDetail(it)} className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm">Ver detalle</button>
                                                                         </td>
                                                                     </tr>
@@ -2447,35 +2447,35 @@ const ConsultaPacientes = () => {
                                                 </div>
                                             </div>
                                             <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 shadow-sm overflow-x-auto md:overflow-hidden" style={{ maxHeight: 420, overflowY: 'auto' }}>
-                                                <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
-                                                    <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                                                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                                    <thead className="bg-gray-50 dark:bg-slate-700" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                                                         <tr>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Número Formulario</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Sesiones Autorizadas (Mensuales)</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Inicio Prestaciones Servicios</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Fin Prestaciones Servicios</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">ID Historial</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Acciones</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Número Formulario</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Sesiones Autorizadas (Mensuales)</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Inicio Prestaciones Servicios</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Fin Prestaciones Servicios</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID Historial</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Acciones</th>
                                                         </tr>
 
                                                     </thead>
-                                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                                                    <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
                                                         {formPageItems && formPageItems.length > 0 ? (
                                                             formPageItems.map((f, idx) => (
-                                                                <tr key={f.id_historial || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.numero_formulario || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.sesiones_autorizadas_mes ?? ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{formatearFecha(f.inicio_prest_servicios) || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{formatearFecha(f.fin_prest_servicios) || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.id_historial ?? ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600">
+                                                                <tr key={f.id_historial || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{f.numero_formulario || ''}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{f.sesiones_autorizadas_mes ?? ''}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{formatearFecha(f.inicio_prest_servicios) || ''}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{formatearFecha(f.fin_prest_servicios) || ''}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{f.id_historial ?? ''}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm">
                                                                         <button className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white" onClick={() => openFormDetail(f)}>Ver detalle</button>
                                                                     </td>
                                                                 </tr>
                                                             ))
                                                         ) : (
                                                             <tr>
-                                                                <td colSpan={6} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
+                                                                <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">Sin registros por el momento</td>
                                                             </tr>
                                                         )}
                                                     </tbody>
@@ -2548,30 +2548,30 @@ const ConsultaPacientes = () => {
                                                 </div>
                                             </div>
                                             <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 shadow-sm overflow-x-auto md:overflow-hidden">
-                                                <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
-                                                    <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">
+                                                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                                    <thead className="bg-gray-50 dark:bg-slate-700">
                                                         <tr>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Código Turno</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Clínica</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Fecha</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Acciones</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Código Turno</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Clínica</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Fecha</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Acciones</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                                                    <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
                                                         {turnosPageItems && turnosPageItems.length > 0 ? (
                                                             turnosPageItems.map((t, idx) => (
-                                                                <tr key={t.id_turno || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.id_turno_cod || t.id_turno}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.nombre_clinica}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{formatearFecha(t.fecha_turno)}</td>
-                                                                    <td className="p-3 border dark:border-gray-600">
+                                                                <tr key={t.id_turno || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{t.id_turno_cod || t.id_turno}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{t.nombre_clinica}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{formatearFecha(t.fecha_turno)}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm">
                                                                         <button className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white" onClick={() => openTurnoDetail(t)}>Ver detalle</button>
                                                                     </td>
                                                                 </tr>
                                                             ))
                                                         ) : (
                                                             <tr>
-                                                                <td colSpan={4} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
+                                                                <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">Sin registros por el momento</td>
                                                             </tr>
                                                         )}
                                                     </tbody>
@@ -2642,24 +2642,24 @@ const ConsultaPacientes = () => {
                                                 </div>
                                             </div>
                                             <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 shadow-sm overflow-x-auto md:overflow-hidden">
-                                                <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
-                                                    <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">
+                                                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                                    <thead className="bg-gray-50 dark:bg-slate-700">
                                                         <tr>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Clínica</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold">Fecha Falta</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Clínica</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Fecha Falta</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                                                    <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
                                                         {faltistasPageItems && faltistasPageItems.length > 0 ? (
                                                             faltistasPageItems.map((f, idx) => (
-                                                                <tr key={(f.noafiliacion || '') + (f.fechafalta || '') + idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.clinica || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{formatearFecha(f.fechafalta)}</td>
+                                                                <tr key={(f.noafiliacion || '') + (f.fechafalta || '') + idx} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{f.clinica || ''}</td>
+                                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{formatearFecha(f.fechafalta)}</td>
                                                                 </tr>
                                                             ))
                                                         ) : (
                                                             <tr>
-                                                                <td colSpan={2} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
+                                                                <td colSpan={2} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">Sin registros por el momento</td>
                                                             </tr>
                                                         )}
                                                     </tbody>
@@ -2734,19 +2734,19 @@ const ConsultaPacientes = () => {
                                                 </div>
                                             </div>
                                             <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 shadow-sm overflow-x-auto md:overflow-hidden">
-                                                <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
-                                                    <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">
+                                                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                                    <thead className="bg-gray-50 dark:bg-slate-700">
                                                         <tr>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold text-center">ID Lab</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold text-center">Fecha</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold text-center">Periodicidad</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold text-center">Examen</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold text-center">Virología</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold text-center">HIV</th>
-                                                            <th className="p-3 border dark:border-gray-600 font-semibold text-center">Acciones</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID Lab</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Fecha</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Periodicidad</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Examen</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Virología</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">HIV</th>
+                                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Acciones</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                                                    <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
                                                         {laboratoriosPageItems && laboratoriosPageItems.length > 0 ? (
                                                             laboratoriosPageItems.map((it, idx) => {
                                                                 const pn = it.primer_nombre ?? it.primernombre ?? '';
@@ -2757,14 +2757,14 @@ const ConsultaPacientes = () => {
                                                                 const rawFecha = it.fecha_laboratorio ?? it.fecha ?? '';
                                                                 const fecha = formatearFecha(rawFecha);
                                                                 return (
-                                                                    <tr key={(it.id_laboratorio || '') + '-' + idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                                                                        <td className="p-3 border dark:border-gray-600 text-center">{it.id_laboratorio ?? it.idlaboratorio ?? ''}</td>
-                                                                        <td className="p-3 border dark:border-gray-600 text-center">{fecha}</td>
-                                                                        <td className="p-3 border dark:border-gray-600 text-center">{it.periodicidad || ''}</td>
-                                                                        <td className="p-3 border dark:border-gray-600 text-center">{it.examen_realizado ? 'Sí' : 'No'}</td>
-                                                                        <td className="p-3 border dark:border-gray-600 text-center">{it.virologia || ''}</td>
-                                                                        <td className="p-3 border dark:border-gray-600 text-center">{it.hiv || ''}</td>
-                                                                        <td className="p-3 border dark:border-gray-600 text-center">
+                                                                    <tr key={(it.id_laboratorio || '') + '-' + idx} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{it.id_laboratorio ?? it.idlaboratorio ?? ''}</td>
+                                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{fecha}</td>
+                                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{it.periodicidad || ''}</td>
+                                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{it.examen_realizado ? 'Sí' : 'No'}</td>
+                                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{it.virologia || ''}</td>
+                                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{it.hiv || ''}</td>
+                                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
                                                                             <button type="button" className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white" onClick={() => openLabDetail(it)}>Ver detalle</button>
                                                                         </td>
                                                                     </tr>
@@ -2772,7 +2772,7 @@ const ConsultaPacientes = () => {
                                                             })
                                                         ) : (
                                                             <tr>
-                                                                <td colSpan={7} className="text-center text-gray-500 py-4">Sin registros por el momento</td>
+                                                                <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">Sin registros por el momento</td>
                                                             </tr>
                                                         )}
                                                     </tbody>

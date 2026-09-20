@@ -553,31 +553,32 @@ const GestionTurno = () => {
             </select>
           </div>
 
+          <div className="bg-white dark:bg-slate-800 shadow overflow-hidden sm:rounded-lg">
           <div className="overflow-x-auto">
-            <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-xs sm:text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
-              <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-slate-700">
                 <tr>
-                  <th className="p-3 border dark:border-gray-600 font-semibold">ID Turno</th>
-                  <th className="p-3 border dark:border-gray-600 font-semibold">Clínica</th>
-                  <th className="p-3 border dark:border-gray-600 font-semibold">Fecha</th>
-                  <th className="p-3 border dark:border-gray-600 font-semibold">Acciones</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID Turno</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Clínica</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Fecha</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+              <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {turnos.length > 0 ? (
                   turnosPaginados.map((turno) => (
-                    <tr key={turno.id_turno} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                      <td className="p-3 border dark:border-gray-600 text-gray-800 dark:text-gray-200 font-medium">
+                    <tr key={turno.id_turno} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 dark:text-blue-400">
                         {turno.id_turno_cod}
                       </td>
-                      <td className="p-3 border dark:border-gray-600 text-gray-800 dark:text-gray-200">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
                         {turno.nombre_clinica}
                       </td>
-                      <td className="p-3 border dark:border-gray-600 text-gray-800 dark:text-gray-200">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {formatearFecha(turno.fecha_turno)}
                       </td>
-                      <td className="p-3 border dark:border-gray-600">
-                        <div className="flex justify-center gap-2">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <div className="flex gap-2">
                           <button
                             title="Editar"
                             className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 hover:text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/30 transition-colors"
@@ -598,13 +599,14 @@ const GestionTurno = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="4" className="p-6 text-center text-gray-500 dark:text-gray-400 italic">
+                    <td colSpan="4" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                       No hay turnos registrados para este paciente
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
+          </div>
           </div>
 
           {/* Paginación */}

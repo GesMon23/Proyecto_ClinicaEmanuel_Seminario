@@ -324,28 +324,29 @@ const AsignarTurno = () => {
                                 </select>
                             </div>
 
+                            <div className="bg-white dark:bg-slate-800 shadow overflow-hidden sm:rounded-lg">
                             <div className="overflow-x-auto">
-                                <table className="w-full table-auto border border-gray-300 dark:border-gray-600 text-sm text-center bg-white dark:bg-slate-800 rounded-lg overflow-hidden">
-                                    <thead className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200">
+                                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                    <thead className="bg-gray-50 dark:bg-slate-700">
                                         <tr>
-                                            <th className="p-3 border dark:border-gray-600 font-semibold">No. Afiliación</th>
-                                            <th className="p-3 border dark:border-gray-600 font-semibold">Nombre</th>
-                                            <th className="p-3 border dark:border-gray-600 font-semibold">Código Turno</th>
-                                            <th className="p-3 border dark:border-gray-600 font-semibold">Clínica</th>
-                                            <th className="p-3 border dark:border-gray-600 font-semibold">Fecha</th>
-                                            <th className="p-3 border dark:border-gray-600 font-semibold">Acciones</th>
+                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">No. Afiliación</th>
+                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Nombre</th>
+                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Código Turno</th>
+                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Clínica</th>
+                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Fecha</th>
+                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Acciones</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                                    <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
                                         {turnosPaginados.map((t, idx) => (
-                                            <tr key={t.id_turno || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                                                <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.noafiliacion}</td>
-                                                <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.nombrepaciente}</td>
-                                                <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.id_turno_cod || t.id_turno}</td>
-                                                <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.nombre_clinica}</td>
-                                                <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{formatearFecha(t.fecha_turno)}</td>
-                                                <td className="p-3 border dark:border-gray-600">
-                                                    <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                                            <tr key={t.id_turno || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{t.noafiliacion}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{t.nombrepaciente}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 dark:text-blue-400">{t.id_turno_cod || t.id_turno}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{t.nombre_clinica}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{formatearFecha(t.fecha_turno)}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                                    <div className="flex flex-col sm:flex-row gap-2">
                                                         
                                                         <button
                                                             onClick={() => handleFaltante(t)}
@@ -360,6 +361,7 @@ const AsignarTurno = () => {
                                         ))}
                                     </tbody>
                                 </table>
+                            </div>
                             </div>
 
                             {/* Paginación */}
