@@ -108,8 +108,20 @@ const GestionTurno = () => {
   // Paginación tabla turnos
   const [paginaActual, setPaginaActual] = useState(1);
   const [filasPorPagina, setFilasPorPagina] = useState(5);
-  const totalPaginas = Math.ceil(turnos.length / filasPorPagina);
-  const turnosPaginados = turnos.slice(
+  // Buscador genérico de la tabla (ID de turno, clínica y fecha), sin distinguir tildes ni mayúsculas
+  const [busquedaTurnos, setBusquedaTurnos] = useState("");
+  const normalizarBusqueda = (v) =>
+    String(v ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const qBusqueda = normalizarBusqueda(busquedaTurnos).trim();
+  const turnosFiltrados = qBusqueda
+    ? turnos.filter((t) =>
+        normalizarBusqueda(
+          [t.id_turno_cod || t.id_turno, t.nombre_clinica, formatearFecha(t.fecha_turno), String(t.fecha_turno || "").slice(0, 10)].join(" ")
+        ).includes(qBusqueda)
+      )
+    : turnos;
+  const totalPaginas = Math.ceil(turnosFiltrados.length / filasPorPagina);
+  const turnosPaginados = turnosFiltrados.slice(
     (paginaActual - 1) * filasPorPagina,
     paginaActual * filasPorPagina
   );
@@ -327,6 +339,7 @@ const GestionTurno = () => {
     setTurnoEditando(null);
     setCalendarioHabilitado(false);
     setPaginaActual(1);
+    setBusquedaTurnos("");
   };
 
   const handleEditar = (idTurno) => {
@@ -578,7 +591,15 @@ const GestionTurno = () => {
           )}
 
           {/* Controles de tabla */}
-          <div className="flex items-center justify-end mb-2 gap-3">
+          <div className="flex flex-wrap items-center justify-between mb-2 gap-3">
+            <input
+              type="text"
+              value={busquedaTurnos}
+              onChange={(e) => { setBusquedaTurnos(e.target.value); setPaginaActual(1); }}
+              placeholder="Buscar en la tabla..."
+              className="w-full sm:w-72 px-3 py-1.5 border border-gray-300 dark:border-slate-700 rounded-md dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <div className="flex items-center gap-3">
             <label className="text-sm text-gray-700 dark:text-gray-300">Filas por página:</label>
             <select
               value={filasPorPagina}
@@ -590,6 +611,7 @@ const GestionTurno = () => {
               <option value={10}>10</option>
               <option value={15}>15</option>
             </select>
+            </div>
           </div>
 
           <div className="bg-white dark:bg-slate-800 shadow overflow-hidden sm:rounded-lg">
@@ -604,7 +626,7 @@ const GestionTurno = () => {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {turnos.length > 0 ? (
+                {turnosFiltrados.length > 0 ? (
                   turnosPaginados.map((turno) => (
                     <tr key={turno.id_turno} className="hover:bg-gray-50 dark:hover:bg-slate-700">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 dark:text-blue-400">
@@ -639,7 +661,7 @@ const GestionTurno = () => {
                 ) : (
                   <tr>
                     <td colSpan="4" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                      No hay turnos registrados para este paciente
+                      {turnos.length === 0 ? "No hay turnos registrados para este paciente" : "No se encontraron turnos con esa búsqueda"}
                     </td>
                   </tr>
                 )}

@@ -123,6 +123,20 @@ router.get('/Afoto/:id', (req, res) => {
   return res.status(404).json({ error: 'foto_no_encontrada' });
 });
 
+// Cuando cambia la jornada, los turnos Creada de Hemodiálisis se mueven a los días de la nueva jornada.
+// El SP sp_actualizar_paciente_por_noafiliacion ya lo hace; esta función cubre los UPDATE directos
+// (DPI sin cambios) que no pasan por el SP.
+async function reprogramarTurnosSiCambioJornada(noAfiliacion, jornadaAnterior, jornadaNueva, actor) {
+  const nueva = (jornadaNueva === undefined || jornadaNueva === null || jornadaNueva === '') ? null : Number(jornadaNueva);
+  const anterior = (jornadaAnterior === undefined || jornadaAnterior === null) ? null : Number(jornadaAnterior);
+  if (nueva === null || Number.isNaN(nueva) || nueva === anterior) return;
+  try {
+    await pool.query('CALL public.sp_reprogramar_turnos_jornada($1, $2, 0)', [noAfiliacion, actor]);
+  } catch (e) {
+    console.error('[Apacientes] No se pudieron reprogramar los turnos tras el cambio de jornada:', e.message);
+  }
+}
+
 // Actualizar paciente por No. Afiliación con validación de DPI
 router.put('/Apacientes/:no_afiliacion', async (req, res) => {
   const { no_afiliacion } = req.params;
@@ -150,9 +164,21 @@ router.put('/Apacientes/:no_afiliacion', async (req, res) => {
   try {
     // Prevalidación: DPI único (solo si intenta cambiarlo respecto al actual)
     let currentDpi = null;
+    let jornadaAnterior = null;
     try {
-      const cur = await pool.query('SELECT dpi FROM public.tbl_pacientes WHERE no_afiliacion = $1', [no_afiliacion]);
+      const cur = await pool.query('SELECT dpi, id_jornada FROM public.tbl_pacientes WHERE no_afiliacion = $1', [no_afiliacion]);
       currentDpi = cur.rows?.[0]?.dpi ? String(cur.rows[0].dpi).replace(/\D+/g, '').trim() : null;
+      jornadaAnterior = cur.rows?.[0]?.id_jornada ?? null;
+    } catch (_) {}
+
+    // Actor (usuario del token) para auditoría de los turnos reprogramados
+    let actor = 'web';
+    try {
+      const auth = req.headers.authorization || '';
+      if (auth.startsWith('Bearer ')) {
+        const payload = jwt.verify(auth.slice(7), process.env.JWT_SECRET || 'dev_secret_change_me');
+        actor = payload?.nombre_usuario || String(payload?.sub || 'web');
+      }
     } catch (_) {}
     try {
       const dpiClean = dpi ? String(dpi).replace(/\D+/g, '').trim() : null;
@@ -197,6 +223,7 @@ router.put('/Apacientes/:no_afiliacion', async (req, res) => {
           ]
         );
         const row = u.rows?.[0] || null;
+        await reprogramarTurnosSiCambioJornada(no_afiliacion, jornadaAnterior, id_jornada, actor);
         return res.json({ success: true, paciente: row });
       }
     } catch (_) { /* continuar con SP si no se pudo determinar */ }
@@ -281,6 +308,7 @@ router.put('/Apacientes/:no_afiliacion', async (req, res) => {
                 ]
               );
               const row = u.rows?.[0] || null;
+              await reprogramarTurnosSiCambioJornada(no_afiliacion, jornadaAnterior, id_jornada, actor);
               return res.json({ success: true, paciente: row });
             }
           }
