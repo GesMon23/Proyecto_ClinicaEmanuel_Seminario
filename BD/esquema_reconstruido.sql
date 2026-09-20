@@ -1954,20 +1954,36 @@ BEGIN
 END;
 $$;
 
+-- [REAL] GestionTurno.jsx (Creacion de Turnos) lee turno.nombre_clinica
+-- (nombre, no id) y turno.id_turno_cod - confirmado leyendo el JSX.
+-- id_turno_cod no tiene una fuente real distinta del propio id_turno (el
+-- sistema original nunca devolvia un codigo separado, ver sp_crear_turno_t
+-- mas abajo), asi que se usa el mismo id_turno como aproximacion.
 CREATE OR REPLACE PROCEDURE public.sp_mostrar_turnos_t(
   IN p_noafiliacion text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
-  OPEN ref FOR SELECT * FROM public.tbl_turnos WHERE no_afiliacion = p_noafiliacion ORDER BY fecha_turno DESC;
+  OPEN ref FOR
+    SELECT t.*, t.id_turno AS id_turno_cod, c.descripcion AS nombre_clinica
+    FROM public.tbl_turnos t
+    LEFT JOIN public.tbl_clinica c ON t.id_clinica = c.id_clinica
+    WHERE t.no_afiliacion = p_noafiliacion
+    ORDER BY t.fecha_turno DESC;
 END;
 $$;
 
+-- [REAL] AsignarTurno.jsx lee t.nombre_clinica y t.id_turno_cod, mismo
+-- patron que sp_mostrar_turnos_t.
 CREATE OR REPLACE PROCEDURE public.sp_mostrar_turnos_faltantes_t(
   IN p_noafiliacion text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
-  OPEN ref FOR SELECT * FROM public.tbl_turnos
-    WHERE no_afiliacion = p_noafiliacion AND id_estado_turno = 7 ORDER BY fecha_turno DESC;
+  OPEN ref FOR
+    SELECT t.*, t.id_turno AS id_turno_cod, c.descripcion AS nombre_clinica
+    FROM public.tbl_turnos t
+    LEFT JOIN public.tbl_clinica c ON t.id_clinica = c.id_clinica
+    WHERE t.no_afiliacion = p_noafiliacion AND t.id_estado_turno = 7
+    ORDER BY t.fecha_turno DESC;
 END;
 $$;
 
