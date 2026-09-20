@@ -504,7 +504,7 @@ const LlamadoTurnosTV = () => {
                             <div className="flex-1 min-h-0 flex items-center py-1">
                                 {turno ? (
                                     <div className="w-full h-full bg-white/90 rounded-lg p-3 shadow-sm flex items-center gap-6">
-                                        <div className="h-[85%] aspect-square rounded-full overflow-hidden border-4 border-white shadow-md flex-shrink-0 bg-gray-100">
+                                        <div className="h-[90%] aspect-square rounded-full overflow-hidden border-4 border-white shadow-md flex-shrink-0 bg-gray-100">
                                             {turno.no_afiliacion ? (
                                                 <img
                                                     src={`/api/foto/${encodeURIComponent(turno.no_afiliacion)}?v=${encodeURIComponent(turno.id_turno_cod || '1')}`}
@@ -523,9 +523,15 @@ const LlamadoTurnosTV = () => {
                                                 </div>
                                             )}
                                         </div>
-                                        <p className={`text-4xl font-bold ${config.textColor} leading-tight truncate`}>
-                                            {turno.nombrepaciente || 'Sin nombre'}
-                                        </p>
+                                        <div className="min-w-0">
+                                            <div className="flex items-center gap-1 mb-1">
+                                                <User className={`w-4 h-4 ${config.iconColor}`} />
+                                                <span className="text-sm font-bold text-gray-600 uppercase leading-none">Paciente</span>
+                                            </div>
+                                            <p className={`text-4xl font-bold ${config.textColor} leading-tight truncate`}>
+                                                {turno.nombrepaciente || 'Sin nombre'}
+                                            </p>
+                                        </div>
                                     </div>
                                 ) : (
                                     <div className="w-full flex flex-col items-center justify-center">
