@@ -1786,10 +1786,10 @@ $$;
 -- SECCION 12: FORMULARIOS (BackRegistroFormularios.js)
 -- ============================================================================
 
--- [INFERIDO] Actualizacion masiva desde un array JSON. Estructura del JSON
--- asumida a partir de tbl_historial_formularios y del SP legacy equivalente
--- que si existia en BD/Scripts Procedures (1).sql (sp_registro_formularios
--- version vieja, adaptado aqui al esquema con guion bajo).
+-- [REAL] Estructura del JSON confirmada leyendo RegistroFormularios.jsx
+-- (handleRegistroFormularioSubmit): { noafiliacion, numeroformulario,
+-- fechainicioperiodo, fechafinperiodo, sesionesautorizadasmes } - SIN
+-- guion bajo y SIN id_jornada (nunca se envia, por eso queda opcional).
 CREATE OR REPLACE PROCEDURE public.sp_registro_formularios(
   IN p_pacientes json, IN p_usuario text
 ) LANGUAGE plpgsql AS $$
@@ -1803,36 +1803,36 @@ BEGIN
 
   FOR r IN
     SELECT * FROM json_to_recordset(p_pacientes) AS (
-      no_afiliacion text,
-      numero_formulario text,
-      fecha_inicio_periodo date,
-      fecha_fin_periodo date,
-      sesiones_autorizadas_mes integer,
-      id_jornada bigint
+      noafiliacion text,
+      numeroformulario text,
+      fechainicioperiodo date,
+      fechafinperiodo date,
+      sesionesautorizadasmes integer,
+      idjornada bigint
     )
   LOOP
-    SELECT COUNT(*) INTO v_existe FROM public.tbl_pacientes WHERE no_afiliacion = r.no_afiliacion;
+    SELECT COUNT(*) INTO v_existe FROM public.tbl_pacientes WHERE no_afiliacion = r.noafiliacion;
     IF v_existe = 0 THEN
-      RAISE EXCEPTION 'No existe paciente con no_afiliacion=%', r.no_afiliacion;
+      RAISE EXCEPTION 'No existe paciente con no_afiliacion=%', r.noafiliacion;
     END IF;
 
     UPDATE public.tbl_pacientes SET
-      numero_formulario_activo = r.numero_formulario,
-      inicio_prest_servicios = r.fecha_inicio_periodo,
-      fin_prest_servicios = r.fecha_fin_periodo,
-      sesiones_autorizadas_mes = r.sesiones_autorizadas_mes,
-      id_jornada = COALESCE(r.id_jornada, id_jornada),
+      numero_formulario_activo = r.numeroformulario,
+      inicio_prest_servicios = r.fechainicioperiodo,
+      fin_prest_servicios = r.fechafinperiodo,
+      sesiones_autorizadas_mes = r.sesionesautorizadasmes,
+      id_jornada = COALESCE(r.idjornada, id_jornada),
       id_estado = 1,
       usuario_actualizacion = p_usuario,
       fecha_actualizacion = now()
-    WHERE no_afiliacion = r.no_afiliacion;
+    WHERE no_afiliacion = r.noafiliacion;
 
     INSERT INTO public.tbl_historial_formularios (
       no_afiliacion, numero_formulario, sesiones_autorizadas_mes,
       inicio_prest_servicios, fin_prest_servicios, usuario_creacion, fecha_creacion
     ) VALUES (
-      r.no_afiliacion, r.numero_formulario, r.sesiones_autorizadas_mes,
-      r.fecha_inicio_periodo, r.fecha_fin_periodo, p_usuario, now()
+      r.noafiliacion, r.numeroformulario, r.sesionesautorizadasmes,
+      r.fechainicioperiodo, r.fechafinperiodo, p_usuario, now()
     ) ON CONFLICT (no_afiliacion, numero_formulario) DO UPDATE SET
       sesiones_autorizadas_mes = EXCLUDED.sesiones_autorizadas_mes,
       inicio_prest_servicios = EXCLUDED.inicio_prest_servicios,
