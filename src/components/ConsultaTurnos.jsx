@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../config/api';
 import { Table, Form, Row, Col, Button, Card } from 'react-bootstrap';
 import logoClinica from '@/assets/logoClinica2.png';
+import { formatearFecha } from '@/utils/fechas';
 import './NuevoIngresoReportes.css';
 
 const ConsultaTurnos = () => {
@@ -283,7 +284,7 @@ const ConsultaTurnos = () => {
                                             {turno.nombrepaciente}
                                         </td>
                                         <td className="p-3 border dark:border-gray-600 text-gray-800 dark:text-gray-200">
-                                            {turno.fecha}
+                                            {formatearFecha(turno.fecha)}
                                         </td>
                                         <td className="p-3 border dark:border-gray-600 text-gray-800 dark:text-gray-200">
                                             {turno.nombreclinica}

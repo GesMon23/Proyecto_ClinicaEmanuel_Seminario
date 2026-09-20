@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import api from '../config/api';
 import logoClinica from '@/assets/logoClinica2.png';
+import { formatearFecha } from '@/utils/fechas';
 
 const ConsultaNutricion = () => {
   const [noAfiliacion, setNoAfiliacion] = useState('');
@@ -27,7 +28,7 @@ const ConsultaNutricion = () => {
     const sexo = it.sexo ?? it.Sexo ?? '';
 
     const paciente = [primerNombre, segundoNombre, primerApellido, segundoApellido].filter(Boolean).join(' ');
-    const fecha = it.fecha_creacion ? new Date(it.fecha_creacion).toLocaleString() : '';
+    const fecha = formatearFecha(it.fecha_creacion);
 
     const html = `
       <html>
@@ -101,7 +102,7 @@ const ConsultaNutricion = () => {
     };
     const htmlRows = rows.map((it, idx) => {
       const sexo = it.sexo ?? it.Sexo ?? '';
-      const fecha = it.fecha_creacion ? new Date(it.fecha_creacion).toLocaleDateString() : '';
+      const fecha = formatearFecha(it.fecha_creacion);
       return `
         <tr>
           <td>${idx + 1}</td>
@@ -393,7 +394,7 @@ const ConsultaNutricion = () => {
                     </td>
                     <td className="px-3 py-2">{sexo}</td>
                     <td className="px-3 py-2">{it.id_informe}</td>
-                    <td className="px-3 py-2">{it.fecha_creacion ? new Date(it.fecha_creacion).toLocaleDateString() : ''}</td>
+                    <td className="px-3 py-2">{formatearFecha(it.fecha_creacion)}</td>
                     <td className="px-3 py-2">{it.motivo_consulta}</td>
                     <td className="px-3 py-2">{it.estado_nutricional}</td>
                     <td className="px-3 py-2">{it.altura_cm}</td>
@@ -466,7 +467,7 @@ const ConsultaNutricion = () => {
                         <span className="font-semibold">Sexo:</span> {sexo}
                       </div>
                       <div>
-                        <span className="font-semibold">Fecha:</span> {it.fecha_creacion ? new Date(it.fecha_creacion).toLocaleString() : ''}
+                        <span className="font-semibold">Fecha:</span> {formatearFecha(it.fecha_creacion)}
                       </div>
                     </div>
                     <hr className="border-slate-200 dark:border-slate-700" />

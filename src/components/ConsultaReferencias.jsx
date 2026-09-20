@@ -2,36 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Table, Form, Row, Col, Card, Spinner, Button, Modal } from 'react-bootstrap';
 import api from '../config/api';
 import logoClinica from "@/assets/logoClinica2.png"
+import { formatearFecha } from '@/utils/fechas';
 
 const ConsultaReferencias = () => {
-  // Helper para formatear fechas de manera local sin desfase (evitar parsear 'YYYY-MM-DD' como UTC)
-  const formatFechaLocal = (v) => {
-    if (!v) return '';
-    const s = String(v);
-    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (m) {
-      return `${m[3]}/${m[2]}/${m[1]}`;
-    }
-    try {
-      return new Date(s).toLocaleDateString();
-    } catch (_) {
-      return s;
-    }
-  };
-
-  const formatFechaHoraLocal = (v) => {
-    if (!v) return '';
-    const s = String(v);
-    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (m) {
-      return `${m[3]}/${m[2]}/${m[1]} 00:00`;
-    }
-    try {
-      return new Date(s).toLocaleString();
-    } catch (_) {
-      return s;
-    }
-  };
+  // fecha_referencia no tiene componente de hora real en la BD, asi que
+  // ambos helpers devuelven solo la fecha en dd-mm-aaaa.
+  const formatFechaLocal = (v) => formatearFecha(v);
+  const formatFechaHoraLocal = (v) => formatearFecha(v);
   const [referencias, setReferencias] = useState([]);
   const [filtro, setFiltro] = useState('');
   const [loading, setLoading] = useState(true);

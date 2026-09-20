@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../config/api';
 import logoClinica from '@/assets/logoClinica2.png';
+import { formatearFecha } from '@/utils/fechas';
 
 const ConsultaLaboratorios = () => {
   const [noAfiliacion, setNoAfiliacion] = useState('');
@@ -46,7 +47,7 @@ const ConsultaLaboratorios = () => {
     const segundoApellido = it.segundo_apellido ?? it.segundoapellido ?? '';
     const sexo = it.sexo ?? '';
     const paciente = [primerNombre, segundoNombre, primerApellido, segundoApellido].filter(Boolean).join(' ');
-    const fecha = it.fecha_laboratorio ? new Date(it.fecha_laboratorio).toLocaleDateString() : '';
+    const fecha = formatearFecha(it.fecha_laboratorio);
 
     const excludeKeys = new Set([
       'id_laboratorio','idlaboratorio','no_afiliacion','noafiliacion','primer_nombre','primernombre','segundo_nombre','segundonombre','primer_apellido','primerapellido','segundo_apellido','segundoapellido','sexo','fecha_laboratorio','periodicidad','examen_realizado','causa_no_realizado','infeccion_acceso','complicacion_acceso','virologia','antigeno_hepatitis_c','antigeno_superficie','hiv','observacion','usuario_creacion','fecha_registro','idperlaboratorio'
@@ -94,7 +95,7 @@ const ConsultaLaboratorios = () => {
           <tr>
             <td>${u.parametro ?? ''}</td>
             <td>${u.valor ?? ''}</td>
-            <td>${u.fecha_laboratorio ? new Date(u.fecha_laboratorio).toLocaleDateString() : ''}</td>
+            <td>${formatearFecha(u.fecha_laboratorio)}</td>
           </tr>
         `).join('')
       : '<tr><td colspan="3">—</td></tr>';
@@ -187,7 +188,7 @@ const ConsultaLaboratorios = () => {
     };
     const htmlRows = rows.map((it, idx) => {
       const sexo = it.sexo ?? '';
-      const fecha = it.fecha_laboratorio ? new Date(it.fecha_laboratorio).toLocaleDateString() : '';
+      const fecha = formatearFecha(it.fecha_laboratorio);
       return `
         <tr>
           <td>${idx + 1}</td>
@@ -508,7 +509,7 @@ const ConsultaLaboratorios = () => {
                       </td>
                       <td className="px-3 py-2">{sexo}</td>
                       <td className="px-3 py-2">{it.id_laboratorio}</td>
-                      <td className="px-3 py-2">{it.fecha_laboratorio ? new Date(it.fecha_laboratorio).toLocaleDateString() : ''}</td>
+                      <td className="px-3 py-2">{formatearFecha(it.fecha_laboratorio)}</td>
                       <td className="px-3 py-2">{it.periodicidad}</td>
                       <td className="px-3 py-2">{it.examen_realizado ? 'Sí' : 'No'}</td>
                       <td className="px-3 py-2">{it.virologia}</td>
@@ -586,7 +587,7 @@ const ConsultaLaboratorios = () => {
                         <span className="font-semibold">Sexo:</span> {sexo}
                       </div>
                       <div>
-                        <span className="font-semibold">Fecha:</span> {it.fecha_laboratorio ? new Date(it.fecha_laboratorio).toLocaleString() : ''}
+                        <span className="font-semibold">Fecha:</span> {formatearFecha(it.fecha_laboratorio)}
                       </div>
                     </div>
                     <hr className="border-slate-200 dark:border-slate-700" />
@@ -675,7 +676,7 @@ const ConsultaLaboratorios = () => {
                                   <tr key={`${u.idparametro}-${u.parametro}`} className="border-t border-slate-200 dark:border-slate-700">
                                     <td className="px-2 py-1">{u.parametro ?? ''}</td>
                                     <td className="px-2 py-1">{u.valor ?? ''}</td>
-                                    <td className="px-2 py-1">{u.fecha_laboratorio ? new Date(u.fecha_laboratorio).toLocaleDateString() : ''}</td>
+                                    <td className="px-2 py-1">{formatearFecha(u.fecha_laboratorio)}</td>
                                   </tr>
                                 ))}
                               </tbody>

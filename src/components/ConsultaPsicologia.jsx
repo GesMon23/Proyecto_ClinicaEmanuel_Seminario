@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import api from '../config/api';
 import logoClinica from '@/assets/logoClinica2.png';
+import { formatearFecha } from '@/utils/fechas';
 
 const ConsultaPsicologia = () => {
   const [noAfiliacion, setNoAfiliacion] = useState('');
@@ -74,7 +75,7 @@ const ConsultaPsicologia = () => {
     const sa = it.segundo_apellido ?? it.segundoapellido ?? '';
     const sexo = it.sexo ?? it.Sexo ?? '';
     const paciente = [pn, sn, pa, sa].filter(Boolean).join(' ');
-    const fecha = it.fecha_creacion ? new Date(it.fecha_creacion).toLocaleString() : '';
+    const fecha = formatearFecha(it.fecha_creacion);
 
     // Parseo seguro de KDQOL
     let kdqolObj = null;
@@ -146,7 +147,7 @@ const ConsultaPsicologia = () => {
         <h2 style="font-size:16px; color:#065f46;">Observaciones</h2>
         <div class="box">${(it.observaciones || '—').toString().replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
         <h2 style="font-size:16px; color:#065f46;">KDQOL</h2>
-        ${kdqolObj ? `<div class="meta" style="color:#64748b; font-size:12px; margin:4px 0 8px;">ID KDQOL: ${kdqolObj.id_kdqol ?? '—'} | Fecha aplicación: ${kdqolObj.fecha_aplicacion ? new Date(kdqolObj.fecha_aplicacion).toLocaleString() : '—'}</div>` : ''}
+        ${kdqolObj ? `<div class="meta" style="color:#64748b; font-size:12px; margin:4px 0 8px;">ID KDQOL: ${kdqolObj.id_kdqol ?? '—'} | Fecha aplicación: ${formatearFecha(kdqolObj.fecha_aplicacion) || '—'}</div>` : ''}
         ${kdqolRows.length > 0 ? `
         <table style="width:100%; border-collapse:collapse; font-size:12px;">
           <thead>
@@ -186,7 +187,7 @@ const ConsultaPsicologia = () => {
     };
     const htmlRows = rows.map((it, idx) => {
       const sexo = it.sexo ?? it.Sexo ?? '';
-      const fecha = it.fecha_creacion ? new Date(it.fecha_creacion).toLocaleDateString() : '';
+      const fecha = formatearFecha(it.fecha_creacion);
       return `
         <tr>
           <td>${idx + 1}</td>
@@ -348,7 +349,7 @@ const ConsultaPsicologia = () => {
                       <td className="px-3 py-2">{[pn, sn, pa, sa].filter(Boolean).join(' ')}</td>
                       <td className="px-3 py-2">{sexo}</td>
                       <td className="px-3 py-2">{it.id_informe}</td>
-                      <td className="px-3 py-2">{it.fecha_creacion ? new Date(it.fecha_creacion).toLocaleDateString() : ''}</td>
+                      <td className="px-3 py-2">{formatearFecha(it.fecha_creacion)}</td>
                       <td className="px-3 py-2">{it.motivo_consulta}</td>
                       <td className="px-3 py-2">{it.tipo_consulta}</td>
                       <td className="px-3 py-2">{it.tipo_atencion}</td>
@@ -431,7 +432,7 @@ const ConsultaPsicologia = () => {
                       <div><span className="font-semibold">ID Informe:</span> {it.id_informe || ''}</div>
                       <div className="md:col-span-2"><span className="font-semibold">Paciente:</span> {[pn, sn, pa, sa].filter(Boolean).join(' ')}</div>
                       <div><span className="font-semibold">Sexo:</span> {sexo}</div>
-                      <div><span className="font-semibold">Fecha:</span> {it.fecha_creacion ? new Date(it.fecha_creacion).toLocaleString() : ''}</div>
+                      <div><span className="font-semibold">Fecha:</span> {formatearFecha(it.fecha_creacion)}</div>
                     </div>
                     <hr className="border-slate-200 dark:border-slate-700" />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -449,7 +450,7 @@ const ConsultaPsicologia = () => {
                       {kdqolObj && (
                         <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                           <span className="mr-2">ID KDQOL: {kdqolObj.id_kdqol ?? '—'}</span>
-                          <span>Fecha aplicación: {kdqolObj.fecha_aplicacion ? new Date(kdqolObj.fecha_aplicacion).toLocaleString() : '—'}</span>
+                          <span>Fecha aplicación: {formatearFecha(kdqolObj.fecha_aplicacion) || '—'}</span>
                         </div>
                       )}
                       {rows.length > 0 ? (
