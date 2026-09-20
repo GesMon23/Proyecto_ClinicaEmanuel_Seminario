@@ -30,6 +30,22 @@ function requireUser(req, res, next) {
     next();
 }
 
+// Turnos Creada que no se asignaron el día de su fecha pasan solos a Faltante
+// ("No se presentó (Mensaje automático)"). El procedimiento es idempotente.
+async function marcarFaltantesAutomaticos() {
+    try {
+        const r = await pool.query('CALL sp_marcar_faltantes_automaticos(0)');
+        const total = r.rows?.[0]?.p_total || 0;
+        if (total > 0) console.log(`[turnos] ${total} turno(s) Creada vencidos marcados como Faltante`);
+    } catch (err) {
+        console.error('[turnos] Error al marcar faltantes automáticos:', err.message);
+    }
+}
+
+// Al iniciar el servidor (cubre cambios de fecha ocurridos con el sistema apagado) y cada minuto
+marcarFaltantesAutomaticos();
+setInterval(marcarFaltantesAutomaticos, 60 * 1000).unref();
+
 // Errores de regla de negocio lanzados por los procedimientos (RAISE EXCEPTION 'CODIGO: mensaje')
 const CODIGOS_NEGOCIO = ['USUARIO_CON_TURNO', 'TURNO_NO_DISPONIBLE', 'TURNO_NO_EN_ATENCION', 'TURNO_NO_CREADA'];
 function responderErrorTurno(res, error, mensajeGenerico) {
@@ -160,6 +176,7 @@ router.get('/GmuestraTurnosFaltantesT', async (req, res) => {
 
 // Turnos en estado Creada con fecha de turno igual a la fecha actual del servidor
 router.get('/GturnosCreadosT', async (req, res) => {
+    await marcarFaltantesAutomaticos();
     const client = await pool.connect();
     try {
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
