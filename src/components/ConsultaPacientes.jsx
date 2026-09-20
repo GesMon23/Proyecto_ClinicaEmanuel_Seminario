@@ -3,6 +3,7 @@ import logoClinica from "@/assets/logoClinica2.png"
 import avatarDefault from "@/assets/default-avatar.png"
 import React, { useState, useEffect } from 'react';
 import api from '../config/api';
+import { formatearFecha } from '@/utils/fechas';
 import {
     Container,
     Row,
@@ -59,23 +60,6 @@ const CustomModal = ({ show, onClose, title, message, type }) => {
 
         </>
     );
-};
-
-const formatearFecha = (fecha) => {
-    if (!fecha) return '';
-    // Elimina la hora si viene en formato ISO o con espacio
-    let soloFecha = fecha.split('T')[0].split(' ')[0];
-    const partes = soloFecha.split('-');
-    if (partes.length < 3) return fecha;
-    return `${partes[2].padStart(2, '0')}/${partes[1].padStart(2, '0')}/${partes[0]}`;
-};
-
-const formatearFechaGuion = (fecha) => {
-    if (!fecha) return '';
-    let soloFecha = fecha.split('T')[0].split(' ')[0];
-    const partes = soloFecha.split('-');
-    if (partes.length < 3) return fecha;
-    return `${partes[2].padStart(2, '0')}-${partes[1].padStart(2, '0')}-${partes[0]}`;
 };
 
 const calcularEstanciaPrograma = (fechaIngreso) => {
@@ -582,7 +566,7 @@ const ConsultaPacientes = () => {
         const segundoApellido = it.segundo_apellido ?? it.segundoapellido ?? '';
         const paciente = [primerNombre, segundoNombre, primerApellido, segundoApellido].filter(Boolean).join(' ');
         const sexo = it.sexo ?? '';
-        const fecha = it.fecha_laboratorio ? new Date(it.fecha_laboratorio).toLocaleDateString() : (it.fecha ? new Date(it.fecha).toLocaleDateString() : '');
+        const fecha = formatearFecha(it.fecha_laboratorio || it.fecha);
 
         const excludeKeys = new Set([
           'id_laboratorio','idlaboratorio','no_afiliacion','noafiliacion','primer_nombre','primernombre','segundo_nombre','segundonombre','primer_apellido','primerapellido','segundo_apellido','segundoapellido','sexo','fecha_laboratorio','fecha','periodicidad','examen_realizado','causa_no_realizado','infeccion_acceso','complicacion_acceso','virologia','antigeno_hepatitis_c','antigeno_superficie','hiv','observacion','usuario_creacion','fecha_registro','idperlaboratorio','parametros'
@@ -687,7 +671,7 @@ const ConsultaPacientes = () => {
                     <tr>
                       <td>${u.parametro ?? ''}</td>
                       <td>${u.valor ?? ''}</td>
-                      <td>${u.fecha_laboratorio ? new Date(u.fecha_laboratorio).toLocaleDateString() : ''}</td>
+                      <td>${formatearFecha(u.fecha_laboratorio)}</td>
                     </tr>
                   `).join('');
                 })()}
@@ -737,7 +721,7 @@ const ConsultaPacientes = () => {
               <div class="row"><span class="label">Acceso Vascular:</span> ${it.accesovascular ?? ''}</div>
               <div class="row"><span class="label">Departamento:</span> ${it.departamento ?? ''}</div>
               <div class="row"><span class="label">Clínica:</span> ${it.clinica ?? ''}</div>
-              <div class="row"><span class="label">Fecha Falta:</span> ${it.fechafalta ?? ''}</div>
+              <div class="row"><span class="label">Fecha Falta:</span> ${formatearFecha(it.fechafalta)}</div>
             </div>
           </body>
           </html>
@@ -779,7 +763,7 @@ const ConsultaPacientes = () => {
               <div class="row"><span class="label">Código Turno:</span> ${it.id_turno_cod || it.id_turno || ''}</div>
               <div class="row" style="grid-column: 1 / -1"><span class="label">Paciente:</span> ${it.nombrepaciente || ''}</div>
               <div class="row"><span class="label">Clínica:</span> ${it.nombre_clinica || ''}</div>
-              <div class="row"><span class="label">Fecha:</span> ${it.fecha_turno ? new Date(it.fecha_turno).toLocaleString() : ''}</div>
+              <div class="row"><span class="label">Fecha:</span> ${formatearFecha(it.fecha_turno)}</div>
             </div>
           </body>
           </html>
@@ -848,7 +832,7 @@ const ConsultaPacientes = () => {
         const sa = it.segundo_apellido ?? it.segundoapellido ?? '';
         const pacienteNombre = [pn, sn, pa, sa].filter(Boolean).join(' ');
         const sexoTxt = it.sexo ?? it.Sexo ?? '';
-        const fechaTxt = it.fecha_creacion ? new Date(it.fecha_creacion).toLocaleString() : '';
+        const fechaTxt = formatearFecha(it.fecha_creacion);
         // Preparar sección KDQOL (dimensiones, promedio y metadatos)
         let kdqolObj = null;
         try { kdqolObj = typeof it.kdqol === 'string' ? JSON.parse(it.kdqol) : it.kdqol; } catch (_) { kdqolObj = null; }
@@ -875,7 +859,7 @@ const ConsultaPacientes = () => {
           });
         }
         const promedio = count > 0 ? Math.round((sum / count) * 100) / 100 : null;
-        const kdqolMetaHtml = kdqolObj ? `<div class="meta" style="color:#64748b; font-size:12px; margin:4px 0 8px;">ID KDQOL: ${kdqolObj.id_kdqol ?? '—'} | Fecha aplicación: ${kdqolObj.fecha_aplicacion ? new Date(kdqolObj.fecha_aplicacion).toLocaleString() : '—'}</div>` : '';
+        const kdqolMetaHtml = kdqolObj ? `<div class="meta" style="color:#64748b; font-size:12px; margin:4px 0 8px;">ID KDQOL: ${kdqolObj.id_kdqol ?? '—'} | Fecha aplicación: ${formatearFecha(kdqolObj.fecha_aplicacion) || '—'}</div>` : '';
         const kdqolTableHtml = kdqolRows.length > 0 ? `
           <table style="width:100%; border-collapse:collapse; font-size:12px;">
             <thead>
@@ -1361,7 +1345,7 @@ const ConsultaPacientes = () => {
             const turnosRows = sortedTurnos.slice(0, 5).map(t => [
                 t.id_turno_cod || t.id_turno || '',
                 t.nombre_clinica || '',
-                t.fecha_turno ? new Date(t.fecha_turno).toLocaleDateString('es-ES') : ''
+                formatearFecha(t.fecha_turno)
             ]);
             if (turnosRows.length) drawTable('Turnos', ['ID','Clínica','Fecha'], turnosRows, ['center','center','center']);
         } catch {}
@@ -1376,7 +1360,7 @@ const ConsultaPacientes = () => {
                 return tb - ta; // descendente
             });
             const faltasRows = sortedFaltas.slice(0, 5).map(f => [
-                (f.fechafalta || f.fecha_falta || '') ? new Date(f.fechafalta || f.fecha_falta).toLocaleDateString('es-ES') : '',
+                formatearFecha(f.fechafalta || f.fecha_falta),
                 f.clinica || f.nombre_clinica || f.id_clinica || '',
                 f.motivo_falta || f.Motivo_falta || f.motivofalta || ''
             ]);
@@ -1409,7 +1393,7 @@ const ConsultaPacientes = () => {
             });
             const refRows = refSorted.slice(0, 5).map(r => [
                 r.id_referencia || '',
-                r.fecha_referencia ? new Date(r.fecha_referencia).toLocaleDateString('es-ES') : '',
+                formatearFecha(r.fecha_referencia),
                 r.especialidad_referencia || '',
                 r.motivo_traslado || '',
                 r.nombre_medico || r.id_medico || ''
@@ -1423,7 +1407,7 @@ const ConsultaPacientes = () => {
                 const latestNut = nutricion[0];
                 const nutRows = [
                     ['ID Informe', latestNut.id_informe || ''],
-                    ['Fecha', latestNut.fecha_creacion ? new Date(latestNut.fecha_creacion).toLocaleDateString('es-ES') : ''],
+                    ['Fecha', formatearFecha(latestNut.fecha_creacion)],
                     ['Usuario', latestNut.usuario_creacion || ''],
                     ['Motivo', latestNut.motivo_consulta || ''],
                     ['Estado Nutricional', latestNut.estado_nutricional || ''],
@@ -1450,7 +1434,7 @@ const ConsultaPacientes = () => {
                 const fechaPsi = latestPsi.fecha_creacion || latestPsi.fecha || latestPsi.fecha_informe || '';
                 const psiRows = [
                     ['ID Informe', latestPsi.id_informe || ''],
-                    ['Fecha', fechaPsi ? new Date(fechaPsi).toLocaleDateString('es-ES') : ''],
+                    ['Fecha', formatearFecha(fechaPsi)],
                     ['Tipo', latestPsi.tipo_consulta || ''],
                     ['Atención', latestPsi.tipo_atencion || ''],
                     ['Motivo', latestPsi.motivo_consulta || ''],
@@ -1550,7 +1534,7 @@ const ConsultaPacientes = () => {
                         for (const p of lista) {
                             const key = String(p.parametro ?? '').trim();
                             const f = p.fecha_laboratorio || p.fecha_registro || p.fecha_creacion || '';
-                            const fechaPrev = f ? new Date(f).toLocaleDateString('es-ES') : '';
+                            const fechaPrev = formatearFecha(f);
                             const valorPrev = p.valor != null ? String(p.valor) : '';
                             if (key) prevMap.set(key, { valor: valorPrev, fecha: fechaPrev });
                         }
@@ -1558,7 +1542,7 @@ const ConsultaPacientes = () => {
                 } catch {}
                 // Encabezado breve del último laboratorio
                 const miniRows = [[
-                    (pickDate(latest) ? new Date(pickDate(latest)).toLocaleDateString('es-ES') : ''),
+                    formatearFecha(pickDate(latest)),
                     latest.periodicidad || '',
                     latest.examen_realizado ? 'Sí' : 'No'
                 ]];
@@ -2295,7 +2279,7 @@ const ConsultaPacientes = () => {
                                                                     <tr key={it.id_informe || idx} className="border-t border-gray-200 dark:border-slate-700">
                                                                         <td className="px-3 py-2">{(pagePsicologia - 1) * pageSizePsicologia + idx + 1}</td>
                                                                         <td className="px-3 py-2">{it.id_informe ?? ''}</td>
-                                                                        <td className="px-3 py-2">{it.fecha_creacion ? new Date(it.fecha_creacion).toLocaleDateString() : ''}</td>
+                                                                        <td className="px-3 py-2">{formatearFecha(it.fecha_creacion)}</td>
                                                                         <td className="px-3 py-2">{it.motivo_consulta ?? ''}</td>
                                                                         <td className="px-3 py-2">{it.tipo_consulta ?? ''}</td>
                                                                         <td className="px-3 py-2">{it.tipo_atencion ?? ''}</td>
@@ -2359,7 +2343,7 @@ const ConsultaPacientes = () => {
                                                                     });
                                                                 }
                                                                 const promedio = c > 0 ? Math.round((s / c) * 100) / 100 : null;
-                                                                const kdqolMetaHtml = kdqolObj ? `<div class="meta" style="color:#64748b; font-size:12px; margin:4px 0 8px;">ID KDQOL: ${kdqolObj.id_kdqol ?? '—'} | Fecha aplicación: ${kdqolObj.fecha_aplicacion ? new Date(kdqolObj.fecha_aplicacion).toLocaleString() : '—'}</div>` : '';
+                                                                const kdqolMetaHtml = kdqolObj ? `<div class="meta" style="color:#64748b; font-size:12px; margin:4px 0 8px;">ID KDQOL: ${kdqolObj.id_kdqol ?? '—'} | Fecha aplicación: ${formatearFecha(kdqolObj.fecha_aplicacion) || '—'}</div>` : '';
                                                                 const kdqolTableHtml = rows.length > 0 ? `
                                                                   <table style="width:100%; border-collapse:collapse; font-size:12px;">
                                                                     <thead>
@@ -2381,7 +2365,7 @@ const ConsultaPacientes = () => {
                                                                             <div><span className="font-semibold">ID Informe:</span> {it.id_informe || ''}</div>
                                                                             <div className="md:col-span-2"><span className="font-semibold">Paciente:</span> {[pn, sn, pa, sa].filter(Boolean).join(' ')}</div>
                                                                             <div><span className="font-semibold">Sexo:</span> {sexo}</div>
-                                                                            <div><span className="font-semibold">Fecha:</span> {it.fecha_creacion ? new Date(it.fecha_creacion).toLocaleString() : ''}</div>
+                                                                            <div><span className="font-semibold">Fecha:</span> {formatearFecha(it.fecha_creacion)}</div>
                                                                         </div>
                                                                         <hr className="border-slate-200 dark:border-slate-700" />
                                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2399,7 +2383,7 @@ const ConsultaPacientes = () => {
                                                                             {kdqolObj && (
                                                                                 <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                                                                                     <span className="mr-2">ID KDQOL: {kdqolObj.id_kdqol ?? '—'}</span>
-                                                                                    <span>Fecha aplicación: {kdqolObj.fecha_aplicacion ? new Date(kdqolObj.fecha_aplicacion).toLocaleString() : '—'}</span>
+                                                                                    <span>Fecha aplicación: {formatearFecha(kdqolObj.fecha_aplicacion) || '—'}</span>
                                                                                 </div>
                                                                             )}
                                                                             {rows.length > 0 ? (
@@ -2579,7 +2563,7 @@ const ConsultaPacientes = () => {
                                                                 <tr key={t.id_turno || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
                                                                     <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.id_turno_cod || t.id_turno}</td>
                                                                     <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.nombre_clinica}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.fecha_turno ? new Date(t.fecha_turno).toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' }) : ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{formatearFecha(t.fecha_turno)}</td>
                                                                     <td className="p-3 border dark:border-gray-600">
                                                                         <button className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white" onClick={() => openTurnoDetail(t)}>Ver detalle</button>
                                                                     </td>
@@ -2619,7 +2603,7 @@ const ConsultaPacientes = () => {
                                                                             <div><span className="font-semibold">Código Turno:</span> {it.id_turno_cod || it.id_turno || ''}</div>
                                                                             <div className="md:col-span-2"><span className="font-semibold">Paciente:</span> {it.nombrepaciente || ''}</div>
                                                                             <div><span className="font-semibold">Clínica:</span> {it.nombre_clinica || ''}</div>
-                                                                            <div><span className="font-semibold">Fecha:</span> {it.fecha_turno ? new Date(it.fecha_turno).toLocaleString() : ''}</div>
+                                                                            <div><span className="font-semibold">Fecha:</span> {formatearFecha(it.fecha_turno)}</div>
                                                                         </div>
                                                                         <div className="flex justify-end gap-3">
                                                                             <button onClick={() => descargarPDFTurno(turnoDetalle.item)} className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white">Descargar PDF</button>
@@ -2670,7 +2654,7 @@ const ConsultaPacientes = () => {
                                                             faltistasPageItems.map((f, idx) => (
                                                                 <tr key={(f.noafiliacion || '') + (f.fechafalta || '') + idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
                                                                     <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.clinica || ''}</td>
-                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{f.fechafalta || ''}</td>
+                                                                    <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{formatearFecha(f.fechafalta)}</td>
                                                                 </tr>
                                                             ))
                                                         ) : (
@@ -2711,7 +2695,7 @@ const ConsultaPacientes = () => {
                                                                             <div><span className="font-semibold">Acceso Vascular:</span> {it.accesovascular ?? ''}</div>
                                                                             <div><span className="font-semibold">Departamento:</span> {it.departamento ?? ''}</div>
                                                                             <div><span className="font-semibold">Clínica:</span> {it.clinica ?? ''}</div>
-                                                                            <div><span className="font-semibold">Fecha Falta:</span> {it.fechafalta ?? ''}</div>
+                                                                            <div><span className="font-semibold">Fecha Falta:</span> {formatearFecha(it.fechafalta)}</div>
                                                                         </div>
                                                                         <div className="flex justify-end gap-3">
                                                                             <button onClick={() => descargarPDFFaltista(faltaDetalle.item)} className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white">Descargar PDF</button>
@@ -2771,7 +2755,7 @@ const ConsultaPacientes = () => {
                                                                 const sa = it.segundo_apellido ?? it.segundoapellido ?? '';
                                                                 const nombre = [pn,sn,pa,sa].filter(Boolean).join(' ');
                                                                 const rawFecha = it.fecha_laboratorio ?? it.fecha ?? '';
-                                                                const fecha = rawFecha ? new Date(rawFecha).toLocaleDateString() : '';
+                                                                const fecha = formatearFecha(rawFecha);
                                                                 return (
                                                                     <tr key={(it.id_laboratorio || '') + '-' + idx} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
                                                                         <td className="p-3 border dark:border-gray-600 text-center">{it.id_laboratorio ?? it.idlaboratorio ?? ''}</td>
@@ -2828,7 +2812,7 @@ const ConsultaPacientes = () => {
                                                                             <div><span className="font-semibold">ID Laboratorio:</span> {it.id_laboratorio || it.idlaboratorio || ''}</div>
                                                                             <div className="md:col-span-2"><span className="font-semibold">Paciente:</span> {[primerNombre, segundoNombre, primerApellido, segundoApellido].filter(Boolean).join(' ')}</div>
                                                                             <div><span className="font-semibold">Sexo:</span> {sexo}</div>
-                                                                            <div><span className="font-semibold">Fecha:</span> {it.fecha_laboratorio ? new Date(it.fecha_laboratorio).toLocaleString() : (it.fecha ? new Date(it.fecha).toLocaleString() : '')}</div>
+                                                                            <div><span className="font-semibold">Fecha:</span> {formatearFecha(it.fecha_laboratorio || it.fecha)}</div>
                                                                         </div>
                                                                         <hr className="border-slate-200 dark:border-slate-700" />
                                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2900,7 +2884,7 @@ const ConsultaPacientes = () => {
                                                                                                     <tr key={`${u.idparametro || i}-${u.parametro}`} className="border-t border-slate-200 dark:border-slate-700">
                                                                                                         <td className="px-2 py-1">{u.parametro ?? ''}</td>
                                                                                                         <td className="px-2 py-1">{u.valor ?? ''}</td>
-                                                                                                        <td className="px-2 py-1">{u.fecha_laboratorio ? new Date(u.fecha_laboratorio).toLocaleDateString() : ''}</td>
+                                                                                                        <td className="px-2 py-1">{formatearFecha(u.fecha_laboratorio)}</td>
                                                                                                     </tr>
                                                                                                 ))}
                                                                                             </tbody>
