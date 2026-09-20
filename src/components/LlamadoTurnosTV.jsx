@@ -503,8 +503,8 @@ const LlamadoTurnosTV = () => {
                             {/* Contenido - se ajusta al espacio disponible */}
                             <div className="flex-1 min-h-0 flex items-center py-1">
                                 {turno ? (
-                                    <div className="w-full bg-white/90 rounded-lg p-3 shadow-sm flex items-center gap-4">
-                                        <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow flex-shrink-0 bg-gray-100">
+                                    <div className="w-full h-full bg-white/90 rounded-lg p-3 shadow-sm flex items-center gap-6">
+                                        <div className="h-[85%] aspect-square rounded-full overflow-hidden border-4 border-white shadow-md flex-shrink-0 bg-gray-100">
                                             {turno.no_afiliacion ? (
                                                 <img
                                                     src={`/api/foto/${encodeURIComponent(turno.no_afiliacion)}?v=${encodeURIComponent(turno.id_turno_cod || '1')}`}
@@ -519,11 +519,11 @@ const LlamadoTurnosTV = () => {
                                                 />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                                    <User className="w-10 h-10" />
+                                                    <User className="w-1/2 h-1/2" />
                                                 </div>
                                             )}
                                         </div>
-                                        <p className={`text-2xl font-bold ${config.textColor} leading-tight truncate`}>
+                                        <p className={`text-4xl font-bold ${config.textColor} leading-tight truncate`}>
                                             {turno.nombrepaciente || 'Sin nombre'}
                                         </p>
                                     </div>
