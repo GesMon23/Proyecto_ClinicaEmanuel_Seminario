@@ -2109,7 +2109,7 @@ LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
     SELECT t.*, t.id_turno AS id_turno_cod, t.no_afiliacion AS noafiliacion,
-           c.descripcion AS nombre_clinica,
+           c.descripcion AS nombre_clinica, j.descripcion AS jornada,
            trim(regexp_replace(
              COALESCE(p.primer_nombre,'') || ' ' || COALESCE(p.segundo_nombre,'') || ' ' ||
              COALESCE(p.primer_apellido,'') || ' ' || COALESCE(p.segundo_apellido,''),
@@ -2119,6 +2119,7 @@ BEGIN
     JOIN public.tbl_clinica c ON t.id_clinica = c.id_clinica
     JOIN public.tbl_estados_turno es ON t.id_estado_turno = es.id_estado_turno
     LEFT JOIN public.tbl_pacientes p ON t.no_afiliacion = p.no_afiliacion
+    LEFT JOIN public.tbl_jornadas j ON p.id_jornada = j.id_jornada
     WHERE es.descripcion = 'Creada' AND t.fecha_turno = CURRENT_DATE
     ORDER BY c.descripcion, t.fecha_creacion;
 END;

@@ -23,7 +23,7 @@ const CustomModal = ({ show, onClose, title, message, children }) => {
 const normalizar = (v) =>
     String(v ?? '')
         .normalize('NFD')
-        .replace(/[̀-ͯ]/g, '')
+        .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase();
 
 const esHemodialisis = (clinica) => normalizar(clinica).includes('hemodialisis');
@@ -68,7 +68,7 @@ const AsignarTurno = () => {
         const q = normalizar(busqueda).trim();
         if (!q) return turnos;
         return turnos.filter((t) =>
-            normalizar([t.id_turno_cod || t.id_turno, t.nombrepaciente, t.noafiliacion, t.nombre_clinica].join(' ')).includes(q)
+            normalizar([t.id_turno_cod || t.id_turno, t.nombrepaciente, t.noafiliacion, t.nombre_clinica, t.jornada].join(' ')).includes(q)
         );
     }, [turnos, busqueda]);
 
@@ -223,17 +223,18 @@ const AsignarTurno = () => {
                                     <th scope="col" className={thClass}>Nombre</th>
                                     <th scope="col" className={thClass}>No. Afiliación</th>
                                     <th scope="col" className={thClass}>Clínica</th>
+                                    <th scope="col" className={thClass}>Jornada</th>
                                     <th scope="col" className={thClass}>Acciones</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
                                 {loading && turnos.length === 0 ? (
                                     <tr>
-                                        <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">Cargando...</td>
+                                        <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">Cargando...</td>
                                     </tr>
                                 ) : turnosFiltrados.length === 0 ? (
                                     <tr>
-                                        <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                                        <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                                             {turnos.length === 0 ? 'No hay turnos creados para el día de hoy' : 'No se encontraron turnos con esa búsqueda'}
                                         </td>
                                     </tr>
@@ -244,6 +245,7 @@ const AsignarTurno = () => {
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{t.nombrepaciente}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{t.noafiliacion}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{t.nombre_clinica}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{t.jornada || ''}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm">
                                                 <div className="flex gap-2">
                                                     <button
