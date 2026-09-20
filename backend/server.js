@@ -80,7 +80,6 @@ const backPsicologiaRouter = require('./src/controllers/BackPsicologia');
 // Importar router de consulta de psicología
 const backConsultaPsicologiaRouter = consultasModule.psicologia;
 
-const backNU = require('./src/controllers/BackNU');
 // Importar router de nutrición
 const backNutricionRouter = require('./src/controllers/BackNutricion');
 // Importar router de consulta de nutrición (historial, filtros)
@@ -170,8 +169,6 @@ app.use('/api/psicologia', backConsultaPsicologiaRouter);
 // Tolerar proxies sin /api para consultas
 app.use('/psicologia', backConsultaPsicologiaRouter);
 
-app.use(backNU);
-app.use('/api',backNU);
 // Usar router de nutrición
 app.use('/api/nutricion', backNutricionRouter);
 // Tolerar proxies que remueven /api
