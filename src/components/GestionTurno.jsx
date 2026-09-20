@@ -199,9 +199,26 @@ const GestionTurno = () => {
           : 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)'} !important;
         border: 3px solid ${isDark ? '#22c55e' : '#16a34a'} !important;
         border-radius: 0.5rem !important;
-        box-shadow: 0 0 0 2px ${isDark 
-          ? 'rgba(34, 197, 94, 0.4)' 
+        box-shadow: 0 0 0 2px ${isDark
+          ? 'rgba(34, 197, 94, 0.4)'
           : 'rgba(22, 163, 74, 0.3)'} !important;
+      }
+      /* Días disponibles: verde más discreto que el de la selección */
+      .fc .fc-daygrid-day.dia-disponible {
+        background-color: ${isDark ? '#0f2a1d' : '#e6f7ec'} !important;
+        cursor: pointer;
+      }
+      .fc .fc-daygrid-day.dia-disponible:hover {
+        background-color: ${isDark ? '#14532d' : '#d1f0dc'} !important;
+      }
+      /* Domingos y días anteriores a hoy: bloqueados */
+      .fc .fc-daygrid-day.dia-bloqueado,
+      .fc .fc-daygrid-day.dia-bloqueado:hover {
+        background-color: ${isDark ? '#1e293b' : '#e5e7eb'} !important;
+        cursor: not-allowed;
+      }
+      .fc .fc-daygrid-day.dia-bloqueado .fc-daygrid-day-number {
+        color: ${isDark ? '#64748b' : '#9ca3af'} !important;
       }
     `;
     document.head.appendChild(style);
@@ -926,46 +943,6 @@ const GestionTurno = () => {
               background-color: #1e293b !important;
             }
             
-            /* Días disponibles para crear turnos (verde) */
-            .calendar-wrapper :global(.fc-theme-standard td.dia-disponible) {
-              background-color: #bbf7d0;
-              cursor: pointer;
-            }
-
-            .calendar-wrapper :global(.fc-theme-standard td.dia-disponible:hover) {
-              background-color: #86efac !important;
-            }
-
-            .calendar-wrapper :global(.dark .fc-theme-standard td.dia-disponible) {
-              background-color: #14532d;
-            }
-
-            .calendar-wrapper :global(.dark .fc-theme-standard td.dia-disponible:hover) {
-              background-color: #166534 !important;
-            }
-
-            /* Domingos y días anteriores a hoy: bloqueados (gris) */
-            .calendar-wrapper :global(.fc-theme-standard td.dia-bloqueado),
-            .calendar-wrapper :global(.fc-theme-standard td.dia-bloqueado.fc-day-today) {
-              background: #e5e7eb !important;
-              cursor: not-allowed;
-            }
-
-            .calendar-wrapper :global(.fc-theme-standard td.dia-bloqueado:hover) {
-              background: #e5e7eb !important;
-              transform: none;
-            }
-
-            .calendar-wrapper :global(.fc-theme-standard td.dia-bloqueado .fc-daygrid-day-number) {
-              color: #9ca3af !important;
-            }
-
-            .calendar-wrapper :global(.dark .fc-theme-standard td.dia-bloqueado),
-            .calendar-wrapper :global(.dark .fc-theme-standard td.dia-bloqueado.fc-day-today),
-            .calendar-wrapper :global(.dark .fc-theme-standard td.dia-bloqueado:hover) {
-              background: #1e293b !important;
-            }
-
             /* Botones del toolbar */
             .calendar-wrapper :global(.fc-button) {
               background: linear-gradient(135deg, #10b981 0%, #059669 100%);
