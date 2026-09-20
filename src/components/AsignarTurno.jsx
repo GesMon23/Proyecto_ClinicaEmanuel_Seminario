@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import api from '../config/api';
 import WebcamFoto from '@/components/WebcamFoto.jsx';
 import logoClinica from "@/assets/logoClinica2.png";
+import { formatearFecha } from '@/utils/fechas';
 
 const CustomModal = ({ show, onClose, title, message, type, action, children }) => {
     if (!show) return null;
@@ -342,7 +343,7 @@ const AsignarTurno = () => {
                                                 <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.nombrepaciente}</td>
                                                 <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.id_turno_cod || t.id_turno}</td>
                                                 <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.nombre_clinica}</td>
-                                                <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{t.fecha_turno ? new Date(t.fecha_turno).toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' }) : ''}</td>
+                                                <td className="p-3 border dark:border-gray-600 text-gray-900 dark:text-gray-100">{formatearFecha(t.fecha_turno)}</td>
                                                 <td className="p-3 border dark:border-gray-600">
                                                     <div className="flex flex-col sm:flex-row gap-2 justify-center">
                                                         

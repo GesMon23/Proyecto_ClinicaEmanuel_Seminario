@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import { formatearFecha } from '@/utils/fechas';
 
 export function exportarPacientesExcel(pacientes) {
   // Define los encabezados en el mismo orden que la tabla
@@ -13,12 +14,12 @@ export function exportarPacientesExcel(pacientes) {
     p.dpi || '',
     p.nopacienteproveedor || '',
     p.nombrecompleto || '',
-    p.fechanacimiento || '',
+    formatearFecha(p.fechanacimiento),
     p.edad || '',
     p.sexo || '',
     p.direccion || '',
     p.departamento || '',
-    p.fechaingreso || '',
+    formatearFecha(p.fechaingreso),
     p.estadopaciente || '',
     p.jornada || '',
     p.accesovascular || '',

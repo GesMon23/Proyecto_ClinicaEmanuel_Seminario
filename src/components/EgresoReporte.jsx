@@ -4,6 +4,7 @@ import { saveAs } from 'file-saver';
 import { Card, Form, Row, Col, Button, Table } from 'react-bootstrap';
 import logoClinica from '@/assets/logoClinica2.png';
 import api from '../config/api';
+import { formatearFecha } from '@/utils/fechas';
 import './NuevoIngresoReportes.css';
 
 function parseYMD(str){ if(!str) return null; const [y,m,d]=String(str).split('-').map(Number); if(!y||!m||!d) return null; return new Date(y,m-1,d); }
@@ -136,7 +137,7 @@ const EgresoReporte = () => {
           <td>${it.departamento||''}</td>
           <td>${it.causa_descripcion||''}</td>
           <td>${it.descripcion||''}</td>
-          <td>${it.fechaegreso||''}</td>
+          <td>${formatearFecha(it.fechaegreso)}</td>
           <td>${it.observaciones||''}</td>
         </tr>`).join('');
       const html = `
@@ -191,11 +192,11 @@ const EgresoReporte = () => {
         <div class='row'><span class='label'>Sexo:</span> ${it.sexo||''}</div>
         <div class='row' style='grid-column:1/-1'><span class='label'>Nombre Completo:</span> ${nombre}</div>
         <div class='row'><span class='label'>Edad:</span> ${edad||''}</div>
-        <div class='row'><span class='label'>Fecha Nacimiento:</span> ${it.fechanacimiento||''}</div>
-        <div class='row'><span class='label'>Fecha Ingreso:</span> ${it.fechaingreso||''}</div>
+        <div class='row'><span class='label'>Fecha Nacimiento:</span> ${formatearFecha(it.fechanacimiento)}</div>
+        <div class='row'><span class='label'>Fecha Ingreso:</span> ${formatearFecha(it.fechaingreso)}</div>
         <div class='row'><span class='label'>Estancia (D-M-A):</span> ${estancia||''}</div>
         <div class='row'><span class='label'>Causa de Egreso:</span> ${it.causa_descripcion||''}</div>
-        <div class='row'><span class='label'>Fecha de Egreso:</span> ${it.fechaegreso||''}</div>
+        <div class='row'><span class='label'>Fecha de Egreso:</span> ${formatearFecha(it.fechaegreso)}</div>
         <div class='row' style='grid-column:1/-1'><span class='label'>Observaciones:</span> ${it.observaciones||''}</div>
       </div></div></body></html>`;
       const w = window.open('', '_blank'); if(!w) return; w.document.open(); w.document.write(html); w.document.close(); w.focus(); setTimeout(()=>w.print(),300);
@@ -374,7 +375,7 @@ const EgresoReporte = () => {
                                         <td className="px-4 py-2">{paciente.departamento || ''}</td>
                                         <td className="px-4 py-2">{paciente.causa_descripcion || ''}</td>
                                         <td className="px-4 py-2">{paciente.descripcion || ''}</td>
-                                        <td className="px-4 py-2">{paciente.fechaegreso || ''}</td>
+                                        <td className="px-4 py-2">{formatearFecha(paciente.fechaegreso)}</td>
                                         <td className="px-4 py-2">{paciente.observaciones || ''}</td>
                                         <td className="px-4 py-2">
                                           <button type="button" onClick={() => abrirDetalle(paciente)} className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm">Ver detalle</button>
@@ -410,9 +411,9 @@ const EgresoReporte = () => {
                                 <div><span className="font-semibold">Sexo:</span> {it.sexo || ''}</div>
                                 <div className="md:col-span-2"><span className="font-semibold">Nombre Completo:</span> {nombre || ''}</div>
                                 <div><span className="font-semibold">Edad:</span> {edad || ''}</div>
-                                <div><span className="font-semibold">Fecha Nacimiento:</span> {it.fechanacimiento || ''}</div>
-                                <div><span className="font-semibold">Fecha Ingreso:</span> {it.fechaingreso || ''}</div>
-                                <div><span className="font-semibold">Fecha Egreso:</span> {it.fechaegreso || ''}</div>
+                                <div><span className="font-semibold">Fecha Nacimiento:</span> {formatearFecha(it.fechanacimiento)}</div>
+                                <div><span className="font-semibold">Fecha Ingreso:</span> {formatearFecha(it.fechaingreso)}</div>
+                                <div><span className="font-semibold">Fecha Egreso:</span> {formatearFecha(it.fechaegreso)}</div>
                                 <div><span className="font-semibold">Estancia (D-M-A):</span> {estancia || ''}</div>
                                 <div className="md:col-span-2"><span className="font-semibold">Causa de Egreso:</span> {it.causa_descripcion || ''}</div>
                                 <div><span className="font-semibold">Jornada:</span> {it.jornada || ''}</div>

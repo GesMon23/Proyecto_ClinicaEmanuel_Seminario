@@ -4,6 +4,7 @@ import { saveAs } from 'file-saver';
 import { Card, Form, Row, Col, Button, Table } from 'react-bootstrap';
 import logoClinica from '@/assets/logoClinica2.png';
 import api from '../config/api';
+import { formatearFecha } from '@/utils/fechas';
 import './NuevoIngresoReportes.css';
 
 function parseYMD(str) {
@@ -50,18 +51,11 @@ function fechaCortePaciente(p) {
 
 function formatearPeriodo(fechaInicio, fechaFin) {
     if (!fechaInicio && !fechaFin) return '';
-    const parseFecha = (fechaStr) => {
-        if (!fechaStr) return null;
-        // Espera formato 'YYYY-MM-DD'
-        const [anio, mes, dia] = fechaStr.split('-').map(Number);
-        return { dia, mes, anio };
-    };
-    const formato = (f) => f ? (f.dia.toString().padStart(2, '0') + '/' + f.mes.toString().padStart(2, '0') + '/' + f.anio) : '';
-    const f1 = parseFecha(fechaInicio);
-    const f2 = parseFecha(fechaFin);
-    if (f1 && f2) return `Del ${formato(f1)} al ${formato(f2)}`;
-    if (f1) return `Desde ${formato(f1)}`;
-    if (f2) return `Hasta ${formato(f2)}`;
+    const f1 = formatearFecha(fechaInicio);
+    const f2 = formatearFecha(fechaFin);
+    if (f1 && f2) return `Del ${f1} al ${f2}`;
+    if (f1) return `Desde ${f1}`;
+    if (f2) return `Hasta ${f2}`;
     return '';
 }
 
@@ -260,17 +254,17 @@ const NuevoIngresoReportes = () => {
                 <div class="row"><span class="label">DPI:</span> ${it.dpi || ''}</div>
                 <div class="row" style="grid-column: 1 / -1;"><span class="label">Nombre Completo:</span> ${nombre || ''}</div>
                 <div class="row"><span class="label">Edad:</span> ${edad || ''}</div>
-                <div class="row"><span class="label">Fecha Nacimiento:</span> ${it.fechanacimiento || ''}</div>
+                <div class="row"><span class="label">Fecha Nacimiento:</span> ${formatearFecha(it.fechanacimiento)}</div>
                 <div class="row"><span class="label">Sexo:</span> ${it.sexo || ''}</div>
                 <div class="row"><span class="label">Dirección:</span> ${it.direccion || ''}</div>
                 <div class="row"><span class="label">Departamento:</span> ${it.departamento || ''}</div>
-                <div class="row"><span class="label">Fecha Ingreso:</span> ${it.fechaingreso || ''}</div>
+                <div class="row"><span class="label">Fecha Ingreso:</span> ${formatearFecha(it.fechaingreso)}</div>
                 <div class="row"><span class="label">Estancia (D-M-A):</span> ${estancia || ''}</div>
                 <div class="row"><span class="label">Estado:</span> ${it.estadopaciente || it.estado || ''}</div>
                 <div class="row"><span class="label">Jornada:</span> ${it.jornada || ''}</div>
                 <div class="row"><span class="label">Acceso Vascular:</span> ${it.accesovascular || ''}</div>
                 <div class="row"><span class="label">No. Formulario:</span> ${it.numeroformulario || ''}</div>
-                <div class="row" style="grid-column: 1 / -1;"><span class="label">Periodo:</span> ${(it.fechainicioperiodo || it.fechafinperiodo) ? `${it.fechainicioperiodo || ''} - ${it.fechafinperiodo || ''}` : ''}</div>
+                <div class="row" style="grid-column: 1 / -1;"><span class="label">Periodo:</span> ${formatearPeriodo(it.fechainicioperiodo, it.fechafinperiodo)}</div>
                 <div class="row" style="grid-column: 1 / -1;"><span class="label">Observaciones:</span> ${it.observaciones || ''}</div>
               </div>
             </div>
@@ -512,11 +506,11 @@ const NuevoIngresoReportes = () => {
                                         paciente.apellidocasada
                                     ].filter(Boolean).join(' ')}</td>
                                     <td className="px-4 py-2">{calcularEdadHasta(paciente.fechanacimiento, fechaCortePaciente(paciente))}</td>
-                                    <td className="px-4 py-2">{paciente.fechanacimiento || ''}</td>
+                                    <td className="px-4 py-2">{formatearFecha(paciente.fechanacimiento)}</td>
                                     <td className="px-4 py-2">{paciente.sexo || ''}</td>
                                     <td className="px-4 py-2">{paciente.direccion || ''}</td>
                                     <td className="px-4 py-2">{paciente.departamento || ''}</td>
-                                    <td className="px-4 py-2">{paciente.fechaingreso || ''}</td>
+                                    <td className="px-4 py-2">{formatearFecha(paciente.fechaingreso)}</td>
                                     <td className="px-4 py-2">{diffDMA(paciente.fechaingreso, fechaCortePaciente(paciente))}</td>
                                     <td className="px-4 py-2">{paciente.estadopaciente || paciente.estado || ''}</td>
                                     <td className="px-4 py-2">{paciente.jornada || ''}</td>
@@ -555,11 +549,11 @@ const NuevoIngresoReportes = () => {
                                             <div><span className="font-semibold">DPI:</span> {it.dpi || ''}</div>
                                             <div className="md:col-span-2"><span className="font-semibold">Nombre Completo:</span> {nombre || ''}</div>
                                             <div><span className="font-semibold">Edad:</span> {edad || ''}</div>
-                                            <div><span className="font-semibold">Fecha Nacimiento:</span> {it.fechanacimiento || ''}</div>
+                                            <div><span className="font-semibold">Fecha Nacimiento:</span> {formatearFecha(it.fechanacimiento)}</div>
                                             <div><span className="font-semibold">Sexo:</span> {it.sexo || ''}</div>
                                             <div><span className="font-semibold">Dirección:</span> {it.direccion || ''}</div>
                                             <div><span className="font-semibold">Departamento:</span> {it.departamento || ''}</div>
-                                            <div><span className="font-semibold">Fecha Ingreso:</span> {it.fechaingreso || ''}</div>
+                                            <div><span className="font-semibold">Fecha Ingreso:</span> {formatearFecha(it.fechaingreso)}</div>
                                             <div><span className="font-semibold">Estancia (A-M-D):</span> {estancia || ''}</div>
                                             <div><span className="font-semibold">Estado:</span> {it.estadopaciente || it.estado || ''}</div>
                                             <div><span className="font-semibold">Jornada:</span> {it.jornada || ''}</div>

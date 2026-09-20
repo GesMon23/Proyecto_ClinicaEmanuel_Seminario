@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 
 import api from '../config/api';
 import logoClinica from "@/assets/logoClinica1Min.png";
+import { formatearFecha } from '@/utils/fechas';
 import { 
   RefreshCw,
   HeartPulse,
@@ -543,11 +544,7 @@ const LlamadoTurnosTV = () => {
                                                     <span className="text-xs font-bold text-gray-600 uppercase leading-none">Fecha</span>
                                                 </div>
                                                 <p className={`text-xs font-bold ${config.textColor} leading-tight`}>
-                                                    {turno.fecha_turno ? new Date(turno.fecha_turno).toLocaleDateString('es-GT', {
-                                                        day: '2-digit',
-                                                        month: 'short',
-                                                        year: 'numeric'
-                                                    }) : 'Sin fecha'}
+                                                    {turno.fecha_turno ? formatearFecha(turno.fecha_turno) : 'Sin fecha'}
                                                 </p>
                                             </div>
                                         </div>

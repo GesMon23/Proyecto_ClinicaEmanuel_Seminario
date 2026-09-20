@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../config/api';
 import logoClinica from "@/assets/logoClinica2.png";
+import { formatearFecha } from '@/utils/fechas';
 import { 
   RefreshCw,
   Stethoscope,
@@ -896,11 +897,7 @@ const LlamadoTurnos = () => {
                                                 <div className="bg-gray-50 dark:bg-slate-700/50 p-4 rounded-lg">
                                                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Fecha y Hora</p>
                                                     <p className="text-gray-700 dark:text-gray-300">
-                                                        {new Date(clinicasData[selectedClinica].turnoLlamado.fecha_turno).toLocaleString('es-GT', {
-                                                            day: '2-digit',
-                                                            month: 'short',
-                                                            year: 'numeric'
-                                                        })}
+                                                        {formatearFecha(clinicasData[selectedClinica].turnoLlamado.fecha_turno)}
                                                     </p>
                                                 </div>
                                                 
@@ -993,11 +990,7 @@ const LlamadoTurnos = () => {
                                                         {turno.no_afiliacion}
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                                        {new Date(turno.fecha_turno).toLocaleString('es-GT', {
-                                                            day: '2-digit',
-                                                            month: 'short',
-                                                            year: 'numeric'
-                                                        })}
+                                                        {formatearFecha(turno.fecha_turno)}
                                                     </td>
                                                 </tr>
                                             ))

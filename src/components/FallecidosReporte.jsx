@@ -5,6 +5,7 @@ import { Card, Form, Row, Col, Button, Table } from 'react-bootstrap';
 import logoClinica from '@/assets/logoClinica2.png';
 import api from '../config/api';
 import CustomModal from '@/components/CustomModal.jsx';
+import { formatearFecha } from '@/utils/fechas';
 import './NuevoIngresoReportes.css';
 
 function calcularEdad(fechaNacimiento) {
@@ -144,8 +145,8 @@ const FallecidosReporte = () => {
             <td>${p.jornada || ''}</td>
             <td>${p.accesovascular || ''}</td>
             <td>${p.departamento || ''}</td>
-            <td>${p.fechaingreso || ''}</td>
-            <td>${p.fechafallecido || ''}</td>
+            <td>${formatearFecha(p.fechaingreso)}</td>
+            <td>${formatearFecha(p.fechafallecido)}</td>
             <td>${p.comorbilidades || ''}</td>
             <td>${p.lugarfallecimiento || ''}</td>
             <td>${p.causafallecimiento || ''}</td>
@@ -209,12 +210,12 @@ const FallecidosReporte = () => {
             <div class='row'><span class='label'>Sexo:</span> ${it.sexo || ''}</div>
             <div class='row' style='grid-column:1/-1'><span class='label'>Nombre Completo:</span> ${nombre}</div>
             <div class='row'><span class='label'>Edad:</span> ${edad || ''}</div>
-            <div class='row'><span class='label'>Fecha Nacimiento:</span> ${it.fechanacimiento || ''}</div>
+            <div class='row'><span class='label'>Fecha Nacimiento:</span> ${formatearFecha(it.fechanacimiento)}</div>
             <div class='row'><span class='label'>Jornada:</span> ${it.jornada || ''}</div>
             <div class='row'><span class='label'>Acceso:</span> ${it.accesovascular || ''}</div>
             <div class='row'><span class='label'>Departamento:</span> ${it.departamento || ''}</div>
-            <div class='row'><span class='label'>Fecha Ingreso:</span> ${it.fechaingreso || ''}</div>
-            <div class='row'><span class='label'>Fecha Fallecimiento:</span> ${it.fechafallecido || ''}</div>
+            <div class='row'><span class='label'>Fecha Ingreso:</span> ${formatearFecha(it.fechaingreso)}</div>
+            <div class='row'><span class='label'>Fecha Fallecimiento:</span> ${formatearFecha(it.fechafallecido)}</div>
             <div class='row' style='grid-column:1/-1'><span class='label'>Comorbilidades:</span> ${it.comorbilidades || ''}</div>
             <div class='row'><span class='label'>Lugar Fallecimiento:</span> ${it.lugarfallecimiento || ''}</div>
             <div class='row'><span class='label'>Causa Fallecimiento:</span> ${it.causafallecimiento || ''}</div>
@@ -413,14 +414,14 @@ const FallecidosReporte = () => {
                                         <td className="px-4 py-2">{p.noafiliacion || ''}</td>
                                         <td className="px-4 py-2">{p.nombre_completo || [p.primer_nombre, p.segundo_nombre, p.otros_nombres, p.primer_apellido, p.segundo_apellido, p.apellido_casada].filter(Boolean).join(' ')}</td>
                                         <td className="px-4 py-2">{calcularEdad(p.fechanacimiento)}</td>
-                                        <td className="px-4 py-2">{p.fechanacimiento || ''}</td>
+                                        <td className="px-4 py-2">{formatearFecha(p.fechanacimiento)}</td>
                                         <td className="px-4 py-2">{p.sexo || ''}</td>
                                         <td className="px-4 py-2">{p.jornada || ''}</td>
                                         <td className="px-4 py-2">{p.accesovascular || ''}</td>
                                         <td className="px-4 py-2">{p.departamento || ''}</td>
-                                        <td className="px-4 py-2">{p.fechaingreso || ''}</td>
+                                        <td className="px-4 py-2">{formatearFecha(p.fechaingreso)}</td>
                                         <td className="px-4 py-2">{p.comorbilidades || 'Sin registro'}</td>
-                                        <td className="px-4 py-2">{p.fechafallecido || ''}</td>
+                                        <td className="px-4 py-2">{formatearFecha(p.fechafallecido)}</td>
                                         <td className="px-4 py-2">{p.lugarfallecimiento || 'Sin registro'}</td>
                                         <td className="px-4 py-2">{p.causafallecimiento || 'Sin registro'}</td>
                                         <td className="px-4 py-2">{p.observaciones || ''}</td>
@@ -456,12 +457,12 @@ const FallecidosReporte = () => {
                                 <div><span className="font-semibold">Sexo:</span> {it.sexo || ''}</div>
                                 <div className="md:col-span-2"><span className="font-semibold">Nombre Completo:</span> {nombre || ''}</div>
                                 <div><span className="font-semibold">Edad:</span> {edad || ''}</div>
-                                <div><span className="font-semibold">Fecha Nacimiento:</span> {it.fechanacimiento || ''}</div>
+                                <div><span className="font-semibold">Fecha Nacimiento:</span> {formatearFecha(it.fechanacimiento)}</div>
                                 <div><span className="font-semibold">Jornada:</span> {it.jornada || ''}</div>
                                 <div><span className="font-semibold">Acceso:</span> {it.accesovascular || ''}</div>
                                 <div><span className="font-semibold">Departamento:</span> {it.departamento || ''}</div>
-                                <div><span className="font-semibold">Fecha Ingreso:</span> {it.fechaingreso || ''}</div>
-                                <div><span className="font-semibold">Fecha Fallecimiento:</span> {it.fechafallecido || ''}</div>
+                                <div><span className="font-semibold">Fecha Ingreso:</span> {formatearFecha(it.fechaingreso)}</div>
+                                <div><span className="font-semibold">Fecha Fallecimiento:</span> {formatearFecha(it.fechafallecido)}</div>
                                 <div className="md:col-span-2"><span className="font-semibold">Comorbilidades:</span> {it.comorbilidades || ''}</div>
                                 <div><span className="font-semibold">Lugar Fallecimiento:</span> {it.lugarfallecimiento || ''}</div>
                                 <div><span className="font-semibold">Causa Fallecimiento:</span> {it.causafallecimiento || ''}</div>

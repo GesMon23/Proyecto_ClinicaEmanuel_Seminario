@@ -4,6 +4,7 @@ import api from "../config/api";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import { formatearFecha } from '@/utils/fechas';
 import logoClinica from "@/assets/logoClinica2.png";
 
 const CustomModal = ({ show, onClose, title, message, type, onConfirm }) => {
@@ -573,11 +574,7 @@ const GestionTurno = () => {
                         {turno.nombre_clinica}
                       </td>
                       <td className="p-3 border dark:border-gray-600 text-gray-800 dark:text-gray-200">
-                        {new Date(turno.fecha_turno).toLocaleDateString('es-ES', {
-                          year: 'numeric',
-                          month: '2-digit',
-                          day: '2-digit'
-                        })}
+                        {formatearFecha(turno.fecha_turno)}
                       </td>
                       <td className="p-3 border dark:border-gray-600">
                         <div className="flex justify-center gap-2">

@@ -4,6 +4,7 @@ import api from '../config/api';
 import CustomModal from '@/components/CustomModal.jsx';
 import logoClinica from "@/assets/logoClinica2.png"
 import defaultAvatar from "@/assets/img/default-avatar.png"
+import { formatearFecha } from '@/utils/fechas';
 
 // Calcula la edad a partir de la fecha de nacimiento (YYYY-MM-DD)
 function calcularEdad(fechaNacimiento) {
@@ -523,14 +524,14 @@ const RegistroFormularios = () => {
                       <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>No. Afiliación:</b> {p.noafiliacion}</div>
                       <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>DPI:</b> {p.dpi}</div>
                       <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>No. Paciente Proveedor:</b> {p.nopacienteproveedor || ''}</div>
-                      <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>Fecha de Nacimiento:</b> {p.fechanacimiento ? new Date(p.fechanacimiento).toLocaleDateString() : ''}</div>
+                      <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>Fecha de Nacimiento:</b> {formatearFecha(p.fechanacimiento)}</div>
                       <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>Edad:</b> {calcularEdad(p.fechanacimiento)}</div>
                     </div>
                     {/* Columna 2 */}
                     <div style={{ flex: 1 }}>
                       <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>Sexo:</b> {p.sexo || ''}</div>
                       <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>Dirección:</b> {p.direccion || ''}</div>
-                      <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>Fecha Egreso:</b> {p.fechaegreso ? new Date(p.fechaegreso).toLocaleDateString() : ''}</div>
+                      <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>Fecha Egreso:</b> {formatearFecha(p.fechaegreso)}</div>
                       <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>Causa:</b> {p.descripcionEgreso}</div>
                       <div style={{ marginBottom: 10 }}><b style={{ color: '#2d6a4f' }}>Causa Egreso:</b> {p.descripcionEgreso || ''}</div>
                     </div>

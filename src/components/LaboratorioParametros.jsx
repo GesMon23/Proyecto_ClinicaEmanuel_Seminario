@@ -4,6 +4,7 @@ import api from '../config/api';
 import './LaboratorioParametros.css';
 import { Row, Col, Form, Button, Card, Table } from "react-bootstrap";
 import CustomModal from '@/components/CustomModal.jsx';
+import { formatearFecha } from '@/utils/fechas';
 
 // Parámetros base y utilidades (restaurados)
 const PARAMETROS_LAB_BASE = [
@@ -45,16 +46,8 @@ const CANON_MAP_BASE = PARAMETROS_LAB_BASE.reduce((acc, p) => {
   return acc;
 }, {});
 
-// Helper: formatea 'YYYY-MM-DD' a 'dd/mm/yyyy'
-const formatearFechaDDMMYYYY = (s) => {
-  if (!s) return '';
-  const str = String(s);
-  const base = str.includes('T') ? str.split('T')[0] : str;
-  const m = base.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!m) return str;
-  const [, yy, mm, dd] = m;
-  return `${dd}/${mm}/${yy}`;
-};
+// Formatea la fecha del laboratorio de origen en dd-mm-aaaa
+const formatearFechaDDMMYYYY = (s) => formatearFecha(s);
 
 // Alias frecuentes
 const ALIAS_MAP = {
