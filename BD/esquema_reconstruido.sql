@@ -2064,9 +2064,10 @@ BEGIN
     LEFT JOIN public.tbl_clinica c ON t.id_clinica = c.id_clinica
     JOIN public.tbl_estados_turno es ON t.id_estado_turno = es.id_estado_turno
     WHERE t.no_afiliacion = p_noafiliacion
-      -- Pestana Crear: solo turnos pendientes (Creada o ya Asignada); se ocultan los
-      -- que estan en atencion, abandonados, finalizados, faltantes o cancelados.
-      AND es.descripcion IN ('Creada', 'Asignada')
+      -- Pestana Crear: solo turnos en estado Creada (los asignados ya pasaron a la
+      -- pestana Asignacion y a Llamado; se ocultan tambien atencion, abandonados,
+      -- finalizados, faltantes y cancelados).
+      AND es.descripcion = 'Creada'
     ORDER BY t.fecha_turno DESC;
 END;
 $$;
