@@ -1,7 +1,7 @@
 // Router de Login/Roles
 const express = require('express');
 const pool = require('../../db/pool');
-const jwt = require('jsonwebtoken');
+const { actorFromRequest } = require('../shared/auth');
 const { runWithUser } = require('../db');
 const fs = require('fs');
 const path = require('path');
@@ -172,14 +172,7 @@ router.put('/Apacientes/:no_afiliacion', async (req, res) => {
     } catch (_) {}
 
     // Actor (usuario del token) para auditoría de los turnos reprogramados
-    let actor = 'web';
-    try {
-      const auth = req.headers.authorization || '';
-      if (auth.startsWith('Bearer ')) {
-        const payload = jwt.verify(auth.slice(7), process.env.JWT_SECRET || 'dev_secret_change_me');
-        actor = payload?.nombre_usuario || String(payload?.sub || 'web');
-      }
-    } catch (_) {}
+    const actor = actorFromRequest(req);
     try {
       const dpiClean = dpi ? String(dpi).replace(/\D+/g, '').trim() : null;
       if (dpiClean && dpiClean.length === 13 && dpiClean !== currentDpi) {
@@ -229,15 +222,7 @@ router.put('/Apacientes/:no_afiliacion', async (req, res) => {
     } catch (_) { /* continuar con SP si no se pudo determinar */ }
 
     // Derivar usuario/actor
-    let userName = 'web';
-    try {
-      const auth = req.headers.authorization || '';
-      if (auth.startsWith('Bearer ')) {
-        const token = auth.slice(7);
-        const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret_change_me');
-        userName = payload?.nombre_usuario || String(payload?.sub || 'web');
-      }
-    } catch (_) {}
+    const userName = actorFromRequest(req);
     // Llamar SP con cursor
     const client = await pool.connect();
     try {
@@ -355,15 +340,7 @@ router.post('/Aupload-foto/:no_Afiliacion', async (req, res) => {
         fs.writeFileSync(filePath, buffer);
 
         // Derivar usuario y ejecutar dentro de runWithUser para auditoría
-        let userName = 'web';
-        try {
-          const auth = req.headers.authorization || '';
-          if (auth.startsWith('Bearer ')) {
-            const token = auth.slice(7);
-            const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret_change_me');
-            userName = payload?.nombre_usuario || String(payload?.sub || 'web');
-          }
-        } catch (_) {}
+        const userName = actorFromRequest(req);
         // Actualizar en BD vía SP
         const client = await pool.connect();
         try {

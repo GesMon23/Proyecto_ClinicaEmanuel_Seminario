@@ -1,7 +1,7 @@
 // Router de Login/Roles
 const express = require('express');
 const pool = require('../../db/pool');
-const jwt = require('jsonwebtoken');
+const { actorFromRequest } = require('../shared/auth');
 const { runWithUser } = require('../db');
 
 const router = express.Router();
@@ -31,15 +31,7 @@ router.get('/pacientes/egreso', async (req, res) => {
 
 router.put('/pacientes/:noAfiliacion', async (req, res) => {
     // Derivar usuario desde JWT
-    let userName = 'web';
-    try {
-        const auth = req.headers.authorization || '';
-        if (auth.startsWith('Bearer ')) {
-            const token = auth.slice(7);
-            const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret_change_me');
-            userName = payload?.nombre_usuario || String(payload?.sub || 'web');
-        }
-    } catch (_) {}
+    const userName = actorFromRequest(req);
 
     try {
         const { noAfiliacion } = req.params;
@@ -93,15 +85,7 @@ router.put('/pacientes/:noAfiliacion', async (req, res) => {
 // Endpoint para insertar un egreso
 router.post('/egresos', async (req, res) => {
   // Derivar usuario desde JWT
-  let userName = 'web';
-  try {
-    const auth = req.headers.authorization || '';
-    if (auth.startsWith('Bearer ')) {
-      const token = auth.slice(7);
-      const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret_change_me');
-      userName = payload?.nombre_usuario || String(payload?.sub || 'web');
-    }
-  } catch (_) {}
+  const userName = actorFromRequest(req);
 
   let idEstado = 0;
   try {

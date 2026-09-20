@@ -59,7 +59,8 @@ app.use(bodyParser.json({ limit: '50mb' }));
 // Importar router de login/roles centralizado
 const backLoginRouter = require('./BackLogin');
 
-const backGestionTurnosRouter = require('./src/controllers/BackGestionTurno');
+const turnosModule = require('./src/modules/turnos');
+const backGestionTurnosRouter = turnosModule.router;
 const backFallecidosReportesRouter = require('./src/controllers/BackFallecidosReportes');
 // Importar router de registro de formularios
 const backRegistroFormulariosRouter = require('./src/controllers/BackRegistroFormularios');
@@ -127,10 +128,6 @@ if (!fs.existsSync(fotosDir)) {
 
 app.use(backGestionTurnosRouter);
 app.use('/api',backGestionTurnosRouter);
-
-
-app.use(backConsultaLaboratoriosRouter);
-app.use('/api',backConsultaLaboratoriosRouter);
 
 app.use(backPacientesReporteRouter);
 app.use('/api',backPacientesReporteRouter);
@@ -702,6 +699,7 @@ const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
     console.log(`Servidor corriendo en el puerto ${PORT}`);
+    turnosModule.iniciarTareas();
 });
 // Endpoint para generar y descargar carné PDF por número de afiliación
 app.post('/definirCarnetPaciente', async (req, res) => {
@@ -732,6 +730,3 @@ app.post('/definirCarnetPaciente', async (req, res) => {
     }
 });
 
-
-app.use(backCatalogosRouter);
-app.use('/api',backCatalogosRouter);

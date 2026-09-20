@@ -1,6 +1,6 @@
 const express = require('express');
 const pool = require('../../db/pool');
-const jwt = require('jsonwebtoken');
+const { actorFromRequest } = require('../shared/auth');
 const { runWithUser } = require('../db');
 const router = express.Router();
 router.use(express.json());
@@ -44,15 +44,7 @@ router.put('/api/pacientes/masivo', async (req, res) => {
     }
 
     // Derivar usuario desde JWT; si no hay token, usar 'web'
-    let userName = 'web';
-    try {
-        const auth = req.headers.authorization || '';
-        if (auth.startsWith('Bearer ')) {
-            const token = auth.slice(7);
-            const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret_change_me');
-            userName = payload?.nombre_usuario || String(payload?.sub || 'web');
-        }
-    } catch (_) {}
+    const userName = actorFromRequest(req);
 
     try {
         // Prevalidación: NO permitir formularios si algún paciente está egresado o fallecido

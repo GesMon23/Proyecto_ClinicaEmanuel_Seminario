@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../../db/pool');
-const jwt = require('jsonwebtoken');
+const { actorFromRequest } = require('../shared/auth');
 const { runWithUser } = require('../db');
 
 // GET /api/reingreso/pacientes/reingreso?noafiliacion=... | dpi=...
@@ -37,15 +37,7 @@ router.get('/pacientes/reingreso', async (req, res) => {
 // Body: { noAfiliacion, numeroFormulario, fechaReingreso, observaciones, inicioPrestServicios, finPrestServicios, sesionesAutorizadasMes }
 router.post('/pacientes/reingreso', async (req, res) => {
   // Derivar usuario desde JWT y ejecutar dentro de runWithUser
-  let userName = 'web';
-  try {
-    const auth = req.headers.authorization || '';
-    if (auth.startsWith('Bearer ')) {
-      const token = auth.slice(7);
-      const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret_change_me');
-      userName = payload?.nombre_usuario || String(payload?.sub || 'web');
-    }
-  } catch (_) {}
+  const userName = actorFromRequest(req);
 
   try {
     const result = await runWithUser(String(userName), async (client) => {
@@ -96,15 +88,7 @@ router.post('/pacientes/reingreso', async (req, res) => {
 
 // PUT /api/reingreso/pacientes/:noAfiliacion (actualiza datos de reingreso del paciente)
 router.put('/pacientes/:noAfiliacion', async (req, res) => {
-  let userName = 'web';
-  try {
-    const auth = req.headers.authorization || '';
-    if (auth.startsWith('Bearer ')) {
-      const token = auth.slice(7);
-      const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret_change_me');
-      userName = payload?.nombre_usuario || String(payload?.sub || 'web');
-    }
-  } catch (_) {}
+  const userName = actorFromRequest(req);
 
   try {
     const { noAfiliacion } = req.params;
@@ -144,15 +128,7 @@ router.put('/pacientes/:noAfiliacion', async (req, res) => {
 
 // POST /api/reingreso/historial/reingresos (inserta fila de historial)
 router.post('/historial/reingresos', async (req, res) => {
-  let userName = 'web';
-  try {
-    const auth = req.headers.authorization || '';
-    if (auth.startsWith('Bearer ')) {
-      const token = auth.slice(7);
-      const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret_change_me');
-      userName = payload?.nombre_usuario || String(payload?.sub || 'web');
-    }
-  } catch (_) {}
+  const userName = actorFromRequest(req);
 
   try {
     const { no_afiliacion, numero_formulario, fecha_reingreso, observaciones } = req.body || {};

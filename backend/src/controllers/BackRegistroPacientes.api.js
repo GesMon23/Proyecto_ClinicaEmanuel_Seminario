@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../../db/pool');
+const { actorFromRequest } = require('../shared/auth');
 const fs = require('fs');
 const path = require('path');
 const PDFDocument = require('pdfkit');
 const QRCode = require('qrcode');
-const jwt = require('jsonwebtoken');
 const { runWithUser } = require('../db');
 
 // Directorio de fotos
@@ -150,15 +150,7 @@ router.post('/pacientes', async (req, res) => {
     }
 
     // Resolver actor
-    let userName = 'web';
-    try {
-      const auth = req.headers.authorization || '';
-      if (auth.startsWith('Bearer ')) {
-        const token = auth.slice(7);
-        const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret_change_me');
-        userName = payload?.nombre_usuario || String(payload?.sub || 'web');
-      }
-    } catch (_) {}
+    const userName = actorFromRequest(req);
 
     // Llamar SP con cursor dentro de runWithUser
     const rows = await runWithUser(String(userName), async (client) => {
