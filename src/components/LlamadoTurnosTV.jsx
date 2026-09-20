@@ -503,45 +503,29 @@ const LlamadoTurnosTV = () => {
                             {/* Contenido - se ajusta al espacio disponible */}
                             <div className="flex-1 min-h-0 flex items-center py-1">
                                 {turno ? (
-                                    <div className="w-full">
-                                        {/* Código de turno grande */}
-                                        <div className="bg-white/90 rounded-lg p-2 shadow-sm mb-1.5">
-                                            <p className={`text-3xl font-bold ${config.textColor} font-mono text-center leading-tight`}>
-                                                {turno.id_turno_cod}
-                                            </p>
-                                        </div>
-
-                                        {/* Paciente: foto + nombre */}
-                                        <div className="bg-white/90 rounded-lg p-1.5 shadow-sm flex items-center gap-2">
-                                            <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow flex-shrink-0 bg-gray-100">
-                                                {turno.no_afiliacion ? (
-                                                    <img
-                                                        src={`/api/foto/${encodeURIComponent(turno.no_afiliacion)}?v=${encodeURIComponent(turno.id_turno_cod || '1')}`}
-                                                        alt="Foto del paciente"
-                                                        className="w-full h-full object-cover"
-                                                        onError={(e) => {
-                                                            e.target.onerror = null;
-                                                            e.target.src = 'https://ui-avatars.com/api/?name=' +
-                                                                encodeURIComponent(turno.nombrepaciente || '?') +
-                                                                '&background=3B82F6&color=fff';
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                                        <User className="w-6 h-6" />
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className="min-w-0">
-                                                <div className="flex items-center gap-1 mb-0.5">
-                                                    <User className={`w-2.5 h-2.5 ${config.iconColor}`} />
-                                                    <span className="text-xs font-bold text-gray-600 uppercase leading-none">Paciente</span>
+                                    <div className="w-full bg-white/90 rounded-lg p-3 shadow-sm flex items-center gap-4">
+                                        <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow flex-shrink-0 bg-gray-100">
+                                            {turno.no_afiliacion ? (
+                                                <img
+                                                    src={`/api/foto/${encodeURIComponent(turno.no_afiliacion)}?v=${encodeURIComponent(turno.id_turno_cod || '1')}`}
+                                                    alt="Foto del paciente"
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        e.target.onerror = null;
+                                                        e.target.src = 'https://ui-avatars.com/api/?name=' +
+                                                            encodeURIComponent(turno.nombrepaciente || '?') +
+                                                            '&background=3B82F6&color=fff';
+                                                    }}
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                                    <User className="w-10 h-10" />
                                                 </div>
-                                                <p className={`text-sm font-bold ${config.textColor} leading-tight truncate`}>
-                                                    {turno.nombrepaciente || 'Sin nombre'}
-                                                </p>
-                                            </div>
+                                            )}
                                         </div>
+                                        <p className={`text-2xl font-bold ${config.textColor} leading-tight truncate`}>
+                                            {turno.nombrepaciente || 'Sin nombre'}
+                                        </p>
                                     </div>
                                 ) : (
                                     <div className="w-full flex flex-col items-center justify-center">
