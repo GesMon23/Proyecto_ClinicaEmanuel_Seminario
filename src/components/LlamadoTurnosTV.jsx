@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 
 import api from '../config/api';
 import logoClinica from "@/assets/logoClinica1Min.png";
-import { formatearFecha } from '@/utils/fechas';
-import { 
+import {
   RefreshCw,
   HeartPulse,
   Brain,
@@ -11,8 +10,7 @@ import {
   Clock as ClockIcon,
   AlertTriangle as ExclamationTriangleIcon,
   Hash,
-  User,
-  Calendar
+  User
 } from "lucide-react";
 
 // Mapeo de clínicas a iconos y colores. La clave se busca normalizada
@@ -167,7 +165,7 @@ const LlamadoTurnosTV = () => {
     // Hablar utilitario
     const hablarTurno = (turno, clinica) => {
         if (!turno) return;
-        const mensajeVoz = `Paciente ${turno.nombrepaciente || ''} con el número de afiliación ${turno.no_afiliacion || ''} presentarse en recepción para la clínica ${clinica}.`;
+        const mensajeVoz = `${turno.nombrepaciente || ''} pasar a clínica ${clinica}.`;
         if ('speechSynthesis' in window) {
             try {
                 // Intentar reanudar por si el motor quedó en pausa
@@ -513,38 +511,34 @@ const LlamadoTurnosTV = () => {
                                             </p>
                                         </div>
 
-                                        {/* Todo en una línea horizontal */}
-                                        <div className="grid grid-cols-3 gap-1.5">
-                                            {/* Paciente */}
-                                            <div className="bg-white/90 rounded-lg p-1.5 shadow-sm">
+                                        {/* Paciente: foto + nombre */}
+                                        <div className="bg-white/90 rounded-lg p-1.5 shadow-sm flex items-center gap-2">
+                                            <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow flex-shrink-0 bg-gray-100">
+                                                {turno.no_afiliacion ? (
+                                                    <img
+                                                        src={`/api/foto/${encodeURIComponent(turno.no_afiliacion)}?v=${encodeURIComponent(turno.id_turno_cod || '1')}`}
+                                                        alt="Foto del paciente"
+                                                        className="w-full h-full object-cover"
+                                                        onError={(e) => {
+                                                            e.target.onerror = null;
+                                                            e.target.src = 'https://ui-avatars.com/api/?name=' +
+                                                                encodeURIComponent(turno.nombrepaciente || '?') +
+                                                                '&background=3B82F6&color=fff';
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                                        <User className="w-6 h-6" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="min-w-0">
                                                 <div className="flex items-center gap-1 mb-0.5">
                                                     <User className={`w-2.5 h-2.5 ${config.iconColor}`} />
                                                     <span className="text-xs font-bold text-gray-600 uppercase leading-none">Paciente</span>
                                                 </div>
-                                                <p className={`text-xs font-bold ${config.textColor} leading-tight`}>
+                                                <p className={`text-sm font-bold ${config.textColor} leading-tight truncate`}>
                                                     {turno.nombrepaciente || 'Sin nombre'}
-                                                </p>
-                                            </div>
-
-                                            {/* Afiliación */}
-                                            <div className="bg-white/90 rounded-lg p-1.5 shadow-sm">
-                                                <div className="flex items-center gap-1 mb-0.5">
-                                                    <Hash className={`w-2.5 h-2.5 ${config.iconColor}`} />
-                                                    <span className="text-xs font-bold text-gray-600 uppercase leading-none">Afiliación</span>
-                                                </div>
-                                                <p className={`text-sm font-bold ${config.textColor} font-mono leading-tight`}>
-                                                    {turno.no_afiliacion || 'N/A'}
-                                                </p>
-                                            </div>
-
-                                            {/* Fecha */}
-                                            <div className="bg-white/90 rounded-lg p-1.5 shadow-sm">
-                                                <div className="flex items-center gap-1 mb-0.5">
-                                                    <Calendar className={`w-2.5 h-2.5 ${config.iconColor}`} />
-                                                    <span className="text-xs font-bold text-gray-600 uppercase leading-none">Fecha</span>
-                                                </div>
-                                                <p className={`text-xs font-bold ${config.textColor} leading-tight`}>
-                                                    {turno.fecha_turno ? formatearFecha(turno.fecha_turno) : 'Sin fecha'}
                                                 </p>
                                             </div>
                                         </div>
