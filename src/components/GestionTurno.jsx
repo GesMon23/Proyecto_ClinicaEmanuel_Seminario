@@ -379,7 +379,29 @@ const GestionTurno = () => {
     );
   };
 
+  // Los domingos y los días anteriores a hoy no admiten turnos
+  const esDiaSeleccionable = (date) => {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    return date.getDay() !== 0 && date >= hoy;
+  };
+
+  const selectAllowCalendario = (selectInfo) => {
+    const dia = new Date(selectInfo.start);
+    while (dia < selectInfo.end) {
+      if (!esDiaSeleccionable(dia)) return false;
+      dia.setDate(dia.getDate() + 1);
+    }
+    return true;
+  };
+
+  const clasesDiaCalendario = (arg) => {
+    if (!esDiaSeleccionable(arg.date)) return ['dia-bloqueado'];
+    return calendarioHabilitado ? ['dia-disponible'] : [];
+  };
+
   const handleSelectDate = (selectInfo) => {
+    if (!esDiaSeleccionable(new Date(selectInfo.start))) return;
     // Usar startStr que viene como YMD para allDay y convertir a Date local
     const localDate = parseYMDToLocalDate(selectInfo.startStr || selectInfo.start);
     setFechaSeleccionada(localDate);
@@ -703,6 +725,14 @@ const GestionTurno = () => {
                 ? "Haz clic en una fecha para programar un nuevo turno" 
                 : "Busca un paciente para activar el calendario"}
             </p>
+            <div className="flex flex-wrap gap-4 mt-3 text-sm text-gray-600 dark:text-gray-300">
+              <span className="inline-flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-green-400" /> Disponible
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-gray-400" /> No disponible (domingos y días pasados)
+              </span>
+            </div>
           </div>
           
           <div className="calendar-wrapper bg-white dark:bg-slate-800 rounded-xl p-4 shadow-inner border border-gray-200 dark:border-slate-600">
@@ -712,6 +742,8 @@ const GestionTurno = () => {
               selectable={calendarioHabilitado}
               events={eventosCalendario}
               select={calendarioHabilitado ? handleSelectDate : null}
+              selectAllow={selectAllowCalendario}
+              dayCellClassNames={clasesDiaCalendario}
               eventClick={handleEventClick}
               headerToolbar={{
                 left: "prev,next",
@@ -894,6 +926,46 @@ const GestionTurno = () => {
               background-color: #1e293b !important;
             }
             
+            /* Días disponibles para crear turnos (verde) */
+            .calendar-wrapper :global(.fc-theme-standard td.dia-disponible) {
+              background-color: #bbf7d0;
+              cursor: pointer;
+            }
+
+            .calendar-wrapper :global(.fc-theme-standard td.dia-disponible:hover) {
+              background-color: #86efac !important;
+            }
+
+            .calendar-wrapper :global(.dark .fc-theme-standard td.dia-disponible) {
+              background-color: #14532d;
+            }
+
+            .calendar-wrapper :global(.dark .fc-theme-standard td.dia-disponible:hover) {
+              background-color: #166534 !important;
+            }
+
+            /* Domingos y días anteriores a hoy: bloqueados (gris) */
+            .calendar-wrapper :global(.fc-theme-standard td.dia-bloqueado),
+            .calendar-wrapper :global(.fc-theme-standard td.dia-bloqueado.fc-day-today) {
+              background: #e5e7eb !important;
+              cursor: not-allowed;
+            }
+
+            .calendar-wrapper :global(.fc-theme-standard td.dia-bloqueado:hover) {
+              background: #e5e7eb !important;
+              transform: none;
+            }
+
+            .calendar-wrapper :global(.fc-theme-standard td.dia-bloqueado .fc-daygrid-day-number) {
+              color: #9ca3af !important;
+            }
+
+            .calendar-wrapper :global(.dark .fc-theme-standard td.dia-bloqueado),
+            .calendar-wrapper :global(.dark .fc-theme-standard td.dia-bloqueado.fc-day-today),
+            .calendar-wrapper :global(.dark .fc-theme-standard td.dia-bloqueado:hover) {
+              background: #1e293b !important;
+            }
+
             /* Botones del toolbar */
             .calendar-wrapper :global(.fc-button) {
               background: linear-gradient(135deg, #10b981 0%, #059669 100%);
