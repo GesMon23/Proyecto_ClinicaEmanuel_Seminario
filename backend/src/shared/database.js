@@ -48,4 +48,14 @@ async function fetchCursor(client, nombre, params = [], cursor = 'ref_cursor') {
   return result.rows;
 }
 
-module.exports = { pool, withClient, withTransaction, callProcedure, fetchCursor };
+// Igual que withTransaction, pero fija el usuario de la app en app.current_user (los triggers de
+// auditoría lo leen) y limita la espera por bloqueos. Se usa en las operaciones que deben quedar auditadas.
+async function runWithUser(userName, fn) {
+  return withTransaction(async (client) => {
+    await client.query("SET LOCAL lock_timeout = '5s'");
+    await client.query('SELECT set_config($1, $2, true)', ['app.current_user', String(userName || 'anon')]);
+    return fn(client);
+  });
+}
+
+module.exports = { pool, withClient, withTransaction, runWithUser, callProcedure, fetchCursor };

@@ -63,7 +63,8 @@ const turnosModule = require('./src/modules/turnos');
 const backGestionTurnosRouter = turnosModule.router;
 const backFallecidosReportesRouter = require('./src/controllers/BackFallecidosReportes');
 // Importar router de registro de formularios
-const backRegistroFormulariosRouter = require('./src/controllers/BackRegistroFormularios');
+const pacientesModule = require('./src/modules/pacientes');
+const backRegistroFormulariosRouter = pacientesModule.formularios;
 // Importar router de registro de empleados
 const backRegistroEmpleadosRouter = require('./src/controllers/BackRegistroEmpleados');
 // Importar router de gestión de empleados (listar/editar/estado)
@@ -103,9 +104,9 @@ const backNuevoIngresoReportesRouter = require('./src/controllers/BackNuevoIngre
 app.use(backConsultaLaboratoriosRouter);
 app.use('/api',backConsultaLaboratoriosRouter);
 
-const backActualizacionPacientes = require('./src/controllers/BackActualizacionPacientes');
-const backEgresoPacientes = require('./src/controllers/BackEgresoPacientes');
-const backReingresoPacientesRouter = require('./src/controllers/BackReingresoPacientes');
+const backActualizacionPacientes = pacientesModule.actualizacion;
+const backEgresoPacientes = pacientesModule.egreso;
+const backReingresoPacientesRouter = pacientesModule.reingreso;
 
 const backEgresoReportesRouter = require('./src/controllers/BackEgresoReportes');
 const QRCode = require('qrcode');
@@ -113,7 +114,7 @@ const QRCode = require('qrcode');
 // Importar router de consulta de pacientes
 const backConsultaPacientesRouter = require('./src/controllers/BackConsultaPacientes');
 // Registrar API específica para Registro de Pacientes (endpoints usados por RegistroPacientes.jsx)
-const backRegistroPacientesApiRouter = require('./src/controllers/BackRegistroPacientes.api');
+const backRegistroPacientesApiRouter = pacientesModule.registro;
 // Importar router de registro de laboratorios
 const backRegistroLaboratoriosRouter = require('./src/controllers/BackRegistroLaboratorios');
 
