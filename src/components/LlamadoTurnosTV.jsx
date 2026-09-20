@@ -14,7 +14,10 @@ import {
   Calendar
 } from "lucide-react";
 
-// Mapeo de clínicas a iconos y colores
+// Mapeo de clínicas a iconos y colores. La clave se busca normalizada
+// (sin tildes, minúscula) porque el nombre real de la clínica viene de
+// tbl_clinica.descripcion y puede estar en cualquier combinación de
+// mayúsculas/tildes (ej. "HEMODIÁLISIS" en vez de "Hemodialisis").
 const clinicaConfig = {
   'Hemodialisis': {
     icon: HeartPulse,
@@ -41,6 +44,31 @@ const clinicaConfig = {
     badgeColor: 'bg-teal-100 text-teal-800'
   }
 };
+
+const DEFAULT_CLINICA_CONFIG = {
+  icon: Hash,
+  color: 'bg-gray-50',
+  borderColor: 'border-gray-400',
+  iconColor: 'text-gray-600',
+  textColor: 'text-gray-900',
+  badgeColor: 'bg-gray-100 text-gray-800'
+};
+
+function normalizarNombreClinica(nombre) {
+  return (nombre || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+const clinicaConfigPorClaveNormalizada = Object.fromEntries(
+  Object.entries(clinicaConfig).map(([clave, valor]) => [normalizarNombreClinica(clave), valor])
+);
+
+function obtenerClinicaConfig(clinica) {
+  return clinicaConfigPorClaveNormalizada[normalizarNombreClinica(clinica)] || DEFAULT_CLINICA_CONFIG;
+}
 
 const LlamadoTurnosTV = () => {
     const [turnosActuales, setTurnosActuales] = useState({});
@@ -452,7 +480,7 @@ const LlamadoTurnosTV = () => {
                 )}
                 {clinicas.map((clinica) => {
                     const turno = turnosActuales[clinica];
-                    const config = clinicaConfig[clinica] || {};
+                    const config = obtenerClinicaConfig(clinica);
                     const IconComponent = config.icon;
 
                     return (
