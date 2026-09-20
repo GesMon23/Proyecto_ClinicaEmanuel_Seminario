@@ -95,7 +95,7 @@ const backCatalogosRouter = require('./src/controllers/BackCatalogos');
 // Importar router de reporte de pacientes
 const backPacientesReporteRouter = reportesModule.pacientes;
 // Importar router de estadísticas resumen
-const backEstadisticasResumenRouter = require('./src/controllers/BackEstadisticasResumen');
+const backEstadisticasResumenRouter = require('./src/modules/estadisticas').router;
 
 const backReporteFaltistasRouter = reportesModule.faltistas;
 
