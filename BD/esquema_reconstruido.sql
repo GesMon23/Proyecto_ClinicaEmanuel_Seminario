@@ -2440,13 +2440,34 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE PROCEDURE public.sp_eliminar_turno(IN p_idturno text)
-LANGUAGE plpgsql AS $$
+DROP PROCEDURE IF EXISTS public.sp_eliminar_turno(text);
+
+-- Cancelar un turno (reemplaza a sp_eliminar_turno, que borraba el registro).
+-- Solo se pueden cancelar turnos que aun no se atienden (Creada o Asignada).
+CREATE OR REPLACE PROCEDURE public.sp_cancelar_turno(
+  IN p_idturno text, IN p_usuario text DEFAULT NULL
+) LANGUAGE plpgsql AS $$
+DECLARE
+  v_estado text;
+  v_cancelado bigint;
 BEGIN
-  DELETE FROM public.tbl_turnos WHERE id_turno = p_idturno;
+  SELECT es.descripcion INTO v_estado
+    FROM public.tbl_turnos t
+    JOIN public.tbl_estados_turno es ON es.id_estado_turno = t.id_estado_turno
+   WHERE t.id_turno = p_idturno;
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'No se encontro el turno %', p_idturno;
+    RAISE EXCEPTION 'TURNO_NO_ENCONTRADO: no se encontro el turno %', p_idturno;
   END IF;
+  IF v_estado NOT IN ('Creada', 'Asignada') THEN
+    RAISE EXCEPTION 'TURNO_NO_CANCELABLE: solo se pueden cancelar turnos Creada o Asignada (estado actual: %)', v_estado;
+  END IF;
+
+  SELECT id_estado_turno INTO v_cancelado FROM public.tbl_estados_turno WHERE descripcion = 'Cancelado';
+  UPDATE public.tbl_turnos
+     SET id_estado_turno = v_cancelado,
+         usuario_actualizacion = COALESCE(p_usuario, 'sistema'),
+         fecha_actualizacion = now()
+   WHERE id_turno = p_idturno;
 END;
 $$;
 

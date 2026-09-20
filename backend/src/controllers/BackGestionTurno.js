@@ -23,6 +23,19 @@ function userIdFromRequest(req) {
     }
 }
 
+// Nombre de usuario del JWT (para columnas de auditoría de texto); null si no hay sesión
+function userNameFromRequest(req) {
+    const auth = req.headers.authorization || '';
+    const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+    if (!token) return null;
+    try {
+        const payload = jwt.verify(token, JWT_SECRET);
+        return payload.nombre_usuario || (payload.sub != null ? String(payload.sub) : null);
+    } catch {
+        return null;
+    }
+}
+
 function requireUser(req, res, next) {
     const id = userIdFromRequest(req);
     if (!id) return res.status(401).json({ success: false, message: 'Sesión requerida', error: 'Sesión requerida' });
@@ -47,7 +60,7 @@ marcarFaltantesAutomaticos();
 setInterval(marcarFaltantesAutomaticos, 60 * 1000).unref();
 
 // Errores de regla de negocio lanzados por los procedimientos (RAISE EXCEPTION 'CODIGO: mensaje')
-const CODIGOS_NEGOCIO = ['USUARIO_CON_TURNO', 'TURNO_NO_DISPONIBLE', 'TURNO_NO_EN_ATENCION', 'TURNO_NO_CREADA'];
+const CODIGOS_NEGOCIO = ['USUARIO_CON_TURNO', 'TURNO_NO_DISPONIBLE', 'TURNO_NO_EN_ATENCION', 'TURNO_NO_CREADA', 'TURNO_NO_CANCELABLE'];
 function responderErrorTurno(res, error, mensajeGenerico) {
     const msg = String(error.message || '');
     const codigo = CODIGOS_NEGOCIO.find(c => msg.startsWith(c));
@@ -351,25 +364,26 @@ router.put('/Gfaltante-turnoT/:idturno', async (req, res) => {
 
 
 // Endpoint para eliminar un turno por ID
-router.delete('/Geliminar-turnoT/:idturno', async (req, res) => {
+// Cancelar turno: ya no se borra el registro, pasa a estado Cancelado
+router.put('/Gcancelar-turnoT/:idturno', async (req, res) => {
     const client = await pool.connect();
     try {
         const { idturno } = req.params;
 
         await client.query('BEGIN');
-        await client.query('CALL sp_eliminar_turno($1)', [idturno]);
+        await client.query('CALL sp_cancelar_turno($1, $2)', [idturno, userNameFromRequest(req)]);
         await client.query('COMMIT');
 
-        res.json({ success: true, message: 'Turno eliminado correctamente.' });
+        res.json({ success: true, message: 'Turno cancelado correctamente.' });
     } catch (error) {
         await client.query('ROLLBACK');
-        console.error('Error al eliminar turno:', error);
+        console.error('Error al cancelar turno:', error);
 
-        if (error.message.includes('No se encontró el turno')) {
+        if (String(error.message).startsWith('TURNO_NO_ENCONTRADO')) {
             return res.status(404).json({ success: false, message: 'Turno no encontrado.' });
         }
 
-        res.status(500).json({ success: false, message: 'Error al eliminar turno.', detalle: error.message });
+        responderErrorTurno(res, error, 'Error al cancelar turno.');
     } finally {
         client.release();
     }

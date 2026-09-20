@@ -37,7 +37,7 @@ const CustomModal = ({ show, onClose, title, message, type, onConfirm }) => {
               className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
               onClick={onConfirm}
             >
-              Sí, eliminar
+              Sí, cancelar
             </button>
             <button
               className="px-4 py-2 rounded-lg bg-gray-400 text-white hover:bg-gray-500"
@@ -342,7 +342,7 @@ const GestionTurno = () => {
 
   const handleEliminar = (idTurno) => {
     setIdTurnoAEliminar(idTurno);
-    setModalMessage("¿Está seguro que desea eliminar este turno?");
+    setModalMessage("¿Está seguro que desea cancelar este turno?");
     setModalType("confirm");
     setShowModal(true);
     setOnConfirmEliminar(() => () => confirmarEliminarTurno(idTurno));
@@ -350,9 +350,9 @@ const GestionTurno = () => {
 
   const confirmarEliminarTurno = async (idTurno) => {
     try {
-      const response = await api.delete(`/Geliminar-turnoT/${idTurno}`);
+      const response = await api.put(`/Gcancelar-turnoT/${idTurno}`);
       if (response.data.success) {
-        showSuccessModal("Turno eliminado correctamente");
+        showSuccessModal("Turno cancelado correctamente");
         // Actualizar tanto la lista de turnos como los eventos del calendario
         const turnosActualizados = turnos.filter((t) => t.id_turno !== idTurno);
         setTurnos(turnosActualizados);
@@ -374,10 +374,10 @@ const GestionTurno = () => {
         }));
         setEventosCalendario(eventosActualizados);
       } else {
-        showErrorModal("No se pudo eliminar el turno.");
+        showErrorModal("No se pudo cancelar el turno.");
       }
     } catch (error) {
-      showErrorModal("Error al eliminar el turno.");
+      showErrorModal(error.response?.data?.message || "Error al cancelar el turno.");
     }
     setIdTurnoAEliminar(null);
     setOnConfirmEliminar(null);
@@ -626,7 +626,7 @@ const GestionTurno = () => {
                             <PencilLine />
                           </button>
                           <button
-                            title="Eliminar"
+                            title="Cancelar turno"
                             className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:text-red-700 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/30 transition-colors"
                             onClick={() => handleEliminar(turno.id_turno)}
                           >
