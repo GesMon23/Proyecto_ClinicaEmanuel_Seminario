@@ -709,7 +709,7 @@ const ActualizacionPacientes = () => {
                 </select>
               </div>
 
-            {false && (
+            {(
               <>
                 {/* Sección de foto */}
                 <div className="flex flex-col items-center space-y-6">
