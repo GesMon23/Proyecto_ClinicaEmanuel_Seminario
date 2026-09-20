@@ -1045,7 +1045,13 @@ CREATE OR REPLACE PROCEDURE public.sp_actualizar_paciente_por_noafiliacion(
   IN p_numero_formulario_activo text, IN p_id_jornada bigint, IN p_sesiones_autorizadas_mes integer,
   IN p_url_foto text, IN p_actor text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
+DECLARE
+  v_jornada_ant bigint;
+  v_jornada_nueva bigint;
+  v_movidos integer;
 BEGIN
+  SELECT id_jornada INTO v_jornada_ant FROM public.tbl_pacientes WHERE no_afiliacion = p_no_afiliacion;
+
   IF p_dpi IS NOT NULL AND p_dpi !~ '^[0-9]{13}$' THEN
     RAISE EXCEPTION 'DPI invalido: debe contener exactamente 13 digitos numericos.';
   END IF;
@@ -1078,6 +1084,12 @@ BEGIN
     usuario_actualizacion = p_actor,
     fecha_actualizacion = now()
   WHERE no_afiliacion = p_no_afiliacion;
+
+  -- Cambio de jornada: los turnos Creada se reprograman a los dias de la nueva jornada
+  SELECT id_jornada INTO v_jornada_nueva FROM public.tbl_pacientes WHERE no_afiliacion = p_no_afiliacion;
+  IF v_jornada_nueva IS NOT NULL AND v_jornada_nueva IS DISTINCT FROM v_jornada_ant THEN
+    CALL public.sp_reprogramar_turnos_jornada(p_no_afiliacion, p_actor, v_movidos);
+  END IF;
 
   OPEN ref FOR SELECT * FROM public.tbl_pacientes WHERE no_afiliacion = p_no_afiliacion;
 END;
@@ -1351,6 +1363,130 @@ $$;
 -- parametro 22 (usuario_creacion opcional) se ignora a favor de
 -- current_setting('app.current_user') fijado por runWithUser(), y del
 -- parametro 25 (userName) que es el que realmente trae el nombre de usuario.
+-- Egreso: los turnos en estado Creada del paciente (cualquier clinica y fecha) pasan a Cancelado.
+CREATE OR REPLACE PROCEDURE public.sp_cancelar_turnos_creados_paciente(
+  IN p_noaf text, IN p_usuario text, INOUT p_cancelados integer DEFAULT 0
+) LANGUAGE plpgsql AS $$
+DECLARE
+  v_creada bigint;
+  v_cancelado bigint;
+BEGIN
+  p_cancelados := 0;
+  SELECT id_estado_turno INTO v_creada FROM public.tbl_estados_turno WHERE descripcion = 'Creada';
+  SELECT id_estado_turno INTO v_cancelado FROM public.tbl_estados_turno WHERE descripcion = 'Cancelado';
+  IF p_noaf IS NULL OR v_creada IS NULL OR v_cancelado IS NULL THEN
+    RETURN;
+  END IF;
+
+  UPDATE public.tbl_turnos
+     SET id_estado_turno = v_cancelado,
+         usuario_actualizacion = COALESCE(p_usuario, 'sistema'),
+         fecha_actualizacion = now()
+   WHERE no_afiliacion = p_noaf AND id_estado_turno = v_creada;
+  GET DIAGNOSTICS p_cancelados = ROW_COUNT;
+END;
+$$;
+
+-- Cambio de jornada: los turnos Creada de Hemodialisis que quedan desde hoy hasta el fin del periodo se
+-- mueven a los dias de la nueva jornada. Los que ya caen en un dia valido no se tocan; el resto se reparte
+-- en orden cronologico entre los dias validos libres (los que sobren se cancelan) y, si faltan turnos para
+-- algun dia de la nueva jornada, se generan. Los dias que el paciente ya tiene asignados, atendidos o
+-- faltantes no se reutilizan.
+CREATE OR REPLACE PROCEDURE public.sp_reprogramar_turnos_jornada(
+  IN p_noaf text, IN p_usuario text, INOUT p_movidos integer DEFAULT 0
+) LANGUAGE plpgsql AS $$
+DECLARE
+  v_dias text;
+  v_inicio date;
+  v_fin date;
+  v_clinica bigint;
+  v_creada bigint;
+  v_cancelado bigint;
+  v_desde date;
+  v_hasta date;
+  v_validas date[];
+  v_libres date[];
+  v_i integer := 1;
+  v_n integer;
+  r record;
+BEGIN
+  p_movidos := 0;
+
+  SELECT translate(upper(j.dias), 'ÁÉÍÓÚ', 'AEIOU'), p.inicio_prest_servicios, p.fin_prest_servicios
+    INTO v_dias, v_inicio, v_fin
+    FROM public.tbl_pacientes p
+    JOIN public.tbl_jornadas j ON j.id_jornada = p.id_jornada
+   WHERE p.no_afiliacion = p_noaf;
+  IF v_dias IS NULL OR btrim(v_dias) = '' THEN
+    RETURN;
+  END IF;
+
+  SELECT id_clinica INTO v_clinica FROM public.tbl_clinica
+   WHERE translate(upper(descripcion), 'ÁÉÍÓÚ', 'AEIOU') = 'HEMODIALISIS' LIMIT 1;
+  SELECT id_estado_turno INTO v_creada FROM public.tbl_estados_turno WHERE descripcion = 'Creada';
+  SELECT id_estado_turno INTO v_cancelado FROM public.tbl_estados_turno WHERE descripcion = 'Cancelado';
+  IF v_clinica IS NULL OR v_creada IS NULL THEN
+    RETURN;
+  END IF;
+
+  v_desde := CURRENT_DATE;
+  v_hasta := COALESCE(v_fin, (SELECT max(fecha_turno) FROM public.tbl_turnos
+                               WHERE no_afiliacion = p_noaf AND id_clinica = v_clinica AND id_estado_turno = v_creada));
+  IF v_hasta IS NULL OR v_hasta < v_desde THEN
+    RETURN;
+  END IF;
+  v_hasta := LEAST(v_hasta, v_desde + 400);
+
+  -- Dias de la nueva jornada dentro del rango, sin los ocupados por turnos no Creada ni Cancelados
+  SELECT COALESCE(array_agg(d::date ORDER BY d), '{}'::date[]) INTO v_validas
+    FROM generate_series(v_desde, v_hasta, interval '1 day') AS d
+   WHERE position((ARRAY['LUNES','MARTES','MIERCOLES','JUEVES','VIERNES','SABADO','DOMINGO'])
+                  [extract(isodow FROM d)::int] IN v_dias) > 0
+     AND NOT EXISTS (
+       SELECT 1 FROM public.tbl_turnos t
+        WHERE t.no_afiliacion = p_noaf AND t.id_clinica = v_clinica AND t.fecha_turno = d::date
+          AND t.id_estado_turno <> v_creada
+          AND (v_cancelado IS NULL OR t.id_estado_turno <> v_cancelado)
+     );
+
+  -- Dias validos que no tienen ya un turno Creada
+  SELECT COALESCE(array_agg(x ORDER BY x), '{}'::date[]) INTO v_libres
+    FROM unnest(v_validas) AS x
+   WHERE NOT EXISTS (
+     SELECT 1 FROM public.tbl_turnos t
+      WHERE t.no_afiliacion = p_noaf AND t.id_clinica = v_clinica
+        AND t.id_estado_turno = v_creada AND t.fecha_turno = x
+   );
+
+  FOR r IN
+    SELECT id_turno FROM public.tbl_turnos
+     WHERE no_afiliacion = p_noaf AND id_clinica = v_clinica AND id_estado_turno = v_creada
+       AND fecha_turno BETWEEN v_desde AND v_hasta
+       AND NOT (fecha_turno = ANY (v_validas))
+     ORDER BY fecha_turno, id_turno
+  LOOP
+    IF v_i <= COALESCE(array_length(v_libres, 1), 0) THEN
+      UPDATE public.tbl_turnos
+         SET fecha_turno = v_libres[v_i],
+             usuario_actualizacion = COALESCE(p_usuario, 'sistema'), fecha_actualizacion = now()
+       WHERE id_turno = r.id_turno;
+      v_i := v_i + 1;
+    ELSIF v_cancelado IS NOT NULL THEN
+      UPDATE public.tbl_turnos
+         SET id_estado_turno = v_cancelado,
+             usuario_actualizacion = COALESCE(p_usuario, 'sistema'), fecha_actualizacion = now()
+       WHERE id_turno = r.id_turno;
+    END IF;
+    p_movidos := p_movidos + 1;
+  END LOOP;
+
+  -- Completar los dias de la nueva jornada que sigan sin turno (solo si hay periodo definido)
+  IF v_fin IS NOT NULL THEN
+    CALL public.sp_generar_turnos_periodo(p_noaf, v_desde, v_hasta, p_usuario, v_n);
+  END IF;
+END;
+$$;
+
 -- Genera turnos de Hemodialisis (estado Creada) para el periodo de prestacion de servicios
 -- de un paciente, solo en los dias de su jornada (tbl_jornadas.dias, ej. 'LUNES, MIERCOLES, VIERNES').
 -- Solo genera desde la fecha actual en adelante (los dias ya pasados quedarian marcados como
@@ -1704,9 +1840,14 @@ CREATE OR REPLACE PROCEDURE public.sp_paciente_egreso(
   IN p_fechafallecimiento date, IN p_lugarfallecimiento text, IN p_causafallecimiento text,
   IN p_usuario text
 ) LANGUAGE plpgsql AS $$
+DECLARE
+  v_cancelados integer;
 BEGIN
   UPDATE public.tbl_pacientes SET id_estado = 3, usuario_actualizacion = p_usuario, fecha_actualizacion = now()
   WHERE no_afiliacion = p_no_afiliacion;
+
+  -- Los turnos Creada del paciente egresado pasan a Cancelado
+  CALL public.sp_cancelar_turnos_creados_paciente(p_no_afiliacion, p_usuario, v_cancelados);
 
   INSERT INTO public.tbl_egresos (no_afiliacion, id_causa_egreso, descripcion, fecha_egreso, observaciones, usuario_creacion, fecha_creacion)
   VALUES (p_no_afiliacion, p_idcausa, p_causaegreso, p_fechaegreso, p_observaciones, p_usuario, now())
@@ -1741,6 +1882,8 @@ CREATE OR REPLACE PROCEDURE public.sp_paciente_registrar_egreso(
   IN p_fechafallecimiento date, IN p_lugarfallecimiento text, IN p_causafallecimiento text,
   IN p_usuario text, INOUT cur_paciente refcursor, INOUT cur_egreso refcursor, INOUT cur_tipo refcursor
 ) LANGUAGE plpgsql AS $$
+DECLARE
+  v_cancelados integer;
 BEGIN
   PERFORM 1 FROM public.tbl_pacientes WHERE no_afiliacion = p_no_afiliacion FOR UPDATE NOWAIT;
 
@@ -1761,6 +1904,9 @@ BEGIN
 
   UPDATE public.tbl_pacientes SET id_estado = 3, usuario_actualizacion = p_usuario, fecha_actualizacion = now()
   WHERE no_afiliacion = p_no_afiliacion;
+
+  -- Los turnos Creada del paciente egresado pasan a Cancelado
+  CALL public.sp_cancelar_turnos_creados_paciente(p_no_afiliacion, p_usuario, v_cancelados);
 
   OPEN cur_paciente FOR SELECT * FROM public.tbl_pacientes WHERE no_afiliacion = p_no_afiliacion;
   OPEN cur_egreso FOR SELECT * FROM public.tbl_egresos
