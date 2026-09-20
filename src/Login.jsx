@@ -100,7 +100,7 @@ const LoginComponent = () => {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-900">
+    <div className="bg-white dark:bg-gray-900" data-no-uppercase>
       <div className="flex justify-center h-screen bg-gray-100 dark:bg-slate-900">
         <div
           className="hidden bg-cover bg-black bg-opacity-50 lg:block lg:w-2/3"
@@ -181,7 +181,7 @@ const LoginComponent = () => {
       </div>
       {/* Modal Cambio de Contraseña */}
       {showChangePwd && createPortal((
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50" data-no-uppercase>
           <div className="relative z-[10000] bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-md p-6">
             <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-2">Cambiar contraseña</h3>
             <p className="text-slate-600 dark:text-slate-300 mb-4">Debes cambiar tu contraseña genérica antes de continuar.</p>
@@ -227,7 +227,7 @@ const LoginComponent = () => {
       ), document.body)}
       {/* Modal Recuperación de Contraseña */}
       {showForgot && createPortal((
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50" data-no-uppercase>
           <div className="relative z-[10000] bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-md p-6">
             <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-2">Recuperar contraseña</h3>
             <p className="text-slate-600 dark:text-slate-300 mb-4">Completa tus datos para validar tu identidad.</p>

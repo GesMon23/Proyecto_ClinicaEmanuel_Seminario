@@ -25,6 +25,7 @@ const EXCLUDED_TYPES = new Set([
 
 function isUppercasable(el) {
   if (!el) return false;
+  if (el.closest && el.closest("[data-no-uppercase]")) return false;
   if (el.tagName === "TEXTAREA") return true;
   if (el.tagName !== "INPUT") return false;
   const type = (el.type || "text").toLowerCase();
