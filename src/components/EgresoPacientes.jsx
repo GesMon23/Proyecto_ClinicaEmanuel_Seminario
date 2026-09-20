@@ -526,7 +526,7 @@ const EgresoPacientes = () => {
 
         {/* Formulario de egreso (visible si hay paciente) */}
         {resultados.length > 0 && (
-          <div className="w-full max-w-6xl mx-auto mb-10">
+          <div className="w-full mb-10">
             <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
               <div className="p-4 sm:p-6 lg:p-8">
                 <form onSubmit={handleInsertEgreso} className="space-y-6">

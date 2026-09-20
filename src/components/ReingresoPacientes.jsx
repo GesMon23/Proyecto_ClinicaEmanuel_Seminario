@@ -526,7 +526,7 @@ const ReingresoPacientes = (props) => {
               </div>
 
               {/* Datos para Reingreso (responsivo y ordenado) */}
-              <div className="w-full max-w-6xl mx-auto mb-10">
+              <div className="w-full mb-10">
                 <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
                   {/* Encabezado */}
                   <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4 dark:border-slate-700">

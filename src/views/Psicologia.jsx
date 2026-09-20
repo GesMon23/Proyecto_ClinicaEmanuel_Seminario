@@ -208,7 +208,7 @@ const Psicologia = () => {
 
   return (
     <div className="w-full px-4 md:px-8 py-6">
-      <div className="w-full max-w-6xl mx-auto mb-10">
+      <div className="w-full mb-10">
         <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 overflow-hidden w-full mt-4">
           <div className="p-6 min-w-[280px]">
 
