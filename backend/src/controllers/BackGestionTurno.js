@@ -1,10 +1,46 @@
 const express = require('express');
+const jwt = require('jsonwebtoken');
 const pool = require('../../db/pool');
 const fs = require('fs');
 const path = require('path');
 
 const router = express.Router();
 router.use(express.json());
+
+const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
+
+// Extrae el id del usuario del JWT (claim "sub", igual que BackLogin.js)
+function userIdFromRequest(req) {
+    const auth = req.headers.authorization || '';
+    const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+    if (!token) return null;
+    try {
+        const payload = jwt.verify(token, JWT_SECRET);
+        const id = Number(payload.sub);
+        return Number.isFinite(id) ? id : null;
+    } catch {
+        return null;
+    }
+}
+
+function requireUser(req, res, next) {
+    const id = userIdFromRequest(req);
+    if (!id) return res.status(401).json({ success: false, message: 'Sesión requerida', error: 'Sesión requerida' });
+    req.userId = id;
+    next();
+}
+
+// Errores de regla de negocio lanzados por los procedimientos (RAISE EXCEPTION 'CODIGO: mensaje')
+const CODIGOS_NEGOCIO = ['USUARIO_CON_TURNO', 'TURNO_NO_DISPONIBLE', 'TURNO_NO_EN_ATENCION', 'TURNO_NO_CREADA'];
+function responderErrorTurno(res, error, mensajeGenerico) {
+    const msg = String(error.message || '');
+    const codigo = CODIGOS_NEGOCIO.find(c => msg.startsWith(c));
+    if (codigo) {
+        const limpio = msg.slice(codigo.length).replace(/^:\s*/, '');
+        return res.status(409).json({ success: false, code: codigo, message: limpio, error: limpio });
+    }
+    return res.status(500).json({ success: false, message: mensajeGenerico, error: msg });
+}
 const fotosDir = path.join(__dirname, '../../fotos');
 if (!fs.existsSync(fotosDir)) {
     fs.mkdirSync(fotosDir, { recursive: true });
@@ -388,7 +424,7 @@ router.put('/Gasignar-turnoT/:turno_id', async (req, res) => {
         const { turno_id } = req.params;
 
         await client.query('BEGIN');
-        await client.query('CALL sp_asignar_turno($1)', [turno_id]);
+        await client.query('CALL sp_asignar_turno($1, $2)', [turno_id, userIdFromRequest(req)]);
         await client.query('COMMIT');
 
         res.json({
@@ -399,11 +435,7 @@ router.put('/Gasignar-turnoT/:turno_id', async (req, res) => {
     } catch (error) {
         await client.query('ROLLBACK');
         console.error('Error al asignar el turno:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al asignar el estado del turno',
-            error: error.message
-        });
+        responderErrorTurno(res, error, 'Error al asignar el estado del turno');
     } finally {
         client.release();
     }
@@ -411,7 +443,7 @@ router.put('/Gasignar-turnoT/:turno_id', async (req, res) => {
 
 
 // Actualizar estado del turno a Llamado (4)
-router.put('/Gactualizar-estado-llamadoT/:idTurno', async (req, res) => {
+router.put('/Gactualizar-estado-llamadoT/:idTurno', requireUser, async (req, res) => {
     const client = await pool.connect();
     try {
         const { idTurno } = req.params;
@@ -419,8 +451,8 @@ router.put('/Gactualizar-estado-llamadoT/:idTurno', async (req, res) => {
 
         await client.query('BEGIN');
 
-        // Llamar al procedimiento
-        await client.query('CALL sp_actualizar_estado_llamado($1, $2)', [idTurno, cursorName]);
+        // Llamar al procedimiento (registra al usuario que llama el turno)
+        await client.query('CALL sp_actualizar_estado_llamado($1, $2, $3)', [idTurno, req.userId, cursorName]);
 
         // Traer resultados del cursor
         const result = await client.query(`FETCH ALL FROM ${cursorName}`);
@@ -440,19 +472,36 @@ router.put('/Gactualizar-estado-llamadoT/:idTurno', async (req, res) => {
     } catch (error) {
         await client.query('ROLLBACK');
         console.error('Error al actualizar estado del turno:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al actualizar el estado del turno',
-            error: error.message
-        });
+        responderErrorTurno(res, error, 'Error al actualizar el estado del turno');
+    } finally {
+        client.release();
+    }
+});
+
+// Turno que el usuario autenticado tiene en atención (un usuario solo puede tener uno)
+router.get('/Gturno-actual-usuario', requireUser, async (req, res) => {
+    const client = await pool.connect();
+    try {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        await client.query('BEGIN');
+        await client.query('CALL sp_turno_actual_usuario($1, $2)', [req.userId, 'ref_cursor']);
+        const result = await client.query('FETCH ALL FROM ref_cursor');
+        await client.query('COMMIT');
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'El usuario no tiene un turno en atención' });
+        }
+        res.json(result.rows[0]);
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error al obtener el turno del usuario:', error);
+        res.status(500).json({ error: 'Error al obtener el turno del usuario', detalle: error.message });
     } finally {
         client.release();
     }
 });
 
 
-
-router.put('/Gabandonar-turnoT/:idTurno', async (req, res) => {
+router.put('/Gabandonar-turnoT/:idTurno', requireUser, async (req, res) => {
     const client = await pool.connect();
     try {
         const { idTurno } = req.params;
@@ -461,7 +510,7 @@ router.put('/Gabandonar-turnoT/:idTurno', async (req, res) => {
         await client.query('BEGIN');
 
         // Llamar al procedimiento
-        await client.query('CALL sp_abandonar_turno($1, $2)', [idTurno, cursorName]);
+        await client.query('CALL sp_abandonar_turno($1, $2, $3)', [idTurno, req.userId, cursorName]);
 
         // Traer resultados del cursor
         const result = await client.query(`FETCH ALL FROM ${cursorName}`);
@@ -481,18 +530,14 @@ router.put('/Gabandonar-turnoT/:idTurno', async (req, res) => {
     } catch (error) {
         await client.query('ROLLBACK');
         console.error('Error al actualizar estado del turno:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al actualizar el estado del turno',
-            error: error.message
-        });
+        responderErrorTurno(res, error, 'Error al actualizar el estado del turno');
     } finally {
         client.release();
     }
 });
 
 
-router.put('/Gfinalizar-turnoT/:idTurno', async (req, res) => {
+router.put('/Gfinalizar-turnoT/:idTurno', requireUser, async (req, res) => {
     const client = await pool.connect();
     try {
         const { idTurno } = req.params;
@@ -500,8 +545,8 @@ router.put('/Gfinalizar-turnoT/:idTurno', async (req, res) => {
 
         await client.query('BEGIN');
 
-        // Llamar al procedimiento
-        await client.query('CALL sp_finalizar_turno($1, $2)', [idTurno, cursorName]);
+        // Llamar al procedimiento (registra al usuario que finaliza la atención)
+        await client.query('CALL sp_finalizar_turno($1, $2, $3)', [idTurno, req.userId, cursorName]);
 
         // Traer resultados del cursor
         const result = await client.query(`FETCH ALL FROM ${cursorName}`);
@@ -521,11 +566,7 @@ router.put('/Gfinalizar-turnoT/:idTurno', async (req, res) => {
     } catch (error) {
         await client.query('ROLLBACK');
         console.error('Error al finalizar el turno:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al actualizar el estado del turno',
-            error: error.message
-        });
+        responderErrorTurno(res, error, 'Error al actualizar el estado del turno');
     } finally {
         client.release();
     }

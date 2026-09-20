@@ -82,6 +82,7 @@ const LlamadoTurnos = () => {
     const [selectedClinica, setSelectedClinica] = useState(null);
     const [clinicasData, setClinicasData] = useState({});
     const [siguientesTurnos, setSiguientesTurnos] = useState([]);
+    const [turnoActivo, setTurnoActivo] = useState(null);
     const [showModal, setShowModal] = useState(false);
     const [modalMessage, setModalMessage] = useState('');
     const [modalType, setModalType] = useState('info');
@@ -97,10 +98,11 @@ const LlamadoTurnos = () => {
         const initializeData = async () => {
             try {
                 setLoading(true);
-                const savedData = localStorage.getItem('clinicasData');
-                if (savedData) {
-                    setClinicasData(JSON.parse(savedData));
-                }
+                // El estado de los turnos vive en el servidor; se descarta cualquier copia vieja del navegador
+                try {
+                    localStorage.removeItem('clinicasData');
+                    localStorage.removeItem('turnoLlamado');
+                } catch {}
                 await fetchClinicas();
             } catch (err) {
                 setError(err);
@@ -114,89 +116,47 @@ const LlamadoTurnos = () => {
         initializeData();
     }, []);
 
-    // Función para cargar el turno actual en estado 4 (llamado)
-    const cargarTurnoActual = async (clinica) => {
-        if (!clinica) return;
-        
+    // Turno que el usuario actual tiene en atención (estado 4). Un usuario solo puede tener uno.
+    // Si el servidor no devuelve ninguno, se limpia el estado local (evita mostrar turnos que ya no existen).
+    const cargarTurnoActual = async () => {
         try {
-            const response = await api.get(`/Gturno-actual/${clinica}`);
-            if (response.data) {
-                // Verificar y normalizar la URL de la foto
-                let turnoConFoto = { ...response.data };
-                if (turnoConFoto?.url_foto) {
-                    const filename = turnoConFoto.url_foto.replace(/^.*[\\\/]/, '');
-                    const resolved = await verificarExistenciaFoto(filename);
-                    turnoConFoto.url_foto = resolved;
-                }
-                
-                setClinicasData(prev => ({
-                    ...prev,
-                    [clinica]: {
-                        ...(prev[clinica] || {}),
-                        turnoLlamado: turnoConFoto,
-                        turnoMasAntiguo: prev[clinica]?.turnoMasAntiguo || null,
-                        botonLlamarHabilitado: true
-                    }
-                }));
-            }
+            const response = await api.get('/Gturno-actual-usuario');
+            const turno = response.data || null;
+            setTurnoActivo(turno);
+            setClinicasData(turno ? {
+                [turno.nombre_clinica]: { turnoLlamado: turno }
+            } : {});
         } catch (error) {
-            if (error.response?.status !== 404) {
+            if (error.response?.status === 404) {
+                setTurnoActivo(null);
+                setClinicasData({});
+            } else {
                 console.error('Error al cargar el turno actual:', error);
             }
         }
     };
 
-    // Efecto para cargar los siguientes turnos cuando se selecciona una clínica
+    // Carga inicial y al cambiar de clínica
     useEffect(() => {
+        if (clinicas.length > 0 && !selectedClinica) {
+            setSelectedClinica(clinicas[0].descripcion);
+            return;
+        }
         if (selectedClinica) {
             cargarSiguientesTurnos(selectedClinica);
-            cargarTurnoActual(selectedClinica);
+            cargarTurnoActual();
         }
-        
-        // Cargar los siguientes turnos al montar el componente
-        const loadInitialData = async () => {
-            if (clinicas.length > 0 && !selectedClinica) {
-                const primeraClinica = clinicas[0].descripcion;
-                setSelectedClinica(primeraClinica);
-                await Promise.all([
-                    cargarSiguientesTurnos(primeraClinica),
-                    cargarTurnoActual(primeraClinica)
-                ]);
-            }
-        };
-        
-        loadInitialData();
     }, [selectedClinica, clinicas]);
 
-    // Resolver URL de foto con fallback si /check-photo no existe en prod
-    const verificarExistenciaFoto = async (filename) => {
-        try {
-            // 1) Intentar endpoint JSON (sin extensión para evitar filtro de Nginx)
-            const base = String(filename || '').replace(/^.*[\\\/]/, '');
-            const id = base.replace(/\.[a-zA-Z0-9]+$/, '');
-            const response = await api.get(`/check-photo/${id}`);
-            if (response?.data?.exists && response.data.url) {
-                let url = response.data.url; // p.ej. /fotos/XYZ.jpg
-                if (url.startsWith('/fotos/')) {
-                    url = `/api${url}`; // asegurar proxy vía /api
-                }
-                return url;
-            }
-        } catch (error) {
-            // si 404 del endpoint, intentar fallback directo a servir imagen
-            // console.warn('check-photo no disponible, aplicando fallback /foto/:id');
-        }
-        // 2) Fallback: pedir la imagen directa sin extensión
-        try {
-            const base = String(filename || '').replace(/^.*[\\\/]/, '');
-            const id = base.replace(/\.[a-zA-Z0-9]+$/, '');
-            const respImg = await api.get(`/foto/${id}`, { responseType: 'blob' });
-            if (respImg && respImg.status === 200) {
-                return `/api/foto/${id}`; // servir desde backend
-            }
-        } catch (_) {}
-        return null;
-    };
+    // Refresco periódico: los turnos que llaman otros usuarios deben desaparecer de "Próximos Turnos"
+    useEffect(() => {
+        if (!selectedClinica) return;
+        const id = setInterval(() => {
+            cargarSiguientesTurnos(selectedClinica);
+            cargarTurnoActual();
+        }, 5000);
+        return () => clearInterval(id);
+    }, [selectedClinica]);
 
     const handleCloseModal = () => setShowModal(false);
 
@@ -259,462 +219,132 @@ const LlamadoTurnos = () => {
         }
     };
 
+    // Publica el evento para la TV (localStorage + evento del navegador + SSE del backend)
+    const notificarTV = async (clinica, accion, turno = null) => {
+        try {
+            localStorage.setItem('turnoActualizado', JSON.stringify({ clinica, timestamp: Date.now(), accion }));
+        } catch {}
+        try {
+            window.dispatchEvent(new CustomEvent('turnoActualizado', {
+                detail: { clinica, timestamp: Date.now(), accion }
+            }));
+        } catch {}
+        try {
+            await api.post('/turnos/llamado', {
+                clinica,
+                accion,
+                turnoId: turno?.id_turno_cod || null,
+                turno: turno || null,
+                ts: Date.now(),
+            });
+        } catch (_) {}
+    };
+
+    const mensajeError = (error, porDefecto) =>
+        error.response?.data?.message || error.response?.data?.error || porDefecto;
+
     const handleLlamar = async (clinica = selectedClinica) => {
         if (!clinica) {
             showErrorModal('No se ha seleccionado una clínica');
             return;
         }
+        if (turnoActivo) {
+            showErrorModal('Ya tienes un paciente en atención. Finalízalo o márcalo como abandonado antes de llamar a otro.');
+            return;
+        }
 
         try {
             setFotoCargando(true);
-            
-            // Obtener el siguiente turno para la clínica seleccionada
+
+            // Siguiente turno Asignada de la clínica que nadie ha llamado todavía
             const response = await api.get(`/Gsiguiente-turnoT/${clinica}`);
-            
-            if (response.status === 404) {
+            const turnos = Array.isArray(response.data) ? response.data : [response.data];
+            const turno = turnos[0];
+            if (!turno) {
                 showErrorModal('No hay turnos pendientes para esta clínica');
-                setSiguientesTurnos([]); // Limpiar la lista de próximos turnos
+                setSiguientesTurnos([]);
                 return;
             }
-            
-            // Tomar el primer turno de la lista para el llamado actual
-            const turnos = Array.isArray(response.data) ? response.data : [response.data];
-            const turno = turnos[0]; // Tomamos el primer turno para el llamado actual
-            
-            // Actualizar el estado del turno a Llamado (4)
-            await api.put(`/Gactualizar-estado-llamadoT/${turno.id_turno_cod}`);
-            
-            // Verificar y normalizar la URL de la foto
-            let turnoConFoto = { ...turno };
-            if (turnoConFoto?.url_foto) {
-                const filename = turnoConFoto.url_foto.replace(/^.*[\\\/]/, '');
-                const resolved = await verificarExistenciaFoto(filename);
-                turnoConFoto.url_foto = resolved;
-            }
-            
-            // Actualizar el estado con el turno llamado
-            setClinicasData(prev => ({
-                ...prev,
-                [clinica]: {
-                    ...prev[clinica],
-                    turnoLlamado: turnoConFoto,
-                    turnoMasAntiguo: turnoConFoto, 
-                    botonLlamarHabilitado: true
-                }
-            }));
-            
-            // Actualizar localStorage primero (para que la TV lea datos inmediatos)
-            localStorage.setItem('clinicasData', JSON.stringify({
-                ...clinicasData,
-                [clinica]: {
-                    ...(clinicasData[clinica] || {}),
-                    turnoLlamado: turnoConFoto,
-                    turnoMasAntiguo: turnoConFoto,
-                    botonLlamarHabilitado: true
-                }
-            }));
-            
-            // Disparar evento para que Turnos TV realice el anuncio por voz
-            try {
-                localStorage.setItem('turnoActualizado', JSON.stringify({
-                    clinica: clinica,
-                    timestamp: Date.now(),
-                    accion: 'llamar'
-                }));
-            } catch {}
-            try {
-                window.dispatchEvent(new CustomEvent('turnoActualizado', {
-                    detail: { clinica: clinica, timestamp: Date.now(), accion: 'llamar' }
-                }));
-            } catch {}
-            // Notificar a TVs vía backend (SSE/poll)
-            try {
-                await api.post('/turnos/llamado', {
-                    clinica: clinica,
-                    accion: 'llamar',
-                    turnoId: turnoConFoto?.id_turno_cod || null,
-                    turno: turnoConFoto || null,
-                    ts: Date.now(),
-                });
-            } catch (_) {}
-            
-            // Obtener el siguiente turno para la lista de espera
-            await obtenerSiguienteTurno(clinica);
-            
-            // Actualizar la lista de próximos turnos con un pequeño retraso
-            // para asegurar que los datos se hayan actualizado en el servidor
-            setTimeout(() => cargarSiguientesTurnos(clinica), 500);
-            
-            // Actualizar la lista de próximos turnos inmediatamente
-            // para reflejar los cambios sin esperar la recarga completa
-            const nuevosTurnos = [...siguientesTurnos];
-            if (nuevosTurnos.length > 0) {
-                nuevosTurnos.shift(); // Eliminar el turno que se acaba de llamar
-                setSiguientesTurnos(nuevosTurnos);
-            }
+
+            // El servidor registra al usuario que llama y rechaza el llamado si otro usuario se adelantó
+            const llamado = await api.put(`/Gactualizar-estado-llamadoT/${turno.id_turno_cod}`);
+            await notificarTV(clinica, 'llamar', llamado.data?.turno || turno);
+            await Promise.all([cargarTurnoActual(), cargarSiguientesTurnos(clinica)]);
             showSuccessModal('Turno llamado exitosamente');
         } catch (error) {
-            showErrorModal(`No se encontró un turno para la clínica ${clinica}`);
+            if (error.response?.status === 404) {
+                showErrorModal('No hay turnos pendientes para esta clínica');
+            } else {
+                showErrorModal(mensajeError(error, `No se pudo llamar un turno de la clínica ${clinica}`));
+            }
+            await Promise.all([cargarTurnoActual(), cargarSiguientesTurnos(clinica)]);
         } finally {
             setFotoCargando(false);
         }
     };
 
-    const handleAbandonar = async (clinica = selectedClinica) => {
-        if (!clinica || !clinicasData[clinica]?.turnoLlamado) {
-            showErrorModal('No hay turno para marcar como abandonado');
+    // Cierra el turno que el usuario tiene en atención (finalizar o abandonar)
+    const cerrarTurnoActual = async (clinica, { endpoint, accion, exito, falla }) => {
+        const turno = turnoActivo;
+        if (!clinica || !turno || turno.nombre_clinica !== clinica) {
+            showErrorModal('No hay un turno en atención para esta clínica');
             return;
         }
-        
-        // Cargar los siguientes turnos después de marcar como abandonado
-        await cargarSiguientesTurnos(clinica);
 
         try {
-            // Usar id_turno_cod en lugar de idturno para la petición
-            const response = await api.put(`/Gabandonar-turnoT/${clinicasData[clinica].turnoLlamado.id_turno_cod}`);
-            
-            if (response.data && response.data.success) {
-                // Actualizar el estado local
-                setClinicasData(prev => ({
-                    ...prev,
-                    [clinica]: {
-                        ...prev[clinica],
-                        turnoLlamado: null,
-                        turnoMasAntiguo: null,
-                        botonLlamarHabilitado: true
-                    }
-                }));
-                
-                // Actualizar localStorage
-                const updatedData = {
-                    ...clinicasData,
-                    [clinica]: {
-                        ...clinicasData[clinica],
-                        turnoLlamado: null,
-                        turnoMasAntiguo: null,
-                        botonLlamarHabilitado: true
-                    }
-                };
-                localStorage.setItem('clinicasData', JSON.stringify(updatedData));
-                
-                // Disparar evento para actualizar la vista TV
-                localStorage.setItem('turnoActualizado', JSON.stringify({
-                    clinica: clinica,
-                    timestamp: Date.now(),
-                    accion: 'abandonar'
-                }));
-                
-                // Disparar evento personalizado para la misma pestaña
-                window.dispatchEvent(new CustomEvent('turnoActualizado', {
-                    detail: {
-                        clinica: clinica,
-                        timestamp: Date.now(),
-                        accion: 'abandonar'
-                    }
-                }));
-                // Publicar evento backend
-                try {
-                    await api.post('/turnos/llamado', {
-                        clinica: clinica,
-                        accion: 'abandonar',
-                        turnoId: null,
-                        ts: Date.now(),
-                    });
-                } catch (_) {}
-                
-                showSuccessModal(response.data.message || 'Turno marcado como abandonado');
-            } else {
+            const response = await api.put(`${endpoint}/${turno.id_turno_cod}`);
+            if (!(response.data && response.data.success)) {
                 throw new Error(response.data?.message || 'Error al actualizar el estado del turno');
             }
+            await notificarTV(clinica, accion);
+            await Promise.all([cargarTurnoActual(), cargarSiguientesTurnos(clinica)]);
+            showSuccessModal(response.data.message || exito);
         } catch (error) {
-            console.error('Error en handleAbandonar:', error);
-            showErrorModal(`Error al marcar el turno como abandonado: ${error.response?.data?.message || error.message}`);
+            console.error(falla, error);
+            showErrorModal(`${falla}: ${mensajeError(error, error.message)}`);
+            await cargarTurnoActual();
         }
     };
 
-    const handleLlamarNuevamente = async () => {
-        if (!selectedClinica || !clinicasData[selectedClinica]?.turnoLlamado) {
-            showErrorModal('No hay un turno llamado para volver a llamar');
-            return;
-        }
-        
-        const turno = clinicasData[selectedClinica].turnoLlamado;
-        
-        try {
-            await api.put(`/turnoLlamado/${turno.idturno}`, { idturnoestado: 3 });
-            showSuccessModal('Turno llamado nuevamente');
-            // Asegurar que la TV lea datos frescos desde localStorage
-            try {
-                const updatedData = {
-                    ...clinicasData,
-                    [selectedClinica]: {
-                        ...(clinicasData[selectedClinica] || {}),
-                        turnoLlamado: turno,
-                        turnoMasAntiguo: turno,
-                        botonLlamarHabilitado: true,
-                    }
-                };
-                localStorage.setItem('clinicasData', JSON.stringify(updatedData));
-            } catch {}
-            
-            // Disparar eventos para que Turnos TV realice el anuncio por voz
-            try {
-                localStorage.setItem('turnoActualizado', JSON.stringify({
-                    clinica: selectedClinica,
-                    timestamp: Date.now(),
-                    accion: 're-llamar'
-                }));
-            } catch {}
-            try {
-                window.dispatchEvent(new CustomEvent('turnoActualizado', {
-                    detail: { clinica: selectedClinica, timestamp: Date.now(), accion: 're-llamar' }
-                }));
-            } catch {}
-            // Notificar a TVs vía backend (SSE/poll)
-            try {
-                await api.post('/turnos/llamado', {
-                    clinica: selectedClinica,
-                    accion: 're-llamar',
-                    turnoId: turno?.id_turno_cod || null,
-                    turno: turno || null,
-                    ts: Date.now(),
-                });
-            } catch (_) {}
-            
-            await obtenerSiguienteTurno(selectedClinica);
-        } catch (error) {
-            showErrorModal(`Error al volver a llamar el turno: ${error.message}`);
-        }
-    };
+    const handleAbandonar = (clinica = selectedClinica) => cerrarTurnoActual(clinica, {
+        endpoint: '/Gabandonar-turnoT',
+        accion: 'abandonar',
+        exito: 'Turno marcado como abandonado',
+        falla: 'Error al marcar el turno como abandonado',
+    });
 
-    const obtenerSiguienteTurno = async (clinica = selectedClinica) => {
-        if (!clinica) return;
-        
-        try {
-            const response = await api.get(`/Gsiguiente-turnoT/${clinica}`);
-            
-            // Si no hay turno, establecer valores por defecto
-            if (response.status === 404 || !response.data) {
-                setClinicasData(prev => ({
-                    ...prev,
-                    [clinica]: {
-                        ...prev[clinica],
-                        turnoMasAntiguo: null,
-                        botonLlamarHabilitado: false
-                    }
-                }));
-                return;
-            }
-            
-            const turno = response.data;
-            
-            // Verificar y normalizar la URL de la foto
-            let turnoConFoto = { ...turno };
-            if (turnoConFoto?.url_foto) {
-                const filename = turnoConFoto.url_foto.replace(/^.*[\\\/]/, '');
-                const resolved = await verificarExistenciaFoto(filename);
-                turnoConFoto.url_foto = resolved;
-            }
-            
-            setClinicasData(prev => ({
-                ...prev,
-                [clinica]: {
-                    ...prev[clinica],
-                    turnoMasAntiguo: turnoConFoto,
-                    botonLlamarHabilitado: true
-                }
-            }));
-            
-            // Guardar en localStorage
-            localStorage.setItem('clinicasData', JSON.stringify({
-                ...clinicasData,
-                [clinica]: {
-                    ...(clinicasData[clinica] || {}),
-                    turnoMasAntiguo: turnoConFoto,
-                    botonLlamarHabilitado: true
-                }
-            }));
-        } catch (error) {
-            console.error('Error al obtener siguiente turno:', error);
-            // Si hay un error, deshabilitar el botón de llamar
-            setClinicasData(prev => ({
-                ...prev,
-                [clinica]: {
-                    ...prev[clinica],
-                    botonLlamarHabilitado: false
-                }
-            }));
-        }
-    };
+    const handleFinalizar = (clinica = selectedClinica) => cerrarTurnoActual(clinica, {
+        endpoint: '/Gfinalizar-turnoT',
+        accion: 'finalizar',
+        exito: 'Turno finalizado exitosamente',
+        falla: 'Error al finalizar el turno',
+    });
 
-    const handleFinalizar = async (clinica = selectedClinica) => {
-        if (!clinica || !clinicasData[clinica]?.turnoLlamado) {
-            showErrorModal('No hay un turno activo para finalizar');
-            return;
-        }
-        
-        // Cargar los siguientes turnos después de finalizar uno
-        await cargarSiguientesTurnos(clinica);
-
-        try {
-            // Usar id_turno_cod en lugar de idturno para la petición
-            const response = await api.put(`/Gfinalizar-turnoT/${clinicasData[clinica].turnoLlamado.id_turno_cod}`);
-            
-            if (response.data && response.data.success) {
-                // Actualizar el estado local
-                setClinicasData(prev => ({
-                    ...prev,
-                    [clinica]: {
-                        ...prev[clinica],
-                        turnoLlamado: null,
-                        turnoMasAntiguo: null,
-                        botonLlamarHabilitado: true
-                    }
-                }));
-                
-                // Actualizar localStorage
-                const updatedData = {
-                    ...clinicasData,
-                    [clinica]: {
-                        ...clinicasData[clinica],
-                        turnoLlamado: null,
-                        turnoMasAntiguo: null,
-                        botonLlamarHabilitado: true
-                    }
-                };
-                localStorage.setItem('clinicasData', JSON.stringify(updatedData));
-                
-                // Disparar evento para actualizar la vista TV
-                localStorage.setItem('turnoActualizado', JSON.stringify({
-                    clinica: clinica,
-                    timestamp: Date.now(),
-                    accion: 'finalizar'
-                }));
-                
-                // Disparar evento personalizado para la misma pestaña
-                window.dispatchEvent(new CustomEvent('turnoActualizado', {
-                    detail: {
-                        clinica: clinica,
-                        timestamp: Date.now(),
-                        accion: 'finalizar'
-                    }
-                }));
-                // Publicar evento backend
-                try {
-                    await api.post('/turnos/llamado', {
-                        clinica: clinica,
-                        accion: 'finalizar',
-                        turnoId: null,
-                        ts: Date.now(),
-                    });
-                } catch (_) {}
-                
-                showSuccessModal(response.data.message || 'Turno finalizado exitosamente');
-            } else {
-                throw new Error(response.data?.message || 'Error al actualizar el estado del turno');
-            }
-            
-            showSuccessModal(response.data.message);
-        } catch (error) {
-            showErrorModal(`Error al finalizar el turno: ${error.message}`);
-        }
-    };
-
+    // Próximos turnos: Asignada y aún sin llamar (un turno llamado por otro usuario deja de aparecer)
     const cargarSiguientesTurnos = async (clinica) => {
         if (!clinica) return;
-        
+
         try {
-            console.log(`Cargando próximos turnos para clínica: ${clinica}`);
-            const response = await api.get(`/Gsiguiente-turnoT/${clinica}`);
-            
-            if (response.data) {
-                // Asegurarnos de que siempre sea un array
-                let turnos = [];
-                
-                // Manejar tanto array como objeto simple
-                if (Array.isArray(response.data)) {
-                    turnos = response.data;
-                } else if (typeof response.data === 'object' && response.data !== null) {
-                    // Si es un solo objeto, lo convertimos a array
-                    turnos = [response.data];
-                }
-                
-                console.log('Turnos cargados:', turnos);
-                setSiguientesTurnos(turnos);
-            } else {
-                console.log('No se encontraron turnos');
-                setSiguientesTurnos([]);
-            }
+            const response = await api.get(`/Gsiguientes-turnosT/${encodeURIComponent(clinica)}`);
+            setSiguientesTurnos(Array.isArray(response.data?.turnos) ? response.data.turnos : []);
         } catch (error) {
-            if (error.response?.status === 404) {
-                console.log('No hay turnos pendientes para esta clínica');
-                setSiguientesTurnos([]);
-            } else {
-                console.error('Error al cargar los siguientes turnos:', error);
-                setSiguientesTurnos([]);
-            }
+            console.error('Error al cargar los siguientes turnos:', error);
+            setSiguientesTurnos([]);
         }
     };
 
-    const handleClinicaSelect = async (clinica) => {
+    const handleClinicaSelect = (clinica) => {
         if (!clinica) {
             showErrorModal('Clínica no válida');
             return;
         }
-        
-        // Cargar los siguientes turnos y el turno actual cuando se selecciona una clínica
-        await Promise.all([
-            cargarSiguientesTurnos(clinica),
-            cargarTurnoActual(clinica)
-        ]);
 
-        try {
-            // Siempre permitir cambiar de clínica
-            setSelectedClinica(clinica);
-            
-            // Si la clínica no existe en el estado, inicializarla
-            if (!clinicasData[clinica]) {
-                setClinicasData(prev => ({
-                    ...prev,
-                    [clinica]: {
-                        turnoMasAntiguo: null,
-                        turnoLlamado: null,
-                        botonLlamarHabilitado: false
-                    }
-                }));
-                
-                // Obtener el siguiente turno solo si es una clínica nueva
-                setLoading(true);
-                await obtenerSiguienteTurno(clinica);
-                setLoading(false);
-            } else if (!clinicasData[clinica].turnoMasAntiguo) {
-                // Si la clínica existe pero no tiene turno más antiguo, intentar obtenerlo
-                setLoading(true);
-                await obtenerSiguienteTurno(clinica);
-                setLoading(false);
-            }
-            
-            // Mostrar toast no bloqueante
-            setToastMessage(`Clínica seleccionada: ${clinica}`);
-            setToastType('success');
-            setShowToast(true);
-            setTimeout(() => setShowToast(false), 3000);
-            
-        } catch (error) {
-            console.error('Error al seleccionar la clínica:', error);
-            showErrorModal(`Error al seleccionar la clínica: ${error.message}`);
-            setLoading(false);
-        }
+        setSelectedClinica(clinica);
+        setToastMessage(`Clínica seleccionada: ${clinica}`);
+        setToastType('success');
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
     };
-
-    useEffect(() => {
-        fetchClinicas();
-        const saved = localStorage.getItem('turnoLlamado');
-        if (saved) {
-            setTurnoLlamado(JSON.parse(saved));
-        }
-        setInitialized(true);
-    }, []);
 
     if (loading) {
         return (
@@ -1009,12 +639,17 @@ const LlamadoTurnos = () => {
                 )}
 
                 {/* Botones de acción */}
+                {selectedClinica && turnoActivo && turnoActivo.nombre_clinica !== selectedClinica && (
+                    <p className="mb-3 text-sm text-amber-700 dark:text-amber-400">
+                        Tienes un paciente en atención en {turnoActivo.nombre_clinica}. Debes finalizarlo o marcarlo como abandonado antes de llamar a otro.
+                    </p>
+                )}
                 {selectedClinica && (
                     <div className="flex flex-wrap gap-3 justify-between">
                         <button
                             className="px-5 py-2 rounded-lg bg-green-700 hover:bg-green-800 text-white font-semibold transition-colors dark:bg-green-600 dark:hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                             onClick={() => handleLlamar(selectedClinica)}
-                            disabled={!!clinicasData[selectedClinica]?.turnoLlamado}
+                            disabled={!!turnoActivo || siguientesTurnos.length === 0 || fotoCargando}
                         >
                             Llamar
                         </button>
