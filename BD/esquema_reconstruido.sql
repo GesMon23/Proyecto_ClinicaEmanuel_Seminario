@@ -498,14 +498,15 @@ ON CONFLICT (nombre) DO NOTHING;
 
 -- id_estado_turno: 1 y 4 y 7 confirmados por comentarios del backend.
 INSERT INTO public.tbl_estados_turno (descripcion, estado) VALUES
-  ('Asignado', true),   -- id 1 [REAL]
+  ('Asignada', true),   -- id 1 [REAL] (turno listo para ser llamado)
   ('En espera', true),  -- id 2
   ('En atencion', true),-- id 3
   ('Llamado', true),    -- id 4 [REAL]
   ('Finalizado', true), -- id 5 [INFERIDO]
   ('Cancelado', true),  -- id 6
   ('Faltante', true),   -- id 7 [REAL]
-  ('Abandonado', true)  -- id 8 [INFERIDO]
+  ('Abandonado', true), -- id 8 [INFERIDO]
+  ('Creada', true)      -- id 9 [NUEVO] estado inicial; pasa a Asignada desde la pestana Asignacion
 ON CONFLICT (descripcion) DO NOTHING;
 
 -- id_estado (tbl_estados_paciente): 1=Activo y 3=Egresado confirmados por
@@ -2095,8 +2096,31 @@ BEGIN
   SELECT id_clinica INTO v_id_clinica FROM public.tbl_clinica WHERE descripcion = p_clinica;
   v_id_turno := 'T-' || to_char(clock_timestamp(), 'YYYYMMDDHH24MISS') || '-' || substr(md5(random()::text), 1, 6);
 
+  -- Estado inicial: Creada (pasa a Asignada desde la pestana Asignacion)
   INSERT INTO public.tbl_turnos (id_turno, no_afiliacion, id_clinica, fecha_turno, id_estado_turno, fecha_creacion)
-  VALUES (v_id_turno, p_noafiliacion, v_id_clinica, p_fecha_turno, 1, now());
+  VALUES (v_id_turno, p_noafiliacion, v_id_clinica, p_fecha_turno,
+          (SELECT id_estado_turno FROM public.tbl_estados_turno WHERE descripcion = 'Creada'), now());
+END;
+$$;
+
+-- Turnos en estado Creada con fecha de turno igual a la fecha actual del servidor
+CREATE OR REPLACE PROCEDURE public.sp_mostrar_turnos_creados_hoy(INOUT ref refcursor)
+LANGUAGE plpgsql AS $$
+BEGIN
+  OPEN ref FOR
+    SELECT t.*, t.id_turno AS id_turno_cod, t.no_afiliacion AS noafiliacion,
+           c.descripcion AS nombre_clinica,
+           trim(regexp_replace(
+             COALESCE(p.primer_nombre,'') || ' ' || COALESCE(p.segundo_nombre,'') || ' ' ||
+             COALESCE(p.primer_apellido,'') || ' ' || COALESCE(p.segundo_apellido,''),
+             '\s+', ' ', 'g'
+           )) AS nombrepaciente
+    FROM public.tbl_turnos t
+    JOIN public.tbl_clinica c ON t.id_clinica = c.id_clinica
+    JOIN public.tbl_estados_turno es ON t.id_estado_turno = es.id_estado_turno
+    LEFT JOIN public.tbl_pacientes p ON t.no_afiliacion = p.no_afiliacion
+    WHERE es.descripcion = 'Creada' AND t.fecha_turno = CURRENT_DATE
+    ORDER BY c.descripcion, t.fecha_creacion;
 END;
 $$;
 

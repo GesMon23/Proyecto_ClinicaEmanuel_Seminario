@@ -122,6 +122,24 @@ router.get('/GmuestraTurnosFaltantesT', async (req, res) => {
 });
 
 
+// Turnos en estado Creada con fecha de turno igual a la fecha actual del servidor
+router.get('/GturnosCreadosT', async (req, res) => {
+    const client = await pool.connect();
+    try {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        await client.query('BEGIN');
+        await client.query("CALL sp_mostrar_turnos_creados_hoy('ref_cursor')");
+        const result = await client.query('FETCH ALL FROM ref_cursor');
+        await client.query('COMMIT');
+        res.json(result.rows);
+    } catch (err) {
+        await client.query('ROLLBACK');
+        res.status(500).json({ detail: err.message });
+    } finally {
+        client.release();
+    }
+});
+
 // Crear nuevo turno
 router.post('/Gcrear-turnoT', async (req, res) => {
     const client = await pool.connect();

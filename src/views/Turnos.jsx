@@ -33,7 +33,7 @@ function Turnos() {
                         }`} 
                         onClick={() => setTab('asignar')}
                     >
-                        Faltas
+                        Asignación
                     </button>
 
                     <button 
