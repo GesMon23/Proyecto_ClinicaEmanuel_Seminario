@@ -1,9 +1,6 @@
 // Casos de uso de pacientes: registro, actualización, egreso, reingreso y formularios.
-const fs = require('fs');
-const path = require('path');
 const repo = require('./pacientes.repository');
 const fotos = require('./fotos');
-const { generarCarnetPDF } = require('./carnet');
 const { HttpError } = require('../../shared/http');
 
 const nz = (v) => (v === undefined || v === null || v === '' ? null : v);
@@ -72,27 +69,6 @@ async function registrarPaciente(b, actor) {
     noafiliacion: filas?.[0]?.noafiliacion || noaf,
     carnetUrl: `/carnet/forzar/${encodeURIComponent(noaf)}`,
   };
-}
-
-// Genera el PDF del carné en un archivo temporal; devuelve su ruta. El llamador lo envía y lo borra.
-async function generarCarnet(noAfiliacion) {
-  const noaf = String(noAfiliacion || '').trim();
-  const filas = await repo.carnetDatos(noaf);
-  const paciente = filas[0];
-  if (!paciente) throw new HttpError(404, { error: 'Paciente no encontrado' });
-
-  const rutaFoto = paciente.urlfoto ? path.join(fotos.FOTOS_DIR, paciente.urlfoto) : null;
-  const tmpDir = path.join(__dirname, '../../../tmp');
-  if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
-  const rutaCarnet = path.join(tmpDir, `carnet_${noaf}.pdf`);
-
-  try {
-    await generarCarnetPDF(paciente, rutaFoto, rutaCarnet);
-  } catch (err) {
-    console.error('Error generando carnet:', err);
-    throw new HttpError(500, { error: 'Error al generar el carné.' });
-  }
-  return { noaf, rutaCarnet };
 }
 
 // ------------------------------------------------------------ Actualización
@@ -303,7 +279,7 @@ async function tablaFormularios(noAfiliacion) {
 }
 
 module.exports = {
-  existePorDpi, existePorNoAfiliacion, registrarPaciente, generarCarnet,
+  existePorDpi, existePorNoAfiliacion, registrarPaciente,
   pacienteParaActualizacion, actualizarPaciente, subirFoto,
   pacientesParaEgreso, actualizarDesdeEgresoOReingreso, registrarEgreso,
   pacientesParaReingreso, registrarReingreso, registrarHistorialReingreso,

@@ -23,9 +23,6 @@ async function existeNoAfiliacion(noAfiliacion) {
 const insertarPaciente = (parametros, actor) =>
   runWithUser(actor, (c) => fetchCursor(c, 'public.sp_paciente_insertar', parametros, 'cur_paciente_insertar'));
 
-const carnetDatos = (noAfiliacion) =>
-  withTransaction((c) => fetchCursor(c, 'public.sp_paciente_carnet_datos', [noAfiliacion], 'cur_paciente_carnet'));
-
 // ---- Actualización ----
 const pacienteParaActualizacion = (dpi, noAfiliacion) =>
   withTransaction((c) => fetchCursor(c, 'public.sp_paciente_para_actualizacion', [dpi || null, noAfiliacion || null], 'cur_paciente_para_actualizacion'));
@@ -159,7 +156,7 @@ const tablaFormularios = (noAfiliacion) =>
 module.exports = {
   departamentos, accesosVasculares, jornadasActivas, causasEgresoActivas,
   existeDpi, existeNoAfiliacion,
-  insertarPaciente, carnetDatos,
+  insertarPaciente,
   pacienteParaActualizacion, datosBasicos, titularesDeDpi, actualizarDirecto, actualizarConProcedimiento,
   reprogramarTurnosPorJornada, actualizarFoto,
   pacientesParaEgreso, pacientesParaReingreso, actualizarPorEgresoOReingreso, registrarEgreso,

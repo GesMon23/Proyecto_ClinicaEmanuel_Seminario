@@ -112,7 +112,7 @@ const backEgresoReportesRouter = require('./src/controllers/BackEgresoReportes')
 const QRCode = require('qrcode');
 
 // Importar router de consulta de pacientes
-const backConsultaPacientesRouter = require('./src/controllers/BackConsultaPacientes');
+const backConsultaPacientesRouter = pacientesModule.consulta;
 // Registrar API específica para Registro de Pacientes (endpoints usados por RegistroPacientes.jsx)
 const backRegistroPacientesApiRouter = pacientesModule.registro;
 // Importar router de registro de laboratorios

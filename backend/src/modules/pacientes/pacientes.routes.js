@@ -105,10 +105,6 @@ reingreso.post('/historial/reingresos', wrap(
 // ------------------------------------------------------------------ Registro
 const registro = nuevoRouter();
 
-registro.get('/departamentos', wrap(async (req, res) => res.json(await repo.departamentos()), conError('Error al obtener departamentos')));
-registro.get('/accesos-vasculares', wrap(async (req, res) => res.json(await repo.accesosVasculares()), conError('Error al obtener accesos vasculares')));
-registro.get('/jornadas', wrap(async (req, res) => res.json(await repo.jornadasActivas()), conError('Error al obtener jornadas')));
-
 registro.get('/pacientes/existe/dpi/:dpi', wrap(
   async (req, res) => res.json(await service.existePorDpi(req.params.dpi)),
   conError('Error al buscar paciente por DPI.')
@@ -125,21 +121,6 @@ registro.post('/pacientes', wrap(
     console.error('[POST /pacientes] ERROR:', err.message, err.code);
     if (err.code === '23505') return [409, { error: 'no_afiliacion o dpi ya existe' }];
     return [500, { error: 'Error al registrar el paciente' }];
-  }
-));
-
-registro.get('/carnet/forzar/:noafiliacion', wrap(
-  async (req, res) => {
-    const { noaf, rutaCarnet } = await service.generarCarnet(req.params.noafiliacion);
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${noaf}_carnet.pdf"`);
-    const stream = fs.createReadStream(rutaCarnet);
-    stream.on('end', () => { try { fs.unlinkSync(rutaCarnet); } catch (_) { /* ya borrado */ } });
-    stream.pipe(res);
-  },
-  (err) => {
-    console.error('Error en GET /carnet/forzar/:noafiliacion:', err);
-    return [500, { error: 'Error al generar el carné.', detalle: err.message }];
   }
 ));
 

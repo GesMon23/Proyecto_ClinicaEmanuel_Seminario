@@ -15,7 +15,7 @@ let puerto;
 before(async () => {
   const app = express();
   // Mismo orden de montaje que server.js
-  for (const nombre of ['formularios', 'actualizacion', 'egreso', 'reingreso', 'registro']) app.use(pacientesModule[nombre]);
+  for (const nombre of ['formularios', 'actualizacion', 'egreso', 'reingreso', 'consulta', 'registro']) app.use(pacientesModule[nombre]);
   servidor = await new Promise((ok) => { const s = app.listen(0, () => ok(s)); });
   puerto = servidor.address().port;
 });
