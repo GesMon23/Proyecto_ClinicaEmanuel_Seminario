@@ -60,8 +60,10 @@ app.use(bodyParser.json({ limit: '50mb' }));
 const backLoginRouter = require('./BackLogin');
 
 const turnosModule = require('./src/modules/turnos');
+const reportesModule = require('./src/modules/reportes');
+const consultasModule = require('./src/modules/consultas');
 const backGestionTurnosRouter = turnosModule.router;
-const backFallecidosReportesRouter = require('./src/controllers/BackFallecidosReportes');
+const backFallecidosReportesRouter = reportesModule.fallecidos;
 // Importar router de registro de formularios
 const pacientesModule = require('./src/modules/pacientes');
 const backRegistroFormulariosRouter = pacientesModule.formularios;
@@ -76,29 +78,29 @@ const backRolesUsuariosRouter = require('./src/controllers/BackRolesUsuarios');
 // Importar router de psicología
 const backPsicologiaRouter = require('./src/controllers/BackPsicologia');
 // Importar router de consulta de psicología
-const backConsultaPsicologiaRouter = require('./src/controllers/BackConsultaPsicologia');
+const backConsultaPsicologiaRouter = consultasModule.psicologia;
 
 const backNU = require('./src/controllers/BackNU');
 // Importar router de nutrición
 const backNutricionRouter = require('./src/controllers/BackNutricion');
 // Importar router de consulta de nutrición (historial, filtros)
-const backConsultaNutricionRouter = require('./src/controllers/BackConsultaNutricion');
+const backConsultaNutricionRouter = consultasModule.nutricion;
 // Importar router de registro de referencias
 const backRegistroReferenciasRouter = require('./src/controllers/BackRegistroReferencias');
 // Importar router de consulta de referencias
-const backConsultaReferenciasRouter = require('./src/controllers/BackConsultaReferencias');
+const backConsultaReferenciasRouter = consultasModule.referencias;
 // Importar router de consulta de laboratorios
-const backConsultaLaboratoriosRouter = require('./src/controllers/BackConsultaLaboratorios');
+const backConsultaLaboratoriosRouter = consultasModule.laboratorios;
 // Importar router de catálogos
 const backCatalogosRouter = require('./src/controllers/BackCatalogos');
 // Importar router de reporte de pacientes
-const backPacientesReporteRouter = require('./src/controllers/BackPacientesReporte');
+const backPacientesReporteRouter = reportesModule.pacientes;
 // Importar router de estadísticas resumen
 const backEstadisticasResumenRouter = require('./src/controllers/BackEstadisticasResumen');
 
-const backReporteFaltistasRouter = require('./src/controllers/BackReporteFaltistas');
+const backReporteFaltistasRouter = reportesModule.faltistas;
 
-const backNuevoIngresoReportesRouter = require('./src/controllers/BackNuevoIngresoReportes');
+const backNuevoIngresoReportesRouter = reportesModule.nuevoIngreso;
 // Importar otros routers usados más abajo
 // Usar router de consulta de laboratorios
 app.use(backConsultaLaboratoriosRouter);
@@ -108,7 +110,7 @@ const backActualizacionPacientes = pacientesModule.actualizacion;
 const backEgresoPacientes = pacientesModule.egreso;
 const backReingresoPacientesRouter = pacientesModule.reingreso;
 
-const backEgresoReportesRouter = require('./src/controllers/BackEgresoReportes');
+const backEgresoReportesRouter = reportesModule.egreso;
 const QRCode = require('qrcode');
 
 // Importar router de consulta de pacientes
