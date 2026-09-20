@@ -1351,6 +1351,65 @@ $$;
 -- parametro 22 (usuario_creacion opcional) se ignora a favor de
 -- current_setting('app.current_user') fijado por runWithUser(), y del
 -- parametro 25 (userName) que es el que realmente trae el nombre de usuario.
+-- Genera turnos de Hemodialisis (estado Creada) para el periodo de prestacion de servicios
+-- de un paciente, solo en los dias de su jornada (tbl_jornadas.dias, ej. 'LUNES, MIERCOLES, VIERNES').
+-- Solo genera desde la fecha actual en adelante (los dias ya pasados quedarian marcados como
+-- Faltante automaticamente) y no duplica turnos que ya existan para el mismo paciente/clinica/dia.
+CREATE OR REPLACE PROCEDURE public.sp_generar_turnos_periodo(
+  IN p_noaf text, IN p_inicio date, IN p_fin date, IN p_usuario text, INOUT p_creados integer DEFAULT 0
+) LANGUAGE plpgsql AS $$
+DECLARE
+  v_dias text;
+  v_clinica bigint;
+  v_creada bigint;
+  v_cancelado bigint;
+  v_desde date;
+  v_hasta date;
+BEGIN
+  p_creados := 0;
+  IF p_noaf IS NULL OR p_inicio IS NULL OR p_fin IS NULL OR p_fin < p_inicio THEN
+    RETURN;
+  END IF;
+
+  SELECT translate(upper(j.dias), 'ÁÉÍÓÚ', 'AEIOU') INTO v_dias
+    FROM public.tbl_pacientes p
+    JOIN public.tbl_jornadas j ON j.id_jornada = p.id_jornada
+   WHERE p.no_afiliacion = p_noaf;
+  IF v_dias IS NULL OR btrim(v_dias) = '' THEN
+    RETURN;
+  END IF;
+
+  SELECT id_clinica INTO v_clinica FROM public.tbl_clinica
+   WHERE translate(upper(descripcion), 'ÁÉÍÓÚ', 'AEIOU') = 'HEMODIALISIS' LIMIT 1;
+  SELECT id_estado_turno INTO v_creada FROM public.tbl_estados_turno WHERE descripcion = 'Creada';
+  SELECT id_estado_turno INTO v_cancelado FROM public.tbl_estados_turno WHERE descripcion = 'Cancelado';
+  IF v_clinica IS NULL OR v_creada IS NULL THEN
+    RETURN;
+  END IF;
+
+  v_desde := GREATEST(p_inicio, CURRENT_DATE);
+  v_hasta := LEAST(p_fin, v_desde + 400);
+  IF v_hasta < v_desde THEN
+    RETURN;
+  END IF;
+
+  INSERT INTO public.tbl_turnos (id_turno, no_afiliacion, id_clinica, fecha_turno, id_estado_turno,
+                                 usuario_creacion, fecha_creacion)
+  SELECT 'T-' || to_char(clock_timestamp(), 'YYYYMMDDHH24MISS') || '-' ||
+         substr(md5(random()::text || d::text || p_noaf), 1, 6),
+         p_noaf, v_clinica, d::date, v_creada, COALESCE(p_usuario, 'sistema'), now()
+    FROM generate_series(v_desde, v_hasta, interval '1 day') AS d
+   WHERE position((ARRAY['LUNES','MARTES','MIERCOLES','JUEVES','VIERNES','SABADO','DOMINGO'])
+                  [extract(isodow FROM d)::int] IN v_dias) > 0
+     AND NOT EXISTS (
+       SELECT 1 FROM public.tbl_turnos t
+        WHERE t.no_afiliacion = p_noaf AND t.id_clinica = v_clinica AND t.fecha_turno = d::date
+          AND (v_cancelado IS NULL OR t.id_estado_turno <> v_cancelado)
+     );
+  GET DIAGNOSTICS p_creados = ROW_COUNT;
+END;
+$$;
+
 CREATE OR REPLACE PROCEDURE public.sp_paciente_insertar(
   IN p_noaf text, IN p_dpi char(13), IN p_nopacienteproveedor text,
   IN p_primernombre text, IN p_segundonombre text, IN p_otrosnombres text,
@@ -1362,6 +1421,8 @@ CREATE OR REPLACE PROCEDURE public.sp_paciente_insertar(
   IN p_usuario_creacion_legacy text, IN p_inicio_periodo date, IN p_fin_periodo date,
   IN p_user_name text, INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
+DECLARE
+  v_turnos integer;
 BEGIN
   INSERT INTO public.tbl_pacientes (
     no_afiliacion, dpi, no_paciente_proveedor, primer_nombre, segundo_nombre, otros_nombres,
@@ -1376,6 +1437,10 @@ BEGIN
     p_sesiones_autorizadas_mes, p_inicio_periodo, p_fin_periodo, p_saved_file_name,
     now(), COALESCE(p_user_name, p_usuario_creacion_legacy, 'web'), now()
   );
+
+  -- Turnos automaticos de Hemodialisis segun periodo de prestacion y jornada
+  CALL public.sp_generar_turnos_periodo(p_noaf, p_inicio_periodo, p_fin_periodo,
+                                        COALESCE(p_user_name, p_usuario_creacion_legacy, 'web'), v_turnos);
 
   OPEN ref FOR SELECT no_afiliacion FROM public.tbl_pacientes WHERE no_afiliacion = p_noaf;
 END;
@@ -1592,6 +1657,8 @@ CREATE OR REPLACE PROCEDURE public.sp_paciente_reingreso_actualizar(
   IN p_sesiones_autorizadas_mes integer, IN p_fecha_inicio_periodo date, IN p_fecha_fin_periodo date,
   IN p_observaciones text, IN p_usuario text
 ) LANGUAGE plpgsql AS $$
+DECLARE
+  v_turnos integer;
 BEGIN
   UPDATE public.tbl_pacientes SET
     primer_nombre = COALESCE(p_primer_nombre, primer_nombre),
@@ -1620,6 +1687,11 @@ BEGIN
       observaciones = EXCLUDED.observaciones,
       usuario_actualizacion = p_usuario,
       fecha_actualizacion = now();
+  END IF;
+
+  -- Turnos automaticos solo cuando la llamada trae un periodo nuevo
+  IF p_fecha_inicio_periodo IS NOT NULL AND p_fecha_fin_periodo IS NOT NULL THEN
+    CALL public.sp_generar_turnos_periodo(p_no_afiliacion, p_fecha_inicio_periodo, p_fecha_fin_periodo, p_usuario, v_turnos);
   END IF;
 END;
 $$;
@@ -1722,6 +1794,7 @@ CREATE OR REPLACE PROCEDURE public.sp_paciente_reingreso_insertar(
 ) LANGUAGE plpgsql AS $$
 DECLARE
   v_actor text := COALESCE(current_setting('app.current_user', true), 'sistema');
+  v_turnos integer;
 BEGIN
   UPDATE public.tbl_pacientes SET
     id_estado = 1,
@@ -1742,6 +1815,10 @@ BEGIN
   ) ON CONFLICT (no_afiliacion, numero_formulario) DO UPDATE SET
     fecha_reingreso = EXCLUDED.fecha_reingreso, observaciones = EXCLUDED.observaciones,
     usuario_actualizacion = v_actor, fecha_actualizacion = now();
+
+  IF p_inicio_prest IS NOT NULL AND p_fin_prest IS NOT NULL THEN
+    CALL public.sp_generar_turnos_periodo(p_no_afiliacion, p_inicio_prest, p_fin_prest, v_actor, v_turnos);
+  END IF;
 
   OPEN ref FOR SELECT * FROM public.tbl_pacientes WHERE no_afiliacion = p_no_afiliacion;
 END;
@@ -1947,6 +2024,7 @@ CREATE OR REPLACE PROCEDURE public.sp_registro_formularios(
 DECLARE
   r RECORD;
   v_existe integer;
+  v_turnos integer;
 BEGIN
   IF p_usuario IS NULL OR p_usuario = '' THEN
     RAISE EXCEPTION 'Debe proporcionar el usuario que realiza la actualizacion.';
@@ -1989,6 +2067,9 @@ BEGIN
       inicio_prest_servicios = EXCLUDED.inicio_prest_servicios,
       fin_prest_servicios = EXCLUDED.fin_prest_servicios,
       usuario_actualizacion = p_usuario, fecha_actualizacion = now();
+
+    -- Turnos automaticos de Hemodialisis segun el nuevo periodo y la jornada del paciente
+    CALL public.sp_generar_turnos_periodo(r.noafiliacion, r.fechainicioperiodo, r.fechafinperiodo, p_usuario, v_turnos);
   END LOOP;
 END;
 $$;
