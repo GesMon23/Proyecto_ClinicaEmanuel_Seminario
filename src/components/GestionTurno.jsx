@@ -747,7 +747,7 @@ const GestionTurno = () => {
                 <span className="w-3 h-3 rounded-full bg-green-400" /> Disponible
               </span>
               <span className="inline-flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-gray-400" /> No disponible (domingos y días pasados)
+                <span className="w-3 h-3 rounded-full bg-gray-400" /> No disponible
               </span>
             </div>
           </div>
@@ -759,6 +759,7 @@ const GestionTurno = () => {
               selectable={calendarioHabilitado}
               events={eventosCalendario}
               select={calendarioHabilitado ? handleSelectDate : null}
+              validRange={(hoy) => ({ start: new Date(hoy.getFullYear(), hoy.getMonth(), 1) })}
               selectAllow={selectAllowCalendario}
               dayCellClassNames={clasesDiaCalendario}
               eventClick={handleEventClick}
