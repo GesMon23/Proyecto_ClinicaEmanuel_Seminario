@@ -311,30 +311,31 @@ const ConsultaPsicologia = () => {
             </select>
           </div>
         </div>
+        <div className="bg-white dark:bg-slate-800 shadow overflow-hidden sm:rounded-lg">
         <div className="overflow-x-auto">
         {loading ? (
           <div className="text-center my-5"><span className="text-green-700">Cargando...</span></div>
         ) : (
-          <table className="min-w-full divide-y divide-gray-300 dark:divide-slate-700 text-sm text-left text-gray-800 dark:text-gray-100">
-            <thead className="bg-gray-100 dark:bg-slate-800 text-xs uppercase font-semibold text-gray-700 dark:text-gray-200">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-slate-700">
               <tr>
-                <th className="px-4 py-2 text-left">#</th>
-                <th className="px-4 py-2 text-left">No. Afiliación</th>
-                <th className="px-4 py-2 text-left">Paciente</th>
-                <th className="px-4 py-2 text-left">Sexo</th>
-                <th className="px-4 py-2 text-left">ID Informe</th>
-                <th className="px-4 py-2 text-left">Fecha</th>
-                <th className="px-4 py-2 text-left">Motivo</th>
-                <th className="px-4 py-2 text-left">Tipo Consulta</th>
-                <th className="px-4 py-2 text-left">Tipo Atención</th>
-                <th className="px-4 py-2 text-left">Pronóstico</th>
-                <th className="px-4 py-2 text-left">Usuario</th>
-                <th className="px-4 py-2 text-left">Acciones</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">#</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">No. Afiliación</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Paciente</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Sexo</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID Informe</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Fecha</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Motivo</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Tipo Consulta</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Tipo Atención</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pronóstico</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Usuario</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
               {registros.length === 0 ? (
-                <tr><td colSpan={12} className="text-center py-4 text-gray-600 dark:text-gray-300">No hay informes para mostrar.</td></tr>
+                <tr><td colSpan={12} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">No hay informes para mostrar.</td></tr>
               ) : (
                 registrosPaginados.map((it, idx) => {
                   const pn = it.primer_nombre ?? it.primernombre ?? '';
@@ -343,19 +344,19 @@ const ConsultaPsicologia = () => {
                   const sa = it.segundo_apellido ?? it.segundoapellido ?? '';
                   const sexo = it.sexo ?? it.Sexo ?? '';
                   return (
-                    <tr key={it.id_informe || idx} className="border-t border-gray-200 dark:border-slate-700">
-                      <td className="px-3 py-2">{inicio + idx + 1}</td>
-                      <td className="px-3 py-2">{it.no_afiliacion}</td>
-                      <td className="px-3 py-2">{[pn, sn, pa, sa].filter(Boolean).join(' ')}</td>
-                      <td className="px-3 py-2">{sexo}</td>
-                      <td className="px-3 py-2">{it.id_informe}</td>
-                      <td className="px-3 py-2">{formatearFecha(it.fecha_creacion)}</td>
-                      <td className="px-3 py-2">{it.motivo_consulta}</td>
-                      <td className="px-3 py-2">{it.tipo_consulta}</td>
-                      <td className="px-3 py-2">{it.tipo_atencion}</td>
-                      <td className="px-3 py-2">{it.pronostico_paciente}</td>
-                      <td className="px-3 py-2">{it.usuario_creacion}</td>
-                      <td className="px-3 py-2">
+                    <tr key={it.id_informe || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{inicio + idx + 1}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{it.no_afiliacion}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{[pn, sn, pa, sa].filter(Boolean).join(' ')}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{sexo}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{it.id_informe}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{formatearFecha(it.fecha_creacion)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{it.motivo_consulta}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{it.tipo_consulta}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{it.tipo_atencion}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{it.pronostico_paciente}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{it.usuario_creacion}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <button type="button" onClick={() => abrirDetalle(it)} className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm">Ver detalle</button>
                       </td>
                     </tr>
@@ -365,6 +366,7 @@ const ConsultaPsicologia = () => {
             </tbody>
           </table>
         )}
+        </div>
         </div>
         {registros.length > 0 && (
           <div className="flex flex-wrap justify-center items-center gap-2 mt-6">

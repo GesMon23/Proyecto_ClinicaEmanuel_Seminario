@@ -336,48 +336,49 @@ const EgresoReporte = () => {
                         </select>
                     </div>
                  </div>
+                 <div className="bg-white dark:bg-slate-800 shadow overflow-hidden sm:rounded-lg">
                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-300 dark:divide-slate-700 text-sm text-left text-gray-800 dark:text-gray-100">
-                    <thead className="bg-gray-100 dark:bg-slate-800 text-xs uppercase font-semibold text-gray-700 dark:text-gray-200">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead className="bg-gray-50 dark:bg-slate-700">
                             <tr>
-                                <th className="min-w-[60px] px-4 py-2">#</th>
-                                <th className="min-w-[140px] px-4 py-2">No. Afiliación</th>
-                                <th className="min-w-[260px] px-4 py-2">Nombre Completo</th>
-                                <th className="min-w-[80px] px-4 py-2">Edad</th>
-                                <th className="min-w-[120px] px-4 py-2">Estancia (D-M-A)</th>
-                                <th className="min-w-[80px] px-4 py-2">Sexo</th>
-                                <th className="min-w-[140px] px-4 py-2">Jornada</th>
-                                <th className="min-w-[160px] px-4 py-2">Acceso Vascular</th>
-                                <th className="min-w-[160px] px-4 py-2">Departamento</th>
-                                <th className="min-w-[200px] px-4 py-2">Causa (desc.)</th>
-                                <th className="min-w-[220px] px-4 py-2">Descripción</th>
-                                <th className="min-w-[140px] px-4 py-2">Fecha de Egreso</th>
-                                <th className="min-w-[220px] px-4 py-2">Observaciones</th>
-                                <th className="min-w-[140px] px-4 py-2">Acciones</th>
+                                <th scope="col" className="min-w-[60px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">#</th>
+                                <th scope="col" className="min-w-[140px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">No. Afiliación</th>
+                                <th scope="col" className="min-w-[260px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Nombre Completo</th>
+                                <th scope="col" className="min-w-[80px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Edad</th>
+                                <th scope="col" className="min-w-[120px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Estancia (D-M-A)</th>
+                                <th scope="col" className="min-w-[80px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Sexo</th>
+                                <th scope="col" className="min-w-[140px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Jornada</th>
+                                <th scope="col" className="min-w-[160px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Acceso Vascular</th>
+                                <th scope="col" className="min-w-[160px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Departamento</th>
+                                <th scope="col" className="min-w-[200px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Causa (desc.)</th>
+                                <th scope="col" className="min-w-[220px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Descripción</th>
+                                <th scope="col" className="min-w-[140px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Fecha de Egreso</th>
+                                <th scope="col" className="min-w-[220px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Observaciones</th>
+                                <th scope="col" className="min-w-[140px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Acciones</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
                             {loading ? (
-                                <tr><td colSpan="14" className="text-center px-4 py-4">Cargando...</td></tr>
+                                <tr><td colSpan="14" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">Cargando...</td></tr>
                             ) : pacientes.length === 0 ? (
-                                <tr><td colSpan="14" className="text-center px-4 py-4">No se encontraron egresos</td></tr>
+                                <tr><td colSpan="14" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">No se encontraron egresos</td></tr>
                             ) : (
                                 pacientesPaginados.map((paciente, idx) => (
-                                    <tr key={paciente.id || idx}>
-                                        <td className="px-4 py-2">{(paginaActual - 1) * filasPorPagina + idx + 1}</td>
-                                        <td className="px-4 py-2">{paciente.noafiliacion || ''}</td>
-                                        <td className="px-4 py-2">{paciente.nombre_completo || [paciente.primer_nombre, paciente.segundo_nombre, paciente.otros_nombres, paciente.primer_apellido, paciente.segundo_apellido, paciente.apellido_casada].filter(Boolean).join(' ')}</td>
-                                        <td className="px-4 py-2">{calcularEdadHasta(paciente.fechanacimiento, paciente.fechaegreso || null)}</td>
-                                        <td className="px-4 py-2">{diffDMA(paciente.fechaingreso, paciente.fechaegreso || null)}</td>
-                                        <td className="px-4 py-2">{paciente.sexo || ''}</td>
-                                        <td className="px-4 py-2">{paciente.jornada || ''}</td>
-                                        <td className="px-4 py-2">{paciente.accesovascular || ''}</td>
-                                        <td className="px-4 py-2">{paciente.departamento || ''}</td>
-                                        <td className="px-4 py-2">{paciente.causa_descripcion || ''}</td>
-                                        <td className="px-4 py-2">{paciente.descripcion || ''}</td>
-                                        <td className="px-4 py-2">{formatearFecha(paciente.fechaegreso)}</td>
-                                        <td className="px-4 py-2">{paciente.observaciones || ''}</td>
-                                        <td className="px-4 py-2">
+                                    <tr key={paciente.id || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{(paginaActual - 1) * filasPorPagina + idx + 1}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.noafiliacion || ''}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.nombre_completo || [paciente.primer_nombre, paciente.segundo_nombre, paciente.otros_nombres, paciente.primer_apellido, paciente.segundo_apellido, paciente.apellido_casada].filter(Boolean).join(' ')}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{calcularEdadHasta(paciente.fechanacimiento, paciente.fechaegreso || null)}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{diffDMA(paciente.fechaingreso, paciente.fechaegreso || null)}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.sexo || ''}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.jornada || ''}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.accesovascular || ''}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.departamento || ''}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.causa_descripcion || ''}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.descripcion || ''}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{formatearFecha(paciente.fechaegreso)}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.observaciones || ''}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm">
                                           <button type="button" onClick={() => abrirDetalle(paciente)} className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm">Ver detalle</button>
                                         </td>
                                     </tr>
@@ -385,6 +386,7 @@ const EgresoReporte = () => {
                             )}
                         </tbody>
                     </table>
+                </div>
                 </div>
                 {/* Modal de Detalle - estilo overlay como NuevoIngresoReportes */}
                 {detalle.isOpen && (

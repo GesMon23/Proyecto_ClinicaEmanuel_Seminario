@@ -459,45 +459,46 @@ const NuevoIngresoReportes = () => {
                     </select>
                 </div>
             </div>
+            <div className="bg-white dark:bg-slate-800 shadow overflow-hidden sm:rounded-lg">
             <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-300 dark:divide-slate-700 text-sm text-left text-gray-800 dark:text-gray-100">
-                    <thead className="bg-gray-100 dark:bg-slate-800 text-xs uppercase font-semibold text-gray-700 dark:text-gray-200">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-slate-700">
                         <tr>
-                            <th className="min-w-[60px] px-4 py-2">#</th>
-                            <th className="min-w-[140px] px-4 py-2">No. Afiliación</th>
-                            <th className="min-w-[130px] px-4 py-2">DPI</th>
-                            <th className="min-w-[130px] px-4 py-2">Número Proveedor</th>
-                            <th className="min-w-[220px] px-4 py-2">Nombre Completo</th>
-                            <th className="min-w-[80px] px-4 py-2">Edad</th>
-                            <th className="min-w-[140px] px-4 py-2">Fecha de Nacimiento</th>
-                            <th className="min-w-[80px] px-4 py-2">Sexo</th>
-                            <th className="min-w-[200px] px-4 py-2">Dirección</th>
-                            <th className="min-w-[160px] px-4 py-2">Departamento</th>
-                            <th className="min-w-[140px] px-4 py-2">Fecha Ingreso</th>
-                            <th className="min-w-[160px] px-4 py-2">Estancia en el Programa</th>
-                            <th className="min-w-[140px] px-4 py-2">Estado del Paciente</th>
-                            <th className="min-w-[120px] px-4 py-2">Jornada</th>
-                            <th className="min-w-[160px] px-4 py-2">Acceso Vascular</th>
-                            <th className="min-w-[180px] px-4 py-2">Número de Formulario</th>
-                            <th className="min-w-[200px] px-4 py-2">Periodo</th>
-                            <th className="min-w-[120px] px-4 py-2">Sesiones Autorizadas Mes</th>
-                            <th className="min-w-[220px] px-4 py-2">Observaciones</th>
-                            <th className="min-w-[120px] px-4 py-2">Acciones</th>
+                            <th scope="col" className="min-w-[60px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">#</th>
+                            <th scope="col" className="min-w-[140px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">No. Afiliación</th>
+                            <th scope="col" className="min-w-[130px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">DPI</th>
+                            <th scope="col" className="min-w-[130px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Número Proveedor</th>
+                            <th scope="col" className="min-w-[220px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Nombre Completo</th>
+                            <th scope="col" className="min-w-[80px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Edad</th>
+                            <th scope="col" className="min-w-[140px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Fecha de Nacimiento</th>
+                            <th scope="col" className="min-w-[80px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Sexo</th>
+                            <th scope="col" className="min-w-[200px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Dirección</th>
+                            <th scope="col" className="min-w-[160px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Departamento</th>
+                            <th scope="col" className="min-w-[140px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Fecha Ingreso</th>
+                            <th scope="col" className="min-w-[160px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Estancia en el Programa</th>
+                            <th scope="col" className="min-w-[140px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Estado del Paciente</th>
+                            <th scope="col" className="min-w-[120px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Jornada</th>
+                            <th scope="col" className="min-w-[160px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Acceso Vascular</th>
+                            <th scope="col" className="min-w-[180px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Número de Formulario</th>
+                            <th scope="col" className="min-w-[200px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Periodo</th>
+                            <th scope="col" className="min-w-[120px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Sesiones Autorizadas Mes</th>
+                            <th scope="col" className="min-w-[220px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Observaciones</th>
+                            <th scope="col" className="min-w-[120px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
                         {loading ? (
-                            <tr><td colSpan="20" className="text-center px-4 py-4">Cargando...</td></tr>
+                            <tr><td colSpan="20" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">Cargando...</td></tr>
                         ) : pacientes.length === 0 ? (
-                            <tr><td colSpan="20" className="text-center px-4 py-4">No se encontraron pacientes</td></tr>
+                            <tr><td colSpan="20" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">No se encontraron pacientes</td></tr>
                         ) : (
                             pacientesPaginados.map((paciente, idx) => (
-                                <tr key={paciente.id || idx}>
-                                    <td className="px-4 py-2">{(paginaActual - 1) * filasPorPagina + idx + 1}</td>
-                                    <td className="px-4 py-2">{paciente.noafiliacion || ''}</td>
-                                    <td className="px-4 py-2">{paciente.dpi || ''}</td>
-                                    <td className="px-4 py-2">{paciente.nopacienteproveedor || ''}</td>
-                                    <td className="px-4 py-2">{[
+                                <tr key={paciente.id || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{(paginaActual - 1) * filasPorPagina + idx + 1}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.noafiliacion || ''}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.dpi || ''}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.nopacienteproveedor || ''}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{[
                                         paciente.primernombre,
                                         paciente.segundonombre,
                                         paciente.otrosnombres,
@@ -505,21 +506,21 @@ const NuevoIngresoReportes = () => {
                                         paciente.segundoapellido,
                                         paciente.apellidocasada
                                     ].filter(Boolean).join(' ')}</td>
-                                    <td className="px-4 py-2">{calcularEdadHasta(paciente.fechanacimiento, fechaCortePaciente(paciente))}</td>
-                                    <td className="px-4 py-2">{formatearFecha(paciente.fechanacimiento)}</td>
-                                    <td className="px-4 py-2">{paciente.sexo || ''}</td>
-                                    <td className="px-4 py-2">{paciente.direccion || ''}</td>
-                                    <td className="px-4 py-2">{paciente.departamento || ''}</td>
-                                    <td className="px-4 py-2">{formatearFecha(paciente.fechaingreso)}</td>
-                                    <td className="px-4 py-2">{diffDMA(paciente.fechaingreso, fechaCortePaciente(paciente))}</td>
-                                    <td className="px-4 py-2">{paciente.estadopaciente || paciente.estado || ''}</td>
-                                    <td className="px-4 py-2">{paciente.jornada || ''}</td>
-                                    <td className="px-4 py-2">{paciente.accesovascular || ''}</td>
-                                    <td className="px-4 py-2">{paciente.numeroformulario || ''}</td>
-                                    <td className="px-4 py-2">{formatearPeriodo(paciente.fechainicioperiodo, paciente.fechafinperiodo)}</td>
-                                    <td className="px-4 py-2">{paciente.sesionesautorizadasmes || ''}</td>
-                                    <td className="px-4 py-2">{paciente.observaciones || ''}</td>
-                                    <td className="px-4 py-2">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{calcularEdadHasta(paciente.fechanacimiento, fechaCortePaciente(paciente))}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{formatearFecha(paciente.fechanacimiento)}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.sexo || ''}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.direccion || ''}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.departamento || ''}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{formatearFecha(paciente.fechaingreso)}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{diffDMA(paciente.fechaingreso, fechaCortePaciente(paciente))}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.estadopaciente || paciente.estado || ''}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.jornada || ''}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.accesovascular || ''}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.numeroformulario || ''}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{formatearPeriodo(paciente.fechainicioperiodo, paciente.fechafinperiodo)}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.sesionesautorizadasmes || ''}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.observaciones || ''}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm">
                                         <button type="button" onClick={() => abrirDetalle(paciente)} className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm">Ver detalle</button>
                                     </td>
                                 </tr>
@@ -527,6 +528,7 @@ const NuevoIngresoReportes = () => {
                         )}
                     </tbody>
                 </table>
+            </div>
             </div>
             {/* Modal de Detalle */}
             {detalle.isOpen && (

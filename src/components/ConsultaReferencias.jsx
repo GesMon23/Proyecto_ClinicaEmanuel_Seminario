@@ -371,49 +371,49 @@ const ConsultaReferencias = () => {
               <Spinner animation="border" variant="success" />
             </div>
           ) : (
+            <div className="bg-white dark:bg-slate-800 shadow overflow-hidden sm:rounded-lg">
             <div className="overflow-x-auto">
-              <table striped bordered hover className="min-w-full divide-y divide-gray-300 dark:divide-slate-700 text-sm text-left text-gray-800 dark:text-gray-100">
-
-                <thead className="bg-gray-100 dark:bg-slate-800 text-xs uppercase font-semibold text-gray-700 dark:text-gray-200">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-slate-700">
                   <tr>
-                    <th className="px-4 py-2 text-left">#</th>
-                    <th className="px-4 py-2 text-left">ID Referencia</th>
-                    <th className="px-4 py-2 text-left">No. Afiliación</th>
-                    <th className="px-4 py-2 text-left">Paciente</th>
-                    <th className="px-4 py-2 text-left">Sexo</th>
-                    <th className="px-4 py-2 text-left">Fecha Referencia</th>
-                    <th className="px-4 py-2 text-left">Motivo Traslado</th>
-                    <th className="px-4 py-2 text-left">Médico</th>
-                    <th className="px-4 py-2 text-left">Especialidad</th>
-                    <th className="px-4 py-2 text-left">Acciones</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">#</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID Referencia</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">No. Afiliación</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Paciente</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Sexo</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Fecha Referencia</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Motivo Traslado</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Médico</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Especialidad</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Acciones</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {referenciasFiltradas.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="text-center py-4 text-gray-600 dark:text-gray-300">
+                      <td colSpan={10} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                         No se encontraron referencias.
                       </td>
                     </tr>
                   ) : (
                     referenciasPaginadas.map((ref, idx) => (
-                      <tr key={ref.idreferencia} className="border-t border-gray-200 dark:border-slate-700">
-                        <td className="px-3 py-2">{inicio + idx + 1}</td>
-                        <td className="px-3 py-2">{ref.idreferencia}</td>
-                        <td className="px-3 py-2">{ref.noafiliacion}</td>
-                        <td className="px-3 py-2">
+                      <tr key={ref.idreferencia} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{inicio + idx + 1}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{ref.idreferencia}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{ref.noafiliacion}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
                           {[ref.primernombre, ref.segundonombre, ref.primerapellido, ref.segundoapellido]
                             .filter(Boolean)
                             .join(' ')}
                         </td>
-                        <td className="px-3 py-2">{ref.sexo}</td>
-                        <td className="px-3 py-2">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{ref.sexo}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
                           {ref.fechareferencia ? formatFechaLocal(ref.fechareferencia) : ''}
                         </td>
-                        <td className="px-3 py-2">{ref.motivotraslado}</td>
-                        <td className="px-3 py-2">{ref.nombremedico}</td>
-                        <td className="px-3 py-2">{ref.especialidadreferencia}</td>
-                        <td className="px-3 py-2">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{ref.motivotraslado}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{ref.nombremedico}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{ref.especialidadreferencia}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <button type="button" onClick={() => abrirDetalle(ref)} className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm">Ver detalle</button>
                         </td>
                       </tr>
@@ -421,6 +421,7 @@ const ConsultaReferencias = () => {
                   )}
                 </tbody>
               </table>
+            </div>
             </div>
           )}
           {referenciasFiltradas.length > 0 && (
