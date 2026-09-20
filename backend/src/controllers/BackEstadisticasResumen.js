@@ -2,6 +2,31 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../../db/pool');
 
+// PostgreSQL devuelve COUNT()/AVG() como texto (bigint/numeric); las gráficas (Recharts) solo
+// dibujan valores numéricos, así que se convierten los campos de conteo/promedio a número.
+const CAMPOS_NUMERICOS = new Set([
+  'total', 'imc_promedio', 'peso_promedio', 'altura_promedio',
+  'fisico', 'mental', 'sintomas', 'carga', 'efectos', 'global', 'dentro', 'fuera',
+]);
+function numerar(valor) {
+  if (Array.isArray(valor)) return valor.map(numerar);
+  if (valor && typeof valor === 'object') {
+    const out = {};
+    for (const [k, v] of Object.entries(valor)) {
+      out[k] = CAMPOS_NUMERICOS.has(k) && typeof v === 'string' && v.trim() !== '' && !isNaN(Number(v))
+        ? Number(v)
+        : numerar(v);
+    }
+    return out;
+  }
+  return valor;
+}
+router.use('/api/estadisticas', (req, res, next) => {
+  const json = res.json.bind(res);
+  res.json = (body) => json(numerar(body));
+  next();
+});
+
 // GET /api/estadisticas/resumen?desde=YYYY-MM-DD&hasta=YYYY-MM-DD
 router.get('/api/estadisticas/resumen', async (req, res) => {
   try {

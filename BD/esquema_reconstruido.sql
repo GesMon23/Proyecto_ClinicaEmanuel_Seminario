@@ -2924,14 +2924,21 @@ CREATE OR REPLACE PROCEDURE public.sp_nutricion_por_tipo(
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
-    SELECT n.motivo_consulta AS tipo, COUNT(*) AS total
+    -- DashboardsInteractivos.jsx lee estado, total y los promedios de IMC/peso/altura
+    -- (grafica por estado nutricional); el desglose por motivo lo da sp_nutricion_por_motivo.
+    SELECT COALESCE(NULLIF(n.estado_nutricional, ''), 'Sin clasificar') AS estado,
+           COUNT(*) AS total,
+           ROUND(AVG(n.imc), 2) AS imc_promedio,
+           ROUND(AVG(n.peso_kg), 2) AS peso_promedio,
+           ROUND(AVG(n.altura_cm), 2) AS altura_promedio
     FROM public.tbl_informe_nutricion n
     JOIN public.tbl_pacientes p ON n.no_afiliacion = p.no_afiliacion
     WHERE (p_desde IS NULL OR n.fecha_creacion::date >= p_desde)
       AND (p_hasta IS NULL OR n.fecha_creacion::date <= p_hasta)
       AND (p_sexo IS NULL OR p.sexo = p_sexo)
       AND (p_motivo IS NULL OR n.motivo_consulta = p_motivo)
-    GROUP BY n.motivo_consulta;
+    GROUP BY 1
+    ORDER BY 1;
 END;
 $$;
 
