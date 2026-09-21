@@ -53,10 +53,10 @@ export function TarjetaCifra({ etiqueta, valor, tono, isDark, tamano = '3.2rem',
 }
 
 // Contenedor de un gráfico: título opcional y mensaje cuando no hay datos
-export function MarcoGrafico({ titulo, clase, hayDatos, children }) {
+export function MarcoGrafico({ titulo, clase, hayDatos, children, Titulo = 'h6' }) {
   return (
     <div className={`w-full ${clase}`}>
-      {titulo && <h6 style={{ fontWeight: 700, marginBottom: 8 }}>{titulo}</h6>}
+      {titulo && React.createElement(Titulo, { style: { fontWeight: 700, marginBottom: 8 } }, titulo)}
       {hayDatos ? (
         <ResponsiveContainer>{children}</ResponsiveContainer>
       ) : (
@@ -67,14 +67,14 @@ export function MarcoGrafico({ titulo, clase, hayDatos, children }) {
 }
 
 // Tooltip con valor y porcentaje sobre `total`
-export function TooltipPorcentaje({ active, payload, label, total }) {
+export function TooltipPorcentaje({ active, payload, label, total, etiqueta = 'Valor' }) {
   if (!active || !payload || !payload.length) return null;
   const v = Number(payload[0]?.value || 0);
   const nombre = payload[0]?.name || payload[0]?.payload?.name || label;
   return (
     <div style={TARJETA_TOOLTIP}>
       <div style={{ fontWeight: 600 }}>{nombre}</div>
-      <div>Valor: {v.toLocaleString()}</div>
+      <div>{etiqueta}: {v.toLocaleString()}</div>
       <div>%: {porcentaje(v, total).toFixed(1)}%</div>
     </div>
   );
@@ -109,7 +109,7 @@ export function TooltipJornada({ active, payload, label, total }) {
   );
 }
 
-export function BotonAlternarFiltros({ abierto, onClick, theme, isDark }) {
+export function BotonAlternarFiltros({ abierto, onClick, theme, isDark, color = theme.primary }) {
   const titulo = abierto ? 'Ocultar filtros' : 'Mostrar filtros';
   return (
     <Button
@@ -119,8 +119,8 @@ export function BotonAlternarFiltros({ abierto, onClick, theme, isDark }) {
       onClick={onClick}
       style={{
         borderRadius: 4, width: 44, height: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        backgroundColor: theme.primary, borderColor: theme.primary, color: '#fff',
-        boxShadow: isDark ? '0 2px 6px rgba(255,255,255,.15)' : '0 2px 6px rgba(13,110,253,.3)',
+        backgroundColor: color, borderColor: color, color: '#fff',
+        boxShadow: isDark ? '0 2px 6px rgba(255,255,255,.15)' : `0 2px 6px ${withAlpha(color, 0.3)}`,
       }}
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
@@ -156,14 +156,14 @@ export function CampoFiltro({ etiqueta, tipo = 'select', valor, onCambio, opcion
   );
 }
 
-export function BotonAplicar({ onClick, theme, isDark, children }) {
+export function BotonAplicar({ onClick, theme, isDark, children, color = theme.primary }) {
   return (
     <Button
       variant="primary"
       className="px-4"
       style={{
-        borderRadius: 4, fontWeight: 900, backgroundColor: theme.primary, borderColor: theme.primary, color: '#fff',
-        boxShadow: isDark ? '0 2px 6px rgba(255,255,255,.15)' : '0 2px 6px rgba(13,110,253,.3)',
+        borderRadius: 4, fontWeight: 900, backgroundColor: color, borderColor: color, color: '#fff',
+        boxShadow: isDark ? '0 2px 6px rgba(255,255,255,.15)' : `0 2px 6px ${withAlpha(color, 0.3)}`,
       }}
       onClick={onClick}
     >
