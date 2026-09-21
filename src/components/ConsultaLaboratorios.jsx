@@ -1,705 +1,178 @@
 import React, { useEffect, useState } from 'react';
-import api from '../config/api';
 import logoClinica from '@/assets/logoClinica2.png';
 import { formatearFecha } from '@/utils/fechas';
+import Paginador from './Paginador';
+import { nombreCompleto } from './consultaPacientes/calculos';
+import { DetalleLaboratorio } from './consultaPacientes/detalles';
+import { imprimirListadoLaboratorios } from './consultaPacientes/documentos';
+import { useDetalleLaboratorio } from './consultaPacientes/useDetalleLaboratorio';
+import { FILTROS_VACIOS, cargarCatalogos, consultarHistorial } from './consultaLaboratorios/laboratorios';
+
+const ENTRADA = 'focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 w-full border rounded-md px-4 py-2 dark:bg-slate-800 dark:text-white dark:border-slate-600';
+const TH = 'px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider';
+const TD = 'px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200';
+const COLUMNAS = ['#', 'No. Afiliación', 'Paciente', 'Sexo', 'ID Laboratorio', 'Fecha', 'Periodicidad', 'Examen', 'Virología', 'HIV', 'Usuario', 'Acciones'];
+
+const Campo = ({ etiqueta, ancho = 'lg:col-span-2', children }) => (
+  <div className={`col-span-1 ${ancho}`}>
+    <label className="block text-[16px] font-medium text-gray-800 dark:text-white mb-1">{etiqueta}</label>
+    {children}
+  </div>
+);
 
 const ConsultaLaboratorios = () => {
-  const [noAfiliacion, setNoAfiliacion] = useState('');
-  const [idLaboratorio, setIdLaboratorio] = useState('');
-  const [desde, setDesde] = useState('');
-  const [hasta, setHasta] = useState('');
-  const [sexo, setSexo] = useState('');
-  const [periodicidad, setPeriodicidad] = useState('');
+  const [filtros, setFiltros] = useState(FILTROS_VACIOS);
   const [catalogos, setCatalogos] = useState({ periodicidades: [], sexos: [] });
   const [historial, setHistorial] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [detalle, setDetalle] = useState({ isOpen: false, item: null });
-  const [ultimos, setUltimos] = useState({ loading: false, error: '', data: [] });
-  const [paginaActual, setPaginaActual] = useState(1);
+  const [pagina, setPagina] = useState(1);
   const [filasPorPagina, setFilasPorPagina] = useState(10);
+  const { detalle, ultimos, abrir, cerrar } = useDetalleLaboratorio();
 
-  const abrirDetalle = (item) => {
-    setDetalle({ isOpen: true, item });
-    const afiliacion = item?.no_afiliacion || item?.noafiliacion || '';
-    if (!afiliacion) {
-      setUltimos({ loading: false, error: '', data: [] });
-      return;
-    }
-    setUltimos(prev => ({ ...prev, loading: true, error: '', data: [] }));
-    api
-      .get(`/laboratorios/${afiliacion}/parametros/ultimo`)
-      .then(({ data }) => {
-        const lista = Array.isArray(data?.data) ? data.data : [];
-        setUltimos({ loading: false, error: '', data: lista });
-      })
-      .catch((e) => {
-        setUltimos({ loading: false, error: 'No se pudieron cargar los últimos parámetros.', data: [] });
-      });
-  };
-  const cerrarDetalle = () => setDetalle({ isOpen: false, item: null });
+  useEffect(() => { cargarCatalogos().then(setCatalogos); }, []);
 
-  const descargarPDF = (item) => {
-    const it = item || {};
-    const primerNombre = it.primer_nombre ?? it.primernombre ?? '';
-    const segundoNombre = it.segundo_nombre ?? it.segundonombre ?? '';
-    const primerApellido = it.primer_apellido ?? it.primerapellido ?? '';
-    const segundoApellido = it.segundo_apellido ?? it.segundoapellido ?? '';
-    const sexo = it.sexo ?? '';
-    const paciente = [primerNombre, segundoNombre, primerApellido, segundoApellido].filter(Boolean).join(' ');
-    const fecha = formatearFecha(it.fecha_laboratorio);
+  const campo = (name) => ({ value: filtros[name], onChange: (e) => setFiltros((f) => ({ ...f, [name]: e.target.value })) });
 
-    const excludeKeys = new Set([
-      'id_laboratorio','idlaboratorio','no_afiliacion','noafiliacion','primer_nombre','primernombre','segundo_nombre','segundonombre','primer_apellido','primerapellido','segundo_apellido','segundoapellido','sexo','fecha_laboratorio','periodicidad','examen_realizado','causa_no_realizado','infeccion_acceso','complicacion_acceso','virologia','antigeno_hepatitis_c','antigeno_superficie','hiv','observacion','usuario_creacion','fecha_registro','idperlaboratorio'
-    ]);
-    const entries = Object.entries(it || {}).filter(([k,v]) => !excludeKeys.has(k) && v !== null && v !== undefined && v !== '');
-    const pretty = (s) => String(s).replace(/_/g,' ').replace(/\b\w/g, m => m.toUpperCase());
-    let paramRows = '';
-    if (it.examen_realizado) {
-      if (Array.isArray(it.parametros) && it.parametros.length > 0) {
-        paramRows = it.parametros.map((p, idx) => `
-          <tr>
-            <td>${p.parametro ?? ''}</td>
-            <td>${p.valor ?? ''}</td>
-          </tr>
-        `).join('');
-      } else {
-        paramRows = entries.map(([k,v]) => `
-          <tr>
-            <td>${pretty(k)}</td>
-            <td>${typeof v === 'boolean' ? (v ? 'Sí' : 'No') : v}</td>
-          </tr>
-        `).join('');
-      }
-    }
-
-    const paramsSection = it.examen_realizado ? `
-        <h2>Parámetros</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Parámetro</th>
-              <th>Valor</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${paramRows || '<tr><td colspan="2">—</td></tr>'}
-          </tbody>
-        </table>
-    ` : '';
-
-    // Construir filas para "Últimos parámetros previos"
-    const ultimosData = Array.isArray(ultimos?.data) ? ultimos.data : [];
-    const prevRows = ultimosData.length > 0
-      ? ultimosData.map(u => `
-          <tr>
-            <td>${u.parametro ?? ''}</td>
-            <td>${u.valor ?? ''}</td>
-            <td>${formatearFecha(u.fecha_laboratorio)}</td>
-          </tr>
-        `).join('')
-      : '<tr><td colspan="3">—</td></tr>';
-
-    const html = `
-      <html>
-      <head>
-        <meta charset="utf-8" />
-        <title>Informe de Laboratorio ${it.id_laboratorio || ''}</title>
-        <style>
-          body { font-family: Arial, sans-serif; color: #1f2937; padding: 24px; }
-          h1 { color: #166534; font-size: 20px; margin-bottom: 8px; }
-          h2 { color: #065f46; font-size: 16px; margin: 16px 0 8px; }
-          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; }
-          .row { margin: 6px 0; }
-          .label { font-weight: bold; }
-          .box { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; }
-          table { width: 100%; border-collapse: collapse; font-size: 12px; }
-          th, td { border: 1px solid #e5e7eb; padding: 6px 8px; text-align: left; }
-          th { background: #f1f5f9; }
-          hr { border: none; border-top: 1px solid #e5e7eb; margin: 16px 0; }
-          .logo { display: block; margin: 0 auto 12px auto; height: 104px; }
-          .title { text-align: center; }
-          @page { size: A4 landscape; margin: 16mm; }
-        </style>
-      </head>
-      <body>
-        <img src="${logoClinica}" alt="Logo Clínica" class="logo" />
-        <h1 class="title">Detalle de Laboratorio</h1>
-        <div class="grid">
-          <div class="row"><span class="label">No. Afiliación:</span> ${it.no_afiliacion || ''}</div>
-          <div class="row"><span class="label">ID Laboratorio:</span> ${it.id_laboratorio || ''}</div>
-          <div class="row" style="grid-column: 1 / -1;"><span class="label">Paciente:</span> ${paciente}</div>
-          <div class="row"><span class="label">Sexo:</span> ${sexo}</div>
-          <div class="row"><span class="label">Fecha de Laboratorio:</span> ${fecha}</div>
-          <div class="row"><span class="label">Periodicidad:</span> ${it.periodicidad || ''}</div>
-        </div>
-        <hr />
-        <h2>Resultados/Estado</h2>
-        <div class="grid">
-          <div class="row"><span class="label">Examen Realizado:</span> ${it.examen_realizado ? 'Sí' : 'No'}</div>
-          <div class="row"><span class="label">Causa No Realizado:</span> ${it.causa_no_realizado || '—'}</div>
-          <div class="row"><span class="label">Infección de Acceso:</span> ${it.infeccion_acceso || '—'}</div>
-          <div class="row"><span class="label">Complicación de Acceso:</span> ${it.complicacion_acceso || '—'}</div>
-          <div class="row"><span class="label">Virología:</span> ${it.virologia || '—'}</div>
-          <div class="row"><span class="label">Ag. Hepatitis C:</span> ${it.antigeno_hepatitis_c ? 'Positivo' : 'Negativo'}</div>
-          <div class="row"><span class="label">Ag. Superficie:</span> ${it.antigeno_superficie ? 'Positivo' : 'Negativo'}</div>
-          <div class="row"><span class="label">HIV:</span> ${it.hiv || '—'}</div>
-        </div>
-        <h2>Observaciones</h2>
-        <div class="box">${(it.observacion || '—').toString().replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-        ${paramsSection}
-        <h2>Últimos parámetros previos</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Parámetro</th>
-              <th>Valor</th>
-              <th>Fecha Lab.</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${prevRows}
-          </tbody>
-        </table>
-      </body>
-      </html>
-    `;
-
-    const w = window.open('', '_blank');
-    if (!w) return;
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    setTimeout(() => {
-      w.print();
-    }, 300);
-  };
-
-  const descargarListadoPDF = () => {
-    const rows = historial || [];
-    const fechaGen = new Date().toLocaleString();
-    const buildName = (it) => {
-      const pn = it.primer_nombre ?? it.primernombre ?? '';
-      const sn = it.segundo_nombre ?? it.segundonombre ?? '';
-      const pa = it.primer_apellido ?? it.primerapellido ?? '';
-      const sa = it.segundo_apellido ?? it.segundoapellido ?? '';
-      return [pn, sn, pa, sa].filter(Boolean).join(' ');
-    };
-    const htmlRows = rows.map((it, idx) => {
-      const sexo = it.sexo ?? '';
-      const fecha = formatearFecha(it.fecha_laboratorio);
-      return `
-        <tr>
-          <td>${idx + 1}</td>
-          <td>${it.no_afiliacion ?? ''}</td>
-          <td>${buildName(it)}</td>
-          <td>${sexo}</td>
-          <td>${it.id_laboratorio ?? ''}</td>
-          <td>${fecha}</td>
-          <td>${it.periodicidad ?? ''}</td>
-          <td>${it.examen_realizado ? 'Sí' : 'No'}</td>
-          <td>${it.virologia ?? ''}</td>
-          <td>${it.hiv ?? ''}</td>
-          <td>${it.usuario_creacion ?? ''}</td>
-        </tr>`;
-    }).join('');
-
-    const html = `
-      <html>
-      <head>
-        <meta charset="utf-8" />
-        <title>Listado de Laboratorios</title>
-        <style>
-          body { font-family: Arial, sans-serif; color: #1f2937; padding: 24px; }
-          h1 { color: #166534; font-size: 20px; margin-bottom: 8px; }
-          .meta { color: #64748b; font-size: 12px; margin-bottom: 16px; }
-          table { width: 100%; border-collapse: collapse; font-size: 12px; }
-          th, td { border: 1px solid #e5e7eb; padding: 6px 8px; text-align: left; }
-          th { background: #f1f5f9; }
-          .logo { display: block; margin: 0 auto 12px auto; height: 104px; }
-          .title { text-align: center; }
-          @page { size: A4 landscape; margin: 16mm; }
-        </style>
-      </head>
-      <body>
-        <img src="${logoClinica}" alt="Logo Clínica" class="logo" />
-        <h1 class="title">Listado de Laboratorios</h1>
-        <div class="meta">Generado: ${fechaGen} - Registros: ${rows.length}</div>
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>No. Afiliación</th>
-              <th>Paciente</th>
-              <th>Sexo</th>
-              <th>ID Laboratorio</th>
-              <th>Fecha</th>
-              <th>Periodicidad</th>
-              <th>Examen</th>
-              <th>Virología</th>
-              <th>HIV</th>
-              <th>Usuario</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${htmlRows}
-          </tbody>
-        </table>
-      </body>
-      </html>
-    `;
-
-    const w = window.open('', '_blank');
-    if (!w) return;
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    setTimeout(() => {
-      w.print();
-    }, 300);
-  };
-
-  // Cargar catálogos
-  useEffect(() => {
-    const cargarCatalogos = async () => {
-      try {
-        const { data } = await api.get('/api/laboratorios/catalogos');
-        setCatalogos({
-          periodicidades: data?.periodicidades || [],
-          sexos: data?.sexos || [],
-        });
-      } catch (e) {
-        setCatalogos({ periodicidades: [], sexos: [] });
-      }
-    };
-    cargarCatalogos();
-  }, []);
-
-  const buscarHistorial = async () => {
+  const buscar = async () => {
     setError('');
     setHistorial([]);
     setLoading(true);
-    setPaginaActual(1);
+    setPagina(1);
     try {
-      const params = {};
-      if (desde) params.desde = desde;
-      if (hasta) params.hasta = hasta;
-      if (noAfiliacion) params.noafiliacion = noAfiliacion;
-      if (idLaboratorio) params.idlaboratorio = idLaboratorio;
-      if (sexo) params.sexo = sexo;
-      if (periodicidad) params.periodicidad = periodicidad;
-      const { data } = await api.get(`/api/laboratorios/historial`, { params });
-      if (data?.success) {
-        setHistorial(data.data || []);
-      } else {
-        setError(data?.message || 'No se pudo obtener el historial.');
-      }
+      setHistorial(await consultarHistorial(filtros));
     } catch (e) {
-      setError('Error al consultar el historial.');
+      setError(e.message);
     } finally {
       setLoading(false);
     }
   };
 
   const limpiar = () => {
-    setNoAfiliacion('');
-    setIdLaboratorio('');
-    setDesde('');
-    setHasta('');
-    setSexo('');
+    setFiltros(FILTROS_VACIOS);
     setHistorial([]);
     setError('');
-    setPaginaActual(1);
+    setPagina(1);
   };
 
-  const totalPaginas = Math.max(1, Math.ceil((historial?.length || 0) / filasPorPagina));
-  const inicio = (paginaActual - 1) * filasPorPagina;
-  const historialPaginado = (historial || []).slice(inicio, inicio + filasPorPagina);
-  const handlePaginaChange = (p) => {
-    if (p >= 1 && p <= totalPaginas) setPaginaActual(p);
-  };
-  const handleFilasPorPaginaChange = (e) => {
-    const v = parseInt(e.target.value, 10) || 10;
-    setFilasPorPagina(v);
-    setPaginaActual(1);
-  };
+  const totalPaginas = Math.max(1, Math.ceil(historial.length / filasPorPagina));
+  const inicio = (pagina - 1) * filasPorPagina;
+  const visibles = historial.slice(inicio, inicio + filasPorPagina);
 
   return (
     <div className="mt-2">
       <div className="flex flex-wrap justify-center items-center gap-6 mb-4">
-        <img
-          src={logoClinica}
-          alt="Logo Clínica"
-          className="h-[120px] max-w-[220px] object-contain rounded-xl shadow-md p-2"
-        />
-        <span className="text-2xl sm:text-3xl font-semibold tracking-wide text-green-800 dark:text-white">
-          Consulta de Laboratorios
-        </span>
+        <img src={logoClinica} alt="Logo Clínica" className="h-[120px] max-w-[220px] object-contain rounded-xl shadow-md p-2" />
+        <span className="text-2xl sm:text-3xl font-semibold tracking-wide text-green-800 dark:text-white">Consulta de Laboratorios</span>
       </div>
 
-      {/* Filtros */}
       <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
-        <div className="col-span-1 lg:col-span-1">
-          <label className="block text-[16px] font-medium text-gray-800 dark:text-white mb-1">Desde</label>
+        <Campo etiqueta="Desde" ancho="lg:col-span-1">
+          <input type="date" {...campo('desde')} max={filtros.hasta || undefined} className={`${ENTRADA} shadow-sm`} />
+        </Campo>
+        <Campo etiqueta="Hasta" ancho="lg:col-span-1">
           <input
-            type="date"
-            value={desde}
-            onChange={(e) => setDesde(e.target.value)}
-            max={hasta || undefined}
-            className="focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 w-full border rounded-md px-4 py-2 shadow-sm dark:bg-slate-800 dark:text-white dark:border-slate-600"
+            type="date" {...campo('hasta')} min={filtros.desde || undefined} disabled={!filtros.desde}
+            className={`${ENTRADA} shadow-sm disabled:opacity-60 disabled:cursor-not-allowed`}
           />
-        </div>
-
-        <div className="col-span-1 lg:col-span-1">
-          <label className="block text-[16px] font-medium text-gray-800 dark:text-white mb-1">Hasta</label>
-          <input
-            type="date"
-            value={hasta}
-            onChange={(e) => setHasta(e.target.value)}
-            min={desde || undefined}
-            disabled={!desde}
-            className="focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 w-full border rounded-md px-4 py-2 shadow-sm dark:bg-slate-800 dark:text-white dark:border-slate-600 disabled:opacity-60 disabled:cursor-not-allowed"
-          />
-        </div>
-
-        <div className="col-span-1 lg:col-span-2">
-          <label className="block text-[16px] font-medium text-gray-800 dark:text-white mb-1">No. Afiliación</label>
-          <input
-            type="text"
-            value={noAfiliacion}
-            onChange={(e) => setNoAfiliacion(e.target.value)}
-            placeholder="Ingrese número de afiliación"
-            className="focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 w-full border rounded-md px-4 py-2 dark:bg-slate-800 dark:text-white dark:border-slate-600"
-          />
-        </div>
-
-        <div className="col-span-1 lg:col-span-2">
-          <label className="block text-[16px] font-medium text-gray-800 dark:text-white mb-1">Periodicidad</label>
-          <select
-            value={periodicidad}
-            onChange={(e) => setPeriodicidad(e.target.value)}
-            className="focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 w-full border rounded-md px-4 py-2 dark:bg-slate-800 dark:text-white dark:border-slate-600"
-          >
+        </Campo>
+        <Campo etiqueta="No. Afiliación">
+          <input type="text" {...campo('noAfiliacion')} placeholder="Ingrese número de afiliación" className={ENTRADA} />
+        </Campo>
+        <Campo etiqueta="Periodicidad">
+          <select {...campo('periodicidad')} className={ENTRADA}>
             <option value="">Todas</option>
-            {catalogos.periodicidades.map((p) => (
-              <option key={p} value={p}>{p}</option>
-            ))}
+            {catalogos.periodicidades.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
-        </div>
-
-        <div className="col-span-1 lg:col-span-2">
-          <label className="block text-[16px] font-medium text-gray-800 dark:text-white mb-1">No. Laboratorio</label>
-          <input
-            type="text"
-            value={idLaboratorio}
-            onChange={(e) => setIdLaboratorio(e.target.value)}
-            placeholder="Ingrese el ID de laboratorio"
-            className="focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 w-full border rounded-md px-4 py-2 dark:bg-slate-800 dark:text-white dark:border-slate-600"
-          />
-        </div>
-
-        <div className="col-span-1 lg:col-span-2">
-          <label className="block text-[16px] font-medium text-gray-800 dark:text-white mb-1">Sexo</label>
-          <select
-            value={sexo}
-            onChange={(e) => setSexo(e.target.value)}
-            className="focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 w-full border rounded-md px-4 py-2 dark:bg-slate-800 dark:text-white dark:border-slate-600"
-          >
+        </Campo>
+        <Campo etiqueta="No. Laboratorio">
+          <input type="text" {...campo('idLaboratorio')} placeholder="Ingrese el ID de laboratorio" className={ENTRADA} />
+        </Campo>
+        <Campo etiqueta="Sexo">
+          <select {...campo('sexo')} className={ENTRADA}>
             <option value="">Todos</option>
-            {catalogos.sexos.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
+            {catalogos.sexos.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
-        </div>
+        </Campo>
 
         <div className="flex items-end gap-3 col-span-1 lg:col-span-2">
           <button
-            type="button"
-            onClick={buscarHistorial}
-            disabled={loading}
-            className={`px-6 py-2 font-semibold rounded-md transition-colors ${loading
-              ? 'bg-green-700 cursor-not-allowed text-white'
-              : 'bg-green-800 hover:bg-green-900 text-white border border-green-900'
-            }`}
+            type="button" onClick={buscar} disabled={loading}
+            className={`px-6 py-2 font-semibold rounded-md transition-colors text-white ${loading ? 'bg-green-700 cursor-not-allowed' : 'bg-green-800 hover:bg-green-900 border border-green-900'}`}
           >
             Buscar
           </button>
-          <button
-            type="button"
-            onClick={limpiar}
-            disabled={loading}
-            className="px-6 py-2 font-semibold rounded-md bg-red-700 hover:bg-red-800 text-white border border-red-800"
-          >
+          <button type="button" onClick={limpiar} disabled={loading} className="px-6 py-2 font-semibold rounded-md bg-red-700 hover:bg-red-800 text-white border border-red-800">
             Limpiar
           </button>
           <button
-            type="button"
-            onClick={descargarListadoPDF}
-            disabled={loading || historial.length === 0}
-            className={`px-6 py-2 font-semibold rounded-md ${historial.length === 0 ? 'bg-gray-400 cursor-not-allowed text-white' : 'bg-blue-700 hover:bg-blue-800 text-white'} `}
+            type="button" onClick={() => imprimirListadoLaboratorios(historial)} disabled={loading || historial.length === 0}
+            className={`px-6 py-2 font-semibold rounded-md text-white ${historial.length === 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-700 hover:bg-blue-800'}`}
           >
             Descargar PDF
           </button>
         </div>
       </div>
 
-      {error && (
-        <div className="mt-4 text-red-700 bg-red-100 border border-red-400 px-4 py-2 rounded text-lg">
-          {error}
-        </div>
-      )}
+      {error && <div className="mt-4 text-red-700 bg-red-100 border border-red-400 px-4 py-2 rounded text-lg">{error}</div>}
 
       <div className="mt-6">
-        <div className="flex items-center justify-end gap-3 mb-3">
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-700 dark:text-gray-300">Filas por página:</label>
-            <select value={filasPorPagina} onChange={handleFilasPorPaginaChange} className="px-2 py-1 border border-gray-300 dark:border-slate-600 rounded-md dark:bg-slate-800 dark:text-white">
-              <option value={5}>5</option>
-              <option value={10}>10</option>
-              <option value={15}>15</option>
-              <option value={20}>20</option>
-            </select>
-          </div>
+        <div className="flex items-center justify-end gap-2 mb-3">
+          <label className="text-sm text-gray-700 dark:text-gray-300">Filas por página:</label>
+          <select
+            value={filasPorPagina}
+            onChange={(e) => { setFilasPorPagina(parseInt(e.target.value, 10) || 10); setPagina(1); }}
+            className="px-2 py-1 border border-gray-300 dark:border-slate-600 rounded-md dark:bg-slate-800 dark:text-white"
+          >
+            {[5, 10, 15, 20].map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
         </div>
+
         <div className="bg-white dark:bg-slate-800 shadow overflow-hidden sm:rounded-lg">
-        <div className="overflow-x-auto">
-        {loading ? (
-          <div className="text-center my-5">
-            <span className="text-green-700">Cargando...</span>
-          </div>
-        ) : (
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-slate-700">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">#</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">No. Afiliación</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Paciente</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Sexo</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID Laboratorio</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Fecha</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Periodicidad</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Examen</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Virología</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">HIV</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Usuario</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {historial.length === 0 ? (
-                <tr>
-                  <td colSpan={12} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                    No hay registros para mostrar.
-                  </td>
-                </tr>
-              ) : (
-                historialPaginado.map((it, idx) => {
-                  const primerNombre = it.primer_nombre ?? it.primernombre ?? '';
-                  const segundoNombre = it.segundo_nombre ?? it.segundonombre ?? '';
-                  const primerApellido = it.primer_apellido ?? it.primerapellido ?? '';
-                  const segundoApellido = it.segundo_apellido ?? it.segundoapellido ?? '';
-                  const sexo = it.sexo ?? '';
-                  return (
-                    <tr key={it.id_laboratorio || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{inicio + idx + 1}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{it.no_afiliacion}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-                        {[primerNombre, segundoNombre, primerApellido, segundoApellido].filter(Boolean).join(' ')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{sexo}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{it.id_laboratorio}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{formatearFecha(it.fecha_laboratorio)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{it.periodicidad}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{it.examen_realizado ? 'Sí' : 'No'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{it.virologia}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{it.hiv}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{it.usuario_creacion}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <button
-                          type="button"
-                          onClick={() => abrirDetalle(it)}
-                          className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm"
-                        >
-                          Ver detalle
-                        </button>
-                      </td>
+          <div className="overflow-x-auto">
+            {loading ? (
+              <div className="text-center my-5"><span className="text-green-700">Cargando...</span></div>
+            ) : (
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-slate-700">
+                  <tr>{COLUMNAS.map((c) => <th key={c} scope="col" className={TH}>{c}</th>)}</tr>
+                </thead>
+                <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {historial.length === 0 ? (
+                    <tr>
+                      <td colSpan={COLUMNAS.length} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">No hay registros para mostrar.</td>
                     </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        )}
-        </div>
-        </div>
-        {historial.length > 0 && (
-          <div className="flex flex-wrap justify-center items-center gap-2 mt-6">
-            <button className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400 transition-colors" disabled={paginaActual === 1} onClick={() => handlePaginaChange(paginaActual - 1)}>Anterior</button>
-            {[...Array(totalPaginas)].map((_, i) => (
-              <button key={i} className={`px-3 py-2 rounded-lg transition-colors ${
-                paginaActual === i + 1
-                  ? 'bg-green-600 text-white'
-                  : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-slate-600'
-              }`} onClick={() => handlePaginaChange(i + 1)}>
-                {i + 1}
-              </button>
-            ))}
-            <button className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400 transition-colors" disabled={paginaActual === totalPaginas} onClick={() => handlePaginaChange(paginaActual + 1)}>Siguiente</button>
+                  ) : (
+                    visibles.map((it, idx) => (
+                      <tr key={it.id_laboratorio || idx} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{inicio + idx + 1}</td>
+                        <td className={TD}>{it.no_afiliacion}</td>
+                        <td className={TD}>{nombreCompleto(it)}</td>
+                        <td className={TD}>{it.sexo ?? ''}</td>
+                        <td className={TD}>{it.id_laboratorio}</td>
+                        <td className={TD}>{formatearFecha(it.fecha_laboratorio)}</td>
+                        <td className={TD}>{it.periodicidad}</td>
+                        <td className={TD}>{it.examen_realizado ? 'Sí' : 'No'}</td>
+                        <td className={TD}>{it.virologia}</td>
+                        <td className={TD}>{it.hiv}</td>
+                        <td className={TD}>{it.usuario_creacion}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <button type="button" onClick={() => abrir(it)} className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm">
+                            Ver detalle
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
-        )}
+        </div>
+        <Paginador pagina={pagina} total={totalPaginas} onCambiar={setPagina} className="mt-6" />
       </div>
 
-      {/* Modal Detalle */}
-      {detalle.isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full mx-4">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-green-700 dark:text-green-300">Detalle de Laboratorio</h3>
-                <button onClick={cerrarDetalle} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">×</button>
-              </div>
-              {(() => {
-                const it = detalle.item || {};
-                const primerNombre = it.primer_nombre ?? it.primernombre ?? '';
-                const segundoNombre = it.segundo_nombre ?? it.segundonombre ?? '';
-                const primerApellido = it.primer_apellido ?? it.primerapellido ?? '';
-                const segundoApellido = it.segundo_apellido ?? it.segundoapellido ?? '';
-                const sexo = it.sexo ?? '';
-                const excludeKeys = new Set([
-                  'id_laboratorio','idlaboratorio','no_afiliacion','noafiliacion','primer_nombre','primernombre','segundo_nombre','segundonombre','primer_apellido','primerapellido','segundo_apellido','segundoapellido','sexo','fecha_laboratorio','periodicidad','examen_realizado','causa_no_realizado','infeccion_acceso','complicacion_acceso','virologia','antigeno_hepatitis_c','antigeno_superficie','hiv','observacion','usuario_creacion','fecha_registro','idperlaboratorio'
-                ]);
-                const entries = Object.entries(it || {}).filter(([k,v]) => !excludeKeys.has(k) && v !== null && v !== undefined && v !== '');
-                const pretty = (s) => String(s).replace(/_/g,' ').replace(/\b\w/g, m => m.toUpperCase());
-                const parametros = Array.isArray(it.parametros) ? it.parametros : [];
-                return (
-                  <div className="space-y-4 text-sm">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <span className="font-semibold">No. Afiliación:</span> {it.no_afiliacion || ''}
-                      </div>
-                      <div>
-                        <span className="font-semibold">ID Laboratorio:</span> {it.id_laboratorio || ''}
-                      </div>
-                      <div className="md:col-span-2">
-                        <span className="font-semibold">Paciente:</span> {[primerNombre, segundoNombre, primerApellido, segundoApellido].filter(Boolean).join(' ')}
-                      </div>
-                      <div>
-                        <span className="font-semibold">Sexo:</span> {sexo}
-                      </div>
-                      <div>
-                        <span className="font-semibold">Fecha:</span> {formatearFecha(it.fecha_laboratorio)}
-                      </div>
-                    </div>
-                    <hr className="border-slate-200 dark:border-slate-700" />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <span className="font-semibold">Periodicidad:</span> {it.periodicidad}
-                      </div>
-                      <div>
-                        <span className="font-semibold">Examen Realizado:</span> {it.examen_realizado ? 'Sí' : 'No'}
-                      </div>
-                      <div>
-                        <span className="font-semibold">Causa No Realizado:</span> {it.causa_no_realizado || '—'}
-                      </div>
-                      <div>
-                        <span className="font-semibold">Virología:</span> {it.virologia || '—'}
-                      </div>
-                      <div>
-                        <span className="font-semibold">Ag. Hepatitis C:</span> {it.antigeno_hepatitis_c ? 'Positivo' : 'Negativo'}
-                      </div>
-                      <div>
-                        <span className="font-semibold">Ag. Superficie:</span> {it.antigeno_superficie ? 'Positivo' : 'Negativo'}
-                      </div>
-                      <div>
-                        <span className="font-semibold">HIV:</span> {it.hiv || '—'}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="font-semibold">Observaciones:</span>
-                      <div className="mt-1 p-2 rounded bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-200">
-                        {it.observacion || '—'}
-                      </div>
-                    </div>
-                    {it.examen_realizado && (
-                      <div>
-                        <span className="font-semibold">Parámetros:</span>
-                        <div className="mt-2 overflow-x-auto">
-                          <table className="min-w-full border border-slate-200 dark:border-slate-700 text-xs">
-                            <thead>
-                              <tr className="bg-slate-100 dark:bg-slate-700">
-                                <th className="px-2 py-1 text-left">Parámetro</th>
-                                <th className="px-2 py-1 text-left">Valor</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {(parametros.length > 0) ? (
-                                parametros.map(p => (
-                                  <tr key={`${p.idparametro}-${p.parametro}`} className="border-t border-slate-200 dark:border-slate-700">
-                                    <td className="px-2 py-1">{p.parametro ?? ''}</td>
-                                    <td className="px-2 py-1">{p.valor ?? ''}</td>
-                                  </tr>
-                                ))
-                              ) : entries.length === 0 ? (
-                                <tr>
-                                  <td className="px-2 py-1" colSpan={2}>—</td>
-                                </tr>
-                              ) : entries.map(([k,v]) => (
-                                <tr key={k} className="border-t border-slate-200 dark:border-slate-700">
-                                  <td className="px-2 py-1">{pretty(k)}</td>
-                                  <td className="px-2 py-1">{typeof v === 'boolean' ? (v ? 'Sí' : 'No') : String(v)}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    )}
-                    <div>
-                      <span className="font-semibold">Últimos parámetros previos:</span>
-                      <div className="mt-2">
-                        {ultimos.loading ? (
-                          <div className="text-sm text-slate-600 dark:text-slate-300">Cargando últimos parámetros...</div>
-                        ) : ultimos.error ? (
-                          <div className="text-sm text-red-600 dark:text-red-400">{ultimos.error}</div>
-                        ) : (ultimos.data && ultimos.data.length > 0) ? (
-                          <div className="overflow-x-auto">
-                            <table className="min-w-full border border-slate-200 dark:border-slate-700 text-xs">
-                              <thead>
-                                <tr className="bg-slate-100 dark:bg-slate-700">
-                                  <th className="px-2 py-1 text-left">Parámetro</th>
-                                  <th className="px-2 py-1 text-left">Valor</th>
-                                  <th className="px-2 py-1 text-left">Fecha Lab.</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {ultimos.data.map((u) => (
-                                  <tr key={`${u.idparametro}-${u.parametro}`} className="border-t border-slate-200 dark:border-slate-700">
-                                    <td className="px-2 py-1">{u.parametro ?? ''}</td>
-                                    <td className="px-2 py-1">{u.valor ?? ''}</td>
-                                    <td className="px-2 py-1">{formatearFecha(u.fecha_laboratorio)}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        ) : (
-                          <div className="text-sm text-slate-600 dark:text-slate-300">No hay registros previos.</div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-3">
-                      <button onClick={() => descargarPDF(detalle.item)} className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white">Descargar PDF</button>
-                      <button onClick={cerrarDetalle} className="px-4 py-2 rounded-md bg-green-700 hover:bg-green-800 text-white">Cerrar</button>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
-        </div>
-      )}
+      {detalle && <DetalleLaboratorio item={detalle} ultimos={ultimos} onClose={cerrar} />}
     </div>
   );
 };

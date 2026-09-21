@@ -104,6 +104,19 @@ export function imprimirLaboratorio(item, ultimos = []) {
       (Array.isArray(ultimos) ? ultimos : []).map((u) => `<tr><td>${u.parametro ?? ''}</td><td>${u.valor ?? ''}</td><td>${formatearFecha(u.fecha_laboratorio)}</td></tr>`))}`);
 }
 
+// Listado de los laboratorios que muestra la consulta (una fila por registro)
+export function imprimirListadoLaboratorios(filas) {
+  const rows = filas.map((it, i) => `
+    <tr>
+      <td>${i + 1}</td><td>${it.no_afiliacion ?? ''}</td><td>${nombreCompleto(it)}</td><td>${it.sexo ?? ''}</td>
+      <td>${it.id_laboratorio ?? ''}</td><td>${formatearFecha(it.fecha_laboratorio)}</td><td>${it.periodicidad ?? ''}</td>
+      <td>${it.examen_realizado ? 'Sí' : 'No'}</td><td>${it.virologia ?? ''}</td><td>${it.hiv ?? ''}</td><td>${it.usuario_creacion ?? ''}</td>
+    </tr>`);
+  imprimir('Listado de Laboratorios', 'Listado de Laboratorios', `
+    <div style="color:#64748b; font-size:12px; margin-bottom:16px;">Generado: ${new Date().toLocaleString()} - Registros: ${filas.length}</div>
+    ${tabla(['#', 'No. Afiliación', 'Paciente', 'Sexo', 'ID Laboratorio', 'Fecha', 'Periodicidad', 'Examen', 'Virología', 'HIV', 'Usuario'], rows)}`);
+}
+
 export function imprimirFaltista(item) {
   const it = item || {};
   imprimir(`Detalle de Faltista ${it.noafiliacion || ''}`, 'Detalle de Faltista', `

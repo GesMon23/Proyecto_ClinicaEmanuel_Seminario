@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { PencilLine, Trash } from 'lucide-react';
 import { formatearFecha } from '@/utils/fechas';
+import Paginador from '@/components/Paginador';
 import { normalizarBusqueda } from './turnos';
 
 const TH = 'px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider';
-const BOTON_PAGINA = 'px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400 transition-colors';
 
 // Turnos del paciente con buscador (ID, clínica y fecha), filas por página y paginación numerada
 export default function TablaTurnos({ turnos, onEditar, onCancelar }) {
@@ -92,23 +92,7 @@ export default function TablaTurnos({ turnos, onEditar, onCancelar }) {
         </div>
       </div>
 
-      {totalPaginas > 1 && (
-        <div className="flex flex-wrap justify-center items-center gap-2 mt-4">
-          <button className={BOTON_PAGINA} disabled={actual === 1} onClick={() => setPagina(actual - 1)}>Anterior</button>
-          {Array.from({ length: totalPaginas }, (_, i) => (
-            <button
-              key={i}
-              className={`px-3 py-2 rounded-lg transition-colors ${actual === i + 1
-                ? 'bg-green-600 text-white'
-                : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-slate-600'}`}
-              onClick={() => setPagina(i + 1)}
-            >
-              {i + 1}
-            </button>
-          ))}
-          <button className={BOTON_PAGINA} disabled={actual === totalPaginas} onClick={() => setPagina(actual + 1)}>Siguiente</button>
-        </div>
-      )}
+      <Paginador pagina={actual} total={totalPaginas} onCambiar={setPagina} />
     </>
   );
 }

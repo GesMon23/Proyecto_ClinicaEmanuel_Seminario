@@ -1,8 +1,8 @@
 // Contenido de cada pestaña de la ficha del paciente. Cada una recibe su lista ya cargada y maneja su propio
 // buscador, paginación y ventana de detalle.
 import React, { useState } from 'react';
-import api from '@/config/api';
 import { formatearFecha, calcularEstanciaRango } from '@/utils/fechas';
+import { useDetalleLaboratorio } from './useDetalleLaboratorio';
 import { calcularEdad } from './calculos';
 import TablaPaginada, { BotonDetalle } from './TablaPaginada';
 import {
@@ -204,23 +204,8 @@ export function Faltistas({ items }) {
   );
 }
 
-const SIN_ULTIMOS = { loading: false, error: '', data: [] };
-
 export function Laboratorios({ items }) {
-  const [detalle, setDetalle] = useState(null);
-  const [ultimos, setUltimos] = useState(SIN_ULTIMOS);
-
-  // Al abrir un laboratorio se cargan los últimos parámetros previos del paciente
-  const abrir = (item) => {
-    setDetalle(item);
-    const afiliacion = item?.no_afiliacion || item?.noafiliacion || '';
-    if (!afiliacion) return setUltimos(SIN_ULTIMOS);
-    setUltimos({ loading: true, error: '', data: [] });
-    api.get(`/laboratorios/${afiliacion}/parametros/ultimo`)
-      .then(({ data }) => setUltimos({ loading: false, error: '', data: Array.isArray(data?.data) ? data.data : [] }))
-      .catch(() => setUltimos({ loading: false, error: 'No se pudieron cargar los últimos parámetros.', data: [] }));
-  };
-  const cerrar = () => { setDetalle(null); setUltimos(SIN_ULTIMOS); };
+  const { detalle, ultimos, abrir, cerrar } = useDetalleLaboratorio();
 
   return (
     <>
