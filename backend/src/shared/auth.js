@@ -13,7 +13,7 @@ function payloadFromRequest(req) {
   }
 }
 
-// Id numérico del usuario (claim "sub", igual que BackLogin.js); null sin sesión
+// Id numérico del usuario (claim "sub" del login); null sin sesión
 function userIdFromRequest(req) {
   const payload = payloadFromRequest(req);
   if (!payload) return null;
@@ -45,7 +45,7 @@ function requireUser(req, res, next) {
   next();
 }
 
-// Middleware: exige un JWT válido y deja el payload en req.user (401 { error } igual que BackLogin.js)
+// Middleware: exige un JWT válido y deja el payload en req.user (401 { error } igual que el login)
 function verifyJWT(req, res, next) {
   const auth = (req.headers && req.headers.authorization) || '';
   if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: 'Token requerido' });

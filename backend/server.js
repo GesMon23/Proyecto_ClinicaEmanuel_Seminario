@@ -57,7 +57,7 @@ app.use(bodyParser.json({ limit: '50mb' }));
 // (Desmontado) Router legacy de actualización masiva para evitar conflicto de rutas
 // const updateMasivoPacientesRouter = require('./update-masivo-pacientes');
 // Importar router de login/roles centralizado
-const backLoginRouter = require('./BackLogin');
+const backLoginRouter = require('./src/modules/auth').router;
 
 const turnosModule = require('./src/modules/turnos');
 const reportesModule = require('./src/modules/reportes');
@@ -136,7 +136,7 @@ app.use('/fotos', express.static(fotosDir));
 app.use('/api/fotos', express.static(fotosDir));
 // (Desmontado) Usar el router legacy para actualización masiva de pacientes
 // app.use(updateMasivoPacientesRouter);
-// Usar router de login/roles (centralizado en BackLogin.js)
+// Usar router de login/roles (módulo auth)
 app.use(backLoginRouter);
 // Exponer también bajo prefijo /api para el frontend que usa baseURL '/api'
 app.use('/api', backLoginRouter);
