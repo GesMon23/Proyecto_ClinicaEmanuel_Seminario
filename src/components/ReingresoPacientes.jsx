@@ -137,7 +137,7 @@ const ReingresoPacientes = (props) => {
                             Período Prestación de Servicios <span className="text-rose-500">*</span>
                           </label>
                           <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-center gap-2">
-                            <CampoGestion etiqueta="" tipo="date" requerido placeholder="Inicio" {...campo("inicioPrestServicios")} />
+                            <CampoGestion etiqueta="" tipo="date" requerido placeholder="Inicio" envoltura="min-w-0" {...campo("inicioPrestServicios")} />
                             <span className="text-sm text-slate-500">a</span>
                             <CampoGestion etiqueta="" tipo="date" requerido placeholder="Fin" min={f.inicioPrestServicios || undefined} {...campo("finPrestServicios")} />
                           </div>

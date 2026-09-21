@@ -8,12 +8,13 @@ const ANILLO = { green: 'focus:ring-green-600', red: 'focus:ring-red-600' };
 // Campo grande de los formularios de gestión (Egreso, Reingreso, ...): etiqueta + input, select o textarea.
 //   tipo: 'text' | 'date' | 'number' | 'select' | 'textarea'  ·  opciones: [{ value, label }] para select
 //   acento: color del anillo de foco ('green' por omisión, 'red' en la sección de fallecimiento)
+//   envoltura: clases extra del contenedor (p. ej. 'flex-1' dentro de una fila)
 export default function CampoGestion({
-  etiqueta, requerido, tipo = 'text', opciones, vacio, ayuda, contador, acento = 'green', className = '', ...resto
+  etiqueta, requerido, tipo = 'text', opciones, vacio, ayuda, contador, acento = 'green', className = '', envoltura = '', ...resto
 }) {
   const clase = `${INPUT} ${ANILLO[acento]} ${className}`;
   return (
-    <div className="space-y-2">
+    <div className={`space-y-2 ${envoltura}`}>
       {(etiqueta || contador) && (
         <div className="flex items-end justify-between">
           <label className="block text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
