@@ -117,6 +117,26 @@ export function imprimirListadoLaboratorios(filas) {
     ${tabla(['#', 'No. Afiliación', 'Paciente', 'Sexo', 'ID Laboratorio', 'Fecha', 'Periodicidad', 'Examen', 'Virología', 'HIV', 'Usuario'], rows)}`);
 }
 
+export function imprimirReferencia(item) {
+  const it = item || {};
+  const paciente = [it.primernombre, it.segundonombre, it.primerapellido, it.segundoapellido].filter(Boolean).join(' ');
+  imprimir(`Referencia ${it.idreferencia || ''}`, 'Detalle de Referencia', `
+    <div class="grid">
+      ${campo('ID Referencia', it.idreferencia || '')}
+      ${campo('No. Afiliación', it.noafiliacion || '')}
+      ${campo('Paciente', paciente, true)}
+      ${campo('Sexo', it.sexo || '')}
+      ${campo('Fecha', formatearFecha(it.fechareferencia))}
+    </div>
+    <hr />
+    <div class="grid">
+      ${campo('Motivo Traslado', it.motivotraslado || '')}
+      ${campo('Especialidad', it.especialidadreferencia || '')}
+      ${campo('ID Médico', it.idmedico || '')}
+      ${campo('Médico', it.nombremedico || '')}
+    </div>`);
+}
+
 export function imprimirFaltista(item) {
   const it = item || {};
   imprimir(`Detalle de Faltista ${it.noafiliacion || ''}`, 'Detalle de Faltista', `
@@ -192,6 +212,9 @@ export function imprimirNutricion(item) {
     <div class="grid">
       ${campo('No. Afiliación', it.no_afiliacion || '')}
       ${campo('ID Informe', it.id_informe || '')}
+      ${campo('Paciente', nombreCompleto(it), true)}
+      ${campo('Sexo', it.sexo ?? '')}
+      ${campo('Fecha', formatearFecha(it.fecha_creacion))}
       ${campo('Estado Nutricional', it.estado_nutricional || '')}
       ${campo('IMC', it.imc ?? '')}
       ${campo('Altura (cm)', it.altura_cm ?? '')}

@@ -1,10 +1,11 @@
 // Ventanas de detalle de cada sección de la ficha del paciente.
-import React from 'react';
+import React, { useEffect } from 'react';
 import { formatearFecha } from '@/utils/fechas';
 import { nombreCompleto, resumenKdqol } from './calculos';
 import {
-  imprimirFaltista, imprimirFormulario, imprimirLaboratorio, imprimirNutricion, imprimirPsicologia, imprimirTurno,
+  imprimirFaltista, imprimirFormulario, imprimirLaboratorio, imprimirNutricion, imprimirPsicologia, imprimirReferencia, imprimirTurno,
 } from './documentos';
+import { useDetalleLaboratorio } from './useDetalleLaboratorio';
 
 function VentanaDetalle({ titulo, onClose, onPdf, children }) {
   return (
@@ -45,6 +46,8 @@ export function DetalleNutricion({ item, onClose }) {
   return (
     <VentanaDetalle titulo="Detalle Nutrición" onClose={onClose} onPdf={() => imprimirNutricion(item)}>
       <Rejilla>
+        {it.no_afiliacion && <Dato etiqueta="No. Afiliación">{it.no_afiliacion}</Dato>}
+        {nombreCompleto(it) && <Dato etiqueta="Paciente">{nombreCompleto(it)}</Dato>}
         <Dato etiqueta="ID Informe">{it.id_informe ?? ''}</Dato>
         <Dato etiqueta="Fecha">{formatearFecha(it.fecha_creacion) || ''}</Dato>
         <Dato etiqueta="Usuario">{it.usuario_creacion ?? ''}</Dato>
@@ -255,4 +258,34 @@ export function DetalleLaboratorio({ item, ultimos, onClose }) {
       </div>
     </VentanaDetalle>
   );
+}
+
+export function DetalleReferencia({ item, onClose }) {
+  const it = item || {};
+  const paciente = [it.primernombre, it.segundonombre, it.primerapellido, it.segundoapellido].filter(Boolean).join(' ');
+  return (
+    <VentanaDetalle titulo="Detalle de Referencia" onClose={onClose} onPdf={() => imprimirReferencia(item)}>
+      <Rejilla>
+        <Dato etiqueta="ID Referencia">{it.idreferencia || ''}</Dato>
+        <Dato etiqueta="No. Afiliación">{it.noafiliacion || ''}</Dato>
+        <Dato etiqueta="Paciente" ancho>{paciente}</Dato>
+        <Dato etiqueta="Sexo">{it.sexo || ''}</Dato>
+        <Dato etiqueta="Fecha">{formatearFecha(it.fechareferencia)}</Dato>
+      </Rejilla>
+      <hr className="border-slate-200 dark:border-slate-700" />
+      <Rejilla>
+        <Dato etiqueta="Motivo Traslado">{it.motivotraslado || ''}</Dato>
+        <Dato etiqueta="Especialidad">{it.especialidadreferencia || ''}</Dato>
+        <Dato etiqueta="ID Médico">{it.idmedico || ''}</Dato>
+        <Dato etiqueta="Médico">{it.nombremedico || ''}</Dato>
+      </Rejilla>
+    </VentanaDetalle>
+  );
+}
+
+// Detalle de un laboratorio que trae por sí mismo los últimos parámetros previos del paciente
+export function DetalleLaboratorioAuto({ item, onClose }) {
+  const { ultimos, abrir } = useDetalleLaboratorio();
+  useEffect(() => { abrir(item); }, [item, abrir]);
+  return <DetalleLaboratorio item={item} ultimos={ultimos} onClose={onClose} />;
 }
