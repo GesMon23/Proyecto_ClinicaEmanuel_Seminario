@@ -1,24 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import api from '../config/api';
 import logoClinica from "@/assets/logoClinica2.png";
-
-const CustomModal = ({ show, onClose, title, message, children }) => {
-    if (!show) return null;
-
-    return (
-        <>
-            <div
-                className="fixed inset-0 bg-black bg-opacity-50 z-50"
-                onClick={onClose}
-            />
-            <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 p-6 rounded-lg shadow-xl z-50 max-w-md w-full mx-4">
-                <h4 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">{title}</h4>
-                {message && <p className="text-gray-700 dark:text-gray-300 mb-4">{message}</p>}
-                {children}
-            </div>
-        </>
-    );
-};
+import CustomModal from '@/components/CustomModal';
 
 const normalizar = (v) =>
     String(v ?? '')

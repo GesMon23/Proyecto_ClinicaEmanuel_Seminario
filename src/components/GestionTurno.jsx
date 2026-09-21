@@ -6,64 +6,7 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { formatearFecha } from '@/utils/fechas';
 import logoClinica from "@/assets/logoClinica2.png";
-
-const CustomModal = ({ show, onClose, title, message, type, onConfirm }) => {
-  if (!show) return null;
-
-  return (
-    <>
-      <div
-        className="fixed inset-0 bg-black/50 z-40"
-        onClick={onClose}
-      />
-      <div className="fixed z-50 top-1/2 left-1/2 w-11/12 max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white dark:bg-slate-900 shadow-lg p-6">
-        <h4
-          className={`text-lg font-bold mb-3 ${
-            type === "success"
-              ? "text-green-700 dark:text-green-400"
-              : type === "error"
-              ? "text-red-700 dark:text-red-400"
-              : "text-slate-800 dark:text-slate-200"
-          }`}
-        >
-          {title}
-        </h4>
-        <p className="text-slate-700 dark:text-slate-300 whitespace-pre-line">
-          {message}
-        </p>
-        {type === "confirm" ? (
-          <div className="flex justify-end gap-3 mt-5">
-            <button
-              className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
-              onClick={onConfirm}
-            >
-              Sí, cancelar
-            </button>
-            <button
-              className="px-4 py-2 rounded-lg bg-gray-400 text-white hover:bg-gray-500"
-              onClick={onClose}
-            >
-              Cancelar
-            </button>
-          </div>
-        ) : (
-          <div className="flex justify-end mt-5">
-            <button
-              className={`px-4 py-2 rounded-lg ${
-                type === "success"
-                  ? "bg-green-600 hover:bg-green-700"
-                  : "bg-red-600 hover:bg-red-700"
-              } text-white`}
-              onClick={onClose}
-            >
-              Cerrar
-            </button>
-          </div>
-        )}
-      </div>
-    </>
-  );
-};
+import CustomModal from '@/components/CustomModal';
 
 const GestionTurno = () => {
   // Helpers de fecha para evitar desfases por UTC
@@ -506,6 +449,7 @@ const GestionTurno = () => {
         message={modalMessage}
         type={modalType}
         onConfirm={onConfirmEliminar}
+        confirmText="Sí, cancelar"
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

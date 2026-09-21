@@ -1,55 +1,59 @@
-// Modal personalizado reutilizable (igual que en ConsultaPacientes)
+// Modal reutilizable de toda la aplicación. Tres usos:
+//   · aviso:        <CustomModal title message type="success|error|info" onClose />   -> botón "Cerrar"
+//   · confirmación: type="confirm" con onConfirm                                      -> "Confirmar" / "Cancelar"
+//   · contenido:    <CustomModal title onClose>{...}</CustomModal>                    -> sin botones propios
 import React from 'react';
-import { Button } from 'react-bootstrap';
 
-const CustomModal = ({ show, onClose, title, message, type }) => {
+const COLOR_TITULO = {
+    success: 'text-green-700 dark:text-green-400',
+    error: 'text-red-700 dark:text-red-400',
+    confirm: 'text-red-700 dark:text-red-400',
+};
+const COLOR_BOTON = {
+    success: 'bg-green-600 hover:bg-green-700',
+    error: 'bg-red-600 hover:bg-red-700',
+};
+
+const CustomModal = ({
+    show, onClose, title, message, type = 'info', onConfirm,
+    confirmText = 'Confirmar', cancelText = 'Cancelar', children,
+}) => {
     if (!show) return null;
-
-    const modalStyle = {
-        position: 'fixed',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        backgroundColor: 'white',
-        padding: '20px',
-        borderRadius: '8px',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-        zIndex: 1000
-    };
-
-    const overlayStyle = {
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        zIndex: 999
-    };
+    const conContenido = children !== undefined && children !== null;
 
     return (
-        <>
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={onClose}>
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-lg shadow-lg w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
-                    <h4 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">
-                        {title}
-                    </h4>
-                    <p className="text-gray-700 dark:text-gray-300 mb-4">
-                        {message}
-                    </p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={onClose}>
+            <div
+                className="bg-white dark:bg-slate-900 p-6 rounded-lg shadow-lg w-full max-w-md mx-4"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <h4 className={`text-xl font-semibold mb-3 ${conContenido ? 'text-gray-800 dark:text-white' : (COLOR_TITULO[type] || 'text-gray-800 dark:text-white')}`}>
+                    {title}
+                </h4>
+                {message && (
+                    <p className="text-gray-700 dark:text-gray-300 mb-4 whitespace-pre-line">{message}</p>
+                )}
+                {conContenido && children}
+                {!conContenido && type === 'confirm' && (
+                    <div className="flex justify-end gap-3 mt-5">
+                        <button className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700" onClick={onConfirm}>
+                            {confirmText}
+                        </button>
+                        <button className="px-4 py-2 rounded-lg bg-gray-400 text-white hover:bg-gray-500" onClick={onClose}>
+                            {cancelText}
+                        </button>
+                    </div>
+                )}
+                {!conContenido && type !== 'confirm' && (
                     <button
                         onClick={onClose}
-                        className={`w-full py-2 px-4 rounded text-white font-medium transition-colors ${type === 'success'
-                                ? 'bg-green-600 hover:bg-green-700'
-                                : 'bg-red-600 hover:bg-red-700'
-                            }`}
+                        className={`w-full py-2 px-4 rounded text-white font-medium transition-colors ${COLOR_BOTON[type] || 'bg-blue-600 hover:bg-blue-700'}`}
                     >
                         Cerrar
                     </button>
-                </div>
+                )}
             </div>
-
-        </>
+        </div>
     );
 };
 

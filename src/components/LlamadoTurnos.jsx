@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../config/api';
 import logoClinica from "@/assets/logoClinica2.png";
 import { formatearFecha } from '@/utils/fechas';
+import CustomModal from '@/components/CustomModal';
 import { 
   RefreshCw,
   Stethoscope,
@@ -42,37 +43,6 @@ const getClinicaIcon = (clinicaNombre) => {
   };
 
   return iconMap[clinicaNombre] || iconMap['default'];
-};
-
-const CustomModal = ({ show, onClose, title, message, type }) => {
-    if (!show) return null;
-
-    return (
-        <>
-            {/* Overlay */}
-            <div 
-                className="fixed inset-0 bg-black bg-opacity-50 z-50"
-                onClick={onClose}
-            />
-            {/* Modal */}
-            <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 p-6 rounded-lg shadow-xl z-50 max-w-md w-full mx-4">
-                <h4 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">{title}</h4>
-                <p className="text-gray-700 dark:text-gray-300 mb-4">{message}</p>
-                <button
-                    className={`w-full font-semibold py-2 px-4 rounded transition-colors ${
-                        type === 'success'
-                            ? 'bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700'
-                            : type === 'error'
-                            ? 'bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700'
-                            : 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700'
-                    } text-white`}
-                    onClick={onClose}
-                >
-                    Cerrar
-                </button>
-            </div>
-        </>
-    );
 };
 
 const LlamadoTurnos = () => {

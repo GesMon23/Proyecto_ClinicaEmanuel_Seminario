@@ -4,27 +4,7 @@ import { Button } from "react-bootstrap";
 import logoClinica from "@/assets/logoClinica2.png";
 import api from "../config/api";
 import WebcamFoto from "@/components/WebcamFoto.jsx";
-
-// Modal sencillo
-const CustomModal = ({ show, onClose, title, children }) => {
-  if (!show) return null;
-  return (
-    <>
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-        onClick={onClose}
-      >
-        <div
-          className="mx-4 w-full max-w-md rounded-lg bg-white p-6 shadow-lg dark:bg-slate-900"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <h4 className="mb-4 text-xl font-semibold text-gray-800 dark:text-white">{title}</h4>
-          {children}
-        </div>
-      </div>
-    </>
-  );
-};
+import CustomModal from '@/components/CustomModal';
 
 const parseDepartamentoRecord = (d) => {
   const idDirect =
