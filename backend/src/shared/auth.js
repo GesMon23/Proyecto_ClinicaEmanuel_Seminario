@@ -45,4 +45,25 @@ function requireUser(req, res, next) {
   next();
 }
 
-module.exports = { payloadFromRequest, userIdFromRequest, userNameFromRequest, actorFromRequest, requireUser };
+// Middleware: exige un JWT válido y deja el payload en req.user (401 { error } igual que BackLogin.js)
+function verifyJWT(req, res, next) {
+  const auth = (req.headers && req.headers.authorization) || '';
+  if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: 'Token requerido' });
+  try {
+    req.user = jwt.verify(auth.slice(7), jwtSecret());
+    return next();
+  } catch {
+    return res.status(401).json({ error: 'Token inválido' });
+  }
+}
+
+// Middleware (después de verifyJWT): exige al menos uno de los roles; lista vacía = cualquier usuario
+function requireRole(roles = []) {
+  return (req, res, next) => {
+    const userRoles = (req.user && req.user.roles) || [];
+    if (roles.length === 0 || roles.some((r) => userRoles.includes(r))) return next();
+    return res.status(403).json({ error: 'No autorizado' });
+  };
+}
+
+module.exports = { payloadFromRequest, userIdFromRequest, userNameFromRequest, actorFromRequest, requireUser, verifyJWT, requireRole };

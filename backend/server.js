@@ -68,14 +68,8 @@ const backFallecidosReportesRouter = reportesModule.fallecidos;
 // Importar router de registro de formularios
 const pacientesModule = require('./src/modules/pacientes');
 const backRegistroFormulariosRouter = pacientesModule.formularios;
-// Importar router de registro de empleados
-const backRegistroEmpleadosRouter = require('./src/controllers/BackRegistroEmpleados');
-// Importar router de gestión de empleados (listar/editar/estado)
-const backGestionEmpleadosRouter = require('./src/controllers/BackGestionEmpleados');
-// Importar router de creación de usuarios (empleados sin usuario, etc.)
-const backCreacionUsuariosRouter = require('./src/controllers/BackCreacionUsuarios');
-// Importar router de roles por usuario (búsqueda, listar y actualizar roles)
-const backRolesUsuariosRouter = require('./src/controllers/BackRolesUsuarios');
+// Empleados, usuarios y roles
+const backUsuariosRouter = require('./src/modules/usuarios').router;
 // Importar router de psicología
 const backPsicologiaRouter = registrosModule.psicologia;
 // Importar router de consulta de psicología
@@ -149,18 +143,9 @@ app.use('/api', backLoginRouter);
 // Usar router de registro de formularios
 app.use(backRegistroFormulariosRouter);
 app.use('/api',backRegistroFormulariosRouter);
-// Usar router de registro de empleados
-app.use(backRegistroEmpleadosRouter);
-app.use('/api',backRegistroEmpleadosRouter);
-// Usar router de gestión de empleados (GET/PUT/PATCH)
-app.use(backGestionEmpleadosRouter);
-app.use('/api',backGestionEmpleadosRouter);
-// Usar router de creación de usuarios
-app.use(backCreacionUsuariosRouter);
-app.use('/api',backCreacionUsuariosRouter);
-// Usar router de roles por usuario
-app.use(backRolesUsuariosRouter);
-app.use('/api',backRolesUsuariosRouter);
+// Empleados, usuarios y roles
+app.use(backUsuariosRouter);
+app.use('/api',backUsuariosRouter);
 // Usar router de psicología
 app.use('/api/psicologia', backPsicologiaRouter);
 // Tolerar proxies que remueven /api
