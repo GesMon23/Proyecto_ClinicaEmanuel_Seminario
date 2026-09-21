@@ -23,6 +23,18 @@ async function coincidePassword(plano, guardada) {
   return guardada === plano;
 }
 
+// Cuentas antiguas con la contraseña en texto plano: se re-guardan con bcrypt en su próximo login exitoso
+const necesitaRehash = (guardada) => typeof guardada === 'string' && guardada !== '' && !guardada.startsWith('$2');
+
+async function migrarPasswordSiHaceFalta(user, plano) {
+  if (!necesitaRehash(user.contrasenia)) return;
+  try {
+    await repo.actualizarPassword(user.id_usuario, await bcrypt.hash(String(plano), 10));
+  } catch (err) {
+    registrarFallo('No fue posible migrar la contraseña a bcrypt:')(err);
+  }
+}
+
 // Contraseña aleatoria con al menos una minúscula, mayúscula, dígito y símbolo
 function generarPasswordFuerte(largo = 12) {
   const minusculas = 'abcdefghijklmnopqrstuvwxyz';
@@ -68,6 +80,7 @@ async function login({ usuario, password } = {}) {
 
   const roles = await repo.nombresDeRoles(user.id_usuario);
   intentos.limpiar(usuario);
+  await migrarPasswordSiHaceFalta(user, password);
 
   const token = jwt.sign({ sub: user.id_usuario, nombre_usuario: user.nombre_usuario, roles }, jwtSecret(), { expiresIn: '8h' });
   let mustChangePassword = false;
@@ -228,7 +241,7 @@ async function solicitarRecuperacion(datos = {}) {
 }
 
 module.exports = {
-  coincidePassword, generarPasswordFuerte, mensajeBloqueo, PASSWORD_FUERTE,
+  coincidePassword, necesitaRehash, generarPasswordFuerte, mensajeBloqueo, PASSWORD_FUERTE,
   login, perfil, usuariosActivos, confirmarPassword, cambiarPassword,
   restablecerConToken, restablecerComoAdmin, restablecerConTokenDeAccion, infoTokenDeAccion, solicitarRecuperacion,
 };

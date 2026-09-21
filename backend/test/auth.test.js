@@ -97,6 +97,13 @@ test('coincidePassword acepta bcrypt y texto plano antiguo', async () => {
   assert.equal(await service.coincidePassword('x', null), false);
 });
 
+test('necesitaRehash detecta solo contraseñas que no son bcrypt', async () => {
+  assert.equal(service.necesitaRehash('plana'), true);
+  assert.equal(service.necesitaRehash(await bcrypt.hash('x', 4)), false);
+  assert.equal(service.necesitaRehash(null), false);
+  assert.equal(service.necesitaRehash(''), false);
+});
+
 test('mensajeBloqueo y escapeHtml', () => {
   assert.equal(service.mensajeBloqueo(61_000), 'Usuario bloqueado. Intenta nuevamente en 1m 1s');
   assert.equal(escapeHtml(`<b onclick="x">&'</b>`), '&lt;b onclick=&quot;x&quot;&gt;&amp;&#39;&lt;/b&gt;');
