@@ -118,6 +118,11 @@ test('totales y resúmenes numéricos', async () => {
   const promedios = await pedir('psicologia-kdqol-promedios');
   assert.equal(promedios.status, 200);
   assert.ok('global' in promedios.body.promedios);
+  // Mismos nombres que los campos del formulario de psicología (y que las áreas del dashboard)
+  const filaPromedios = Object.keys(promedios.body.promedios);
+  for (const campo of ['fisico_mental', 'enfermedad_renal', 'sintomas_problemas', 'efectos_enfermedad', 'vida_diaria']) {
+    assert.ok(filaPromedios.includes(campo), `falta ${campo}`);
+  }
 });
 
 test('resumen general tiene KPIs, series y distribuciones', async () => {

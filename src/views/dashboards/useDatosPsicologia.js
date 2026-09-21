@@ -17,7 +17,7 @@ const KDQOL = {
   sexo: ['psicologia-kdqol-por-sexo', 'sexo'],
 };
 
-const SIN_PROMEDIOS = { fisico: null, mental: null, sintomas: null, carga: null, efectos: null, global: null };
+const SIN_PROMEDIOS = { fisico_mental: null, enfermedad_renal: null, sintomas_problemas: null, efectos_enfermedad: null, vida_diaria: null, global: null };
 const FILTROS_VACIOS = { desde: '', hasta: '', sexo: '' };
 
 const numeroONulo = (v) => (v != null ? Number(v) : null);

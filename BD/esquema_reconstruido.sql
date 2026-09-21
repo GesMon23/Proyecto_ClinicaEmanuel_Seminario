@@ -2054,8 +2054,9 @@ BEGIN
     SELECT jsonb_build_object(
       'informe', to_jsonb(t),
       'kdqol', jsonb_build_object(
-        'fisico', t.fisico_mental, 'mental', t.enfermedad_renal, 'sintomas', t.sintomas_problemas,
-        'carga', t.efectos_enfermedad, 'efectos', t.vida_diaria
+        'fisico_mental', t.fisico_mental, 'enfermedad_renal', t.enfermedad_renal,
+        'sintomas_problemas', t.sintomas_problemas, 'efectos_enfermedad', t.efectos_enfermedad,
+        'vida_diaria', t.vida_diaria
       )
     ) AS result
     FROM public.tbl_informes_psicologia t WHERE id_informe = v_id;
@@ -3128,22 +3129,25 @@ BEGIN
 END;
 $$;
 
--- [PENDIENTE] TODO(reconstruido): el inventario detecto que las columnas
--- leidas (fisico, mental, sintomas, carga, efectos) NO calzan 1:1 con las
--- columnas de insercion (fisico_mental, enfermedad_renal, sintomas_problemas,
--- efectos_enfermedad, vida_diaria) - el mapeo real de que puntaje KDQOL
--- corresponde a que dimension se perdio. Este stub devuelve 0 en las 5
--- dimensiones para que el dashboard no truene; hay que decidir el mapeo
--- correcto (posiblemente consultando la literatura del cuestionario KDQOL-36
--- o los formularios en src/components/Psicologia.jsx) antes de usarlo.
+-- Promedio de cada dimension KDQOL. Las columnas llevan el mismo nombre que los
+-- campos del formulario de psicologia (y de tbl_informes_psicologia), que es
+-- tambien el que muestra el dashboard: sin traduccion entre nombres.
 CREATE OR REPLACE PROCEDURE public.sp_psicologia_kdqol_promedios(
   IN p_desde date, IN p_hasta date, IN p_sexo char(1), INOUT ref refcursor
 ) LANGUAGE plpgsql AS $$
 BEGIN
   OPEN ref FOR
-    SELECT 0::numeric AS fisico, 0::numeric AS mental, 0::numeric AS sintomas,
-           0::numeric AS carga, 0::numeric AS efectos
-    WHERE false;
+    SELECT round(AVG(ip.fisico_mental), 2)       AS fisico_mental,
+           round(AVG(ip.enfermedad_renal), 2)    AS enfermedad_renal,
+           round(AVG(ip.sintomas_problemas), 2)  AS sintomas_problemas,
+           round(AVG(ip.efectos_enfermedad), 2)  AS efectos_enfermedad,
+           round(AVG(ip.vida_diaria), 2)         AS vida_diaria
+    FROM public.tbl_informes_psicologia ip
+    JOIN public.tbl_pacientes p ON ip.no_afiliacion = p.no_afiliacion
+    WHERE ip.aplicacion_kdqol = true
+      AND (p_desde IS NULL OR ip.fecha_creacion::date >= p_desde)
+      AND (p_hasta IS NULL OR ip.fecha_creacion::date <= p_hasta)
+      AND (p_sexo IS NULL OR left(lower(p.sexo),1) = lower(p_sexo));
 END;
 $$;
 
@@ -3192,8 +3196,7 @@ $$;
 -- FIN DEL SCRIPT
 -- ============================================================================
 -- Resumen de lo NO cubierto / pendiente de decision humana:
---   1. sp_estadisticas_resumen y sp_psicologia_kdqol_promedios (arriba,
---      buscar "TODO(reconstruido)").
+--   1. sp_estadisticas_resumen (arriba, buscar "TODO(reconstruido)").
 --   2. backend/BackLogin.js sigue teniendo su propia copia de verifyJWT
 --      (fuera del alcance de este script de BD).
 --   3. BackNU.js es codigo muerto (marcado "NO SE USA" en el propio archivo)

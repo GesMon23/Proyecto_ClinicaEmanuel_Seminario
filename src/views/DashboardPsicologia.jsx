@@ -24,14 +24,14 @@ const ESTILOS = `
   }
 `;
 
-// Las cinco áreas del KDQOL. El campo "promedio" de cada una sale de las dimensiones que calcula el backend
-// (sp_psicologia_kdqol_promedios); el nombre que se muestra sigue el orden actual, pendiente de confirmar.
+// Las cinco áreas del KDQOL. Los campos son los mismos del formulario de psicología y los que devuelve
+// el backend (sp_psicologia_kdqol_promedios).
 const AREAS_KDQOL = [
-  { name: "Físico y mental", campo: "fisico" },
-  { name: "Enfermedad Renal", campo: "mental" },
-  { name: "Síntomas y Problemas", campo: "sintomas" },
-  { name: "Efectos de la Enfermedad", campo: "efectos" },
-  { name: "Vida Diaria", campo: "carga" },
+  { name: "Físico y mental", campo: "fisico_mental" },
+  { name: "Enfermedad Renal", campo: "enfermedad_renal" },
+  { name: "Síntomas y Problemas", campo: "sintomas_problemas" },
+  { name: "Efectos de la Enfermedad", campo: "efectos_enfermedad" },
+  { name: "Vida Diaria", campo: "vida_diaria" },
 ];
 
 const decimales = (v) => (v != null ? v.toFixed(2) : "—");

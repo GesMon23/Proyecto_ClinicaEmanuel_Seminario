@@ -10,7 +10,7 @@ const router = express.Router();
 // valores numéricos, así que se convierten los campos de conteo/promedio a número.
 const CAMPOS_NUMERICOS = new Set([
   'total', 'imc_promedio', 'peso_promedio', 'altura_promedio',
-  'fisico', 'mental', 'sintomas', 'carga', 'efectos', 'global', 'dentro', 'fuera',
+  'fisico_mental', 'enfermedad_renal', 'sintomas_problemas', 'efectos_enfermedad', 'vida_diaria', 'global', 'dentro', 'fuera',
 ]);
 
 function numerar(valor) {

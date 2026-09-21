@@ -27,15 +27,18 @@ async function kdqolTotal(query) {
   return { rango, total: filas[0]?.total || 0 };
 }
 
+// Mismos nombres que los campos del formulario de psicología y las columnas de tbl_informes_psicologia
+const DIMENSIONES_KDQOL = ['fisico_mental', 'enfermedad_renal', 'sintomas_problemas', 'efectos_enfermedad', 'vida_diaria'];
+
 // Promedios por dimensión + promedio global de las dimensiones presentes
 async function kdqolPromedios(query) {
   const rango = P.rango90Dias(query);
   const filas = await repo.consultar('sp_psicologia_kdqol_promedios', [rango.desde, rango.hasta, P.sexoMF(query.sexo)], 'cur_kdqol_prom');
   const fila = filas[0] || {};
-  const valores = ['fisico', 'mental', 'sintomas', 'carga', 'efectos'].map((k) => (fila[k] == null ? null : Number(fila[k])));
+  const valores = DIMENSIONES_KDQOL.map((k) => (fila[k] == null ? null : Number(fila[k])));
   const presentes = valores.filter((v) => typeof v === 'number' && !Number.isNaN(v));
   const global = presentes.length ? Number((presentes.reduce((a, b) => a + b, 0) / presentes.length).toFixed(2)) : null;
-  return { rango, promedios: { ...fila, global } };
+  return { rango, promedios: { ...Object.fromEntries(DIMENSIONES_KDQOL.map((k, i) => [k, valores[i]])), global } };
 }
 
 // Tablero principal: KPIs, series mensuales y distribuciones
