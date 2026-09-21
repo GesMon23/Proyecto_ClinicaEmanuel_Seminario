@@ -89,19 +89,13 @@ test('generarPasswordFuerte cumple la complejidad exigida', () => {
   assert.equal(service.generarPasswordFuerte(2).length, 4, 'mínimo 4 caracteres');
 });
 
-test('coincidePassword acepta bcrypt y texto plano antiguo', async () => {
+test('coincidePassword solo acepta bcrypt: el texto plano guardado nunca coincide', async () => {
   const hash = await bcrypt.hash('Secreta1.', 4);
   assert.equal(await service.coincidePassword('Secreta1.', hash), true);
   assert.equal(await service.coincidePassword('otra', hash), false);
-  assert.equal(await service.coincidePassword('plana', 'plana'), true);
+  assert.equal(await service.coincidePassword('plana', 'plana'), false);
+  assert.equal(await service.coincidePassword('', ''), false);
   assert.equal(await service.coincidePassword('x', null), false);
-});
-
-test('necesitaRehash detecta solo contraseñas que no son bcrypt', async () => {
-  assert.equal(service.necesitaRehash('plana'), true);
-  assert.equal(service.necesitaRehash(await bcrypt.hash('x', 4)), false);
-  assert.equal(service.necesitaRehash(null), false);
-  assert.equal(service.necesitaRehash(''), false);
 });
 
 test('mensajeBloqueo y escapeHtml', () => {
