@@ -1,6 +1,7 @@
 // Reglas del registro de evaluaciones psicológicas (sin React).
 import api from '@/config/api';
 import { calcularEdad } from '@/components/consultaPacientes/calculos';
+import { estaInactivo, nombreCompletoPaciente } from '@/utils/pacientes';
 
 export const EVALUACION_VACIA = {
   motivo_consulta: '',
@@ -38,15 +39,6 @@ export function promedioKdqol(ev) {
   return (Math.round((valores.reduce((a, n) => a + n, 0) / valores.length) * 100) / 100).toFixed(2);
 }
 
-// No se registra psicología a pacientes egresados o fallecidos
-export function estaInactivo(p) {
-  const idEstado = Number(p.id_estado ?? p.idestado ?? 0);
-  const idCausa = Number(p.id_causa ?? p.idcausa ?? 0);
-  const causa = String(p.causaegreso_descripcion ?? p.causa_egreso_descripcion ?? p.descripcion ?? '').toLowerCase();
-  const estado = String(p.estado_descripcion ?? p.estado ?? '').toLowerCase();
-  return idEstado === 3 || estado.includes('egres') || idCausa === 1 || causa.includes('fallec') || estado.includes('fallec');
-}
-
 // Resumen del paciente para la pantalla, o { mensaje } (título y texto del aviso) si no se puede registrar
 export async function buscarPaciente(noAfiliacion) {
   try {
@@ -59,7 +51,7 @@ export async function buscarPaciente(noAfiliacion) {
     }
     return {
       paciente: {
-        nombre: [data.primer_nombre, data.segundo_nombre, data.otros_nombres, data.primer_apellido, data.segundo_apellido, data.apellido_casada].filter(Boolean).join(' '),
+        nombre: nombreCompletoPaciente(data),
         edad: Math.max(0, Number(calcularEdad(data.fecha_nacimiento)) || 0),
         sexo: data.sexo,
       },
