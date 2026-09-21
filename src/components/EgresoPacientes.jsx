@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/useToast';
 import BuscadorPacientes from './pacientes/BuscadorPacientes';
 import CampoGestion from './pacientes/CampoGestion';
 import TarjetaPaciente from './pacientes/TarjetaPaciente';
-import Toast from './pacientes/Toast';
+import Toast from './Toast';
 import {
   FORM_VACIO, armarEgreso, cargarCausasEgreso, causaEsFallecimiento, estaInactivo, fichaDePaciente, problemaDelFormulario,
 } from './egresoPacientes/egreso';
