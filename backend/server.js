@@ -62,6 +62,7 @@ const backLoginRouter = require('./BackLogin');
 const turnosModule = require('./src/modules/turnos');
 const reportesModule = require('./src/modules/reportes');
 const consultasModule = require('./src/modules/consultas');
+const registrosModule = require('./src/modules/registros');
 const backGestionTurnosRouter = turnosModule.router;
 const backFallecidosReportesRouter = reportesModule.fallecidos;
 // Importar router de registro de formularios
@@ -76,22 +77,22 @@ const backCreacionUsuariosRouter = require('./src/controllers/BackCreacionUsuari
 // Importar router de roles por usuario (búsqueda, listar y actualizar roles)
 const backRolesUsuariosRouter = require('./src/controllers/BackRolesUsuarios');
 // Importar router de psicología
-const backPsicologiaRouter = require('./src/controllers/BackPsicologia');
+const backPsicologiaRouter = registrosModule.psicologia;
 // Importar router de consulta de psicología
 const backConsultaPsicologiaRouter = consultasModule.psicologia;
 
 // Importar router de nutrición
-const backNutricionRouter = require('./src/controllers/BackNutricion');
+const backNutricionRouter = registrosModule.nutricion;
 // Importar router de consulta de nutrición (historial, filtros)
 const backConsultaNutricionRouter = consultasModule.nutricion;
 // Importar router de registro de referencias
-const backRegistroReferenciasRouter = require('./src/controllers/BackRegistroReferencias');
+const backRegistroReferenciasRouter = registrosModule.referencias;
 // Importar router de consulta de referencias
 const backConsultaReferenciasRouter = consultasModule.referencias;
 // Importar router de consulta de laboratorios
 const backConsultaLaboratoriosRouter = consultasModule.laboratorios;
 // Importar router de catálogos
-const backCatalogosRouter = require('./src/controllers/BackCatalogos');
+const backCatalogosRouter = registrosModule.catalogos;
 // Importar router de reporte de pacientes
 const backPacientesReporteRouter = reportesModule.pacientes;
 // Importar router de estadísticas resumen
@@ -117,7 +118,7 @@ const backConsultaPacientesRouter = pacientesModule.consulta;
 // Registrar API específica para Registro de Pacientes (endpoints usados por RegistroPacientes.jsx)
 const backRegistroPacientesApiRouter = pacientesModule.registro;
 // Importar router de registro de laboratorios
-const backRegistroLaboratoriosRouter = require('./src/controllers/BackRegistroLaboratorios');
+const backRegistroLaboratoriosRouter = registrosModule.laboratorios;
 
 // Pool compartido
 const pool = require('./db/pool');

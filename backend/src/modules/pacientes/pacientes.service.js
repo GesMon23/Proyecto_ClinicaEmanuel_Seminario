@@ -284,5 +284,6 @@ module.exports = {
   pacientesParaEgreso, actualizarDesdeEgresoOReingreso, registrarEgreso,
   pacientesParaReingreso, registrarReingreso, registrarHistorialReingreso,
   registrarFormularios, tablaFormularios,
+  motivoBloqueo,
   calcularEdad,
 };
