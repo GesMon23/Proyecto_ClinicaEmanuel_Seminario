@@ -109,4 +109,4 @@ export function calcularEstanciaRango(inicioStr, finStr) {
   return partes.join(', ');
 }
 
-// diffDMA existente en reportes devuelve "D-M-A". Se mantiene separado por compatibilidad.
+// La estancia "D-M-A" (días-meses-años) de los reportes está en utils/reportes.js (diferenciaDMA).

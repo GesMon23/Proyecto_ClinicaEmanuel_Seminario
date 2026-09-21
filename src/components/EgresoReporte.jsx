@@ -6,32 +6,7 @@ import logoClinica from '@/assets/logoClinica2.png';
 import api from '../config/api';
 import { formatearFecha } from '@/utils/fechas';
 import './NuevoIngresoReportes.css';
-
-function parseYMD(str){ if(!str) return null; const [y,m,d]=String(str).split('-').map(Number); if(!y||!m||!d) return null; return new Date(y,m-1,d); }
-function calcularEdadHasta(fechaNacimiento, hastaStr){
-  if(!fechaNacimiento) return '';
-  const n = parseYMD(fechaNacimiento) || new Date(fechaNacimiento);
-  const h = hastaStr ? (parseYMD(hastaStr) || new Date(hastaStr)) : new Date();
-  if(isNaN(n) || isNaN(h)) return '';
-  let a = h.getFullYear() - n.getFullYear();
-  let m = h.getMonth() - n.getMonth();
-  let d = h.getDate() - n.getDate();
-  if(d<0){ m-=1; const prev=new Date(h.getFullYear(),h.getMonth(),0).getDate(); d+=prev; }
-  if(m<0){ a-=1; m+=12; }
-  return a>=0 ? a : '';
-}
-function diffDMA(desdeStr, hastaStr){
-  if(!desdeStr) return '';
-  const d = parseYMD(desdeStr) || new Date(desdeStr);
-  const h = hastaStr ? (parseYMD(hastaStr) || new Date(hastaStr)) : new Date();
-  if(isNaN(d)||isNaN(h)||h<d) return '0-0-0';
-  let a=h.getFullYear()-d.getFullYear();
-  let m=h.getMonth()-d.getMonth();
-  let di=h.getDate()-d.getDate();
-  if(di<0){ m-=1; const prev=new Date(h.getFullYear(),h.getMonth(),0).getDate(); di+=prev; }
-  if(m<0){ a-=1; m+=12; }
-  return `${di}-${m}-${a}`;
-}
+import { calcularEdadHasta, diferenciaDMA } from '@/utils/reportes';
 
 function formatearPeriodo(fechaInicio, fechaFin) {
     if (!fechaInicio && !fechaFin) return '';
@@ -180,7 +155,7 @@ const EgresoReporte = () => {
       const it = item||{};
       const nombre = it.nombre_completo || [it.primer_nombre,it.segundo_nombre,it.otros_nombres,it.primer_apellido,it.segundo_apellido,it.apellido_casada].filter(Boolean).join(' ');
       const edad = calcularEdadHasta(it.fechanacimiento, it.fechaegreso||null);
-      const estancia = diffDMA(it.fechaingreso, it.fechaegreso||null);
+      const estancia = diferenciaDMA(it.fechaingreso, it.fechaegreso||null);
       const html = `
       <html><head><meta charset='utf-8'/><title>Detalle Egreso ${it.noafiliacion||''}</title>
       <style>body{font-family:Arial,sans-serif;color:#0f172a;padding:28px}h1{color:#166534;font-size:22px;margin:4px 0 12px;text-align:center}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px}.section{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px}.row{margin:6px 0}.label{font-weight:700;color:#0f172a}.logo{display:block;margin:0 auto 10px auto;height:96px}@page{size:A4 portrait;margin:14mm}</style>
@@ -369,7 +344,7 @@ const EgresoReporte = () => {
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.noafiliacion || ''}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.nombre_completo || [paciente.primer_nombre, paciente.segundo_nombre, paciente.otros_nombres, paciente.primer_apellido, paciente.segundo_apellido, paciente.apellido_casada].filter(Boolean).join(' ')}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{calcularEdadHasta(paciente.fechanacimiento, paciente.fechaegreso || null)}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{diffDMA(paciente.fechaingreso, paciente.fechaegreso || null)}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{diferenciaDMA(paciente.fechaingreso, paciente.fechaegreso || null)}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.sexo || ''}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.jornada || ''}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.accesovascular || ''}</td>
@@ -405,7 +380,7 @@ const EgresoReporte = () => {
                           const it = detalle.item || {};
                           const nombre = it.nombre_completo || [it.primer_nombre, it.segundo_nombre, it.otros_nombres, it.primer_apellido, it.segundo_apellido, it.apellido_casada].filter(Boolean).join(' ');
                           const edad = calcularEdadHasta(it.fechanacimiento, it.fechaegreso || null);
-                          const estancia = diffDMA(it.fechaingreso, it.fechaegreso || null);
+                          const estancia = diferenciaDMA(it.fechaingreso, it.fechaegreso || null);
                           return (
                             <div className="space-y-4 text-sm">
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

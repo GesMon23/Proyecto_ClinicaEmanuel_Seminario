@@ -6,48 +6,7 @@ import logoClinica from '@/assets/logoClinica2.png';
 import api from '../config/api';
 import { formatearFecha } from '@/utils/fechas';
 import './NuevoIngresoReportes.css';
-
-function parseYMD(str) {
-    if (!str) return null;
-    const [y, m, d] = String(str).split('-').map(Number);
-    if (!y || !m || !d) return null;
-    return new Date(y, m - 1, d);
-}
-
-function calcularEdadHasta(fechaNacimiento, hastaStr) {
-    if (!fechaNacimiento) return '';
-    const nacimiento = parseYMD(fechaNacimiento) || new Date(fechaNacimiento);
-    const hasta = hastaStr ? (parseYMD(hastaStr) || new Date(hastaStr)) : new Date();
-    if (!(nacimiento instanceof Date) || isNaN(nacimiento)) return '';
-    if (!(hasta instanceof Date) || isNaN(hasta)) return '';
-    let anios = hasta.getFullYear() - nacimiento.getFullYear();
-    let meses = hasta.getMonth() - nacimiento.getMonth();
-    let dias = hasta.getDate() - nacimiento.getDate();
-    if (dias < 0) { meses -= 1; const prevMonth = new Date(hasta.getFullYear(), hasta.getMonth(), 0).getDate(); dias += prevMonth; }
-    if (meses < 0) { anios -= 1; meses += 12; }
-    return anios >= 0 ? anios : '';
-}
-
-function diffDMA(desdeStr, hastaStr) {
-    if (!desdeStr) return '';
-    const desde = parseYMD(desdeStr) || new Date(desdeStr);
-    const hasta = hastaStr ? (parseYMD(hastaStr) || new Date(hastaStr)) : new Date();
-    if (!(desde instanceof Date) || isNaN(desde)) return '';
-    if (!(hasta instanceof Date) || isNaN(hasta)) return '';
-    if (hasta < desde) return '0-0-0';
-    let anios = hasta.getFullYear() - desde.getFullYear();
-    let meses = hasta.getMonth() - desde.getMonth();
-    let dias = hasta.getDate() - desde.getDate();
-    if (dias < 0) { meses -= 1; const prev = new Date(hasta.getFullYear(), hasta.getMonth(), 0).getDate(); dias += prev; }
-    if (meses < 0) { anios -= 1; meses += 12; }
-    return `${anios}-${meses}-${dias}`;
-}
-
-function fechaCortePaciente(p) {
-    const estado = (p.estadopaciente || p.estado || '').toString().toLowerCase();
-    if (estado === 'fallecido' && p.fechafallecido) return p.fechafallecido;
-    return null; // hoy
-}
+import { calcularEdadHasta, diferenciaDMA, fechaCortePaciente } from '@/utils/reportes';
 
 function formatearPeriodo(fechaInicio, fechaFin) {
     if (!fechaInicio && !fechaFin) return '';
@@ -155,7 +114,7 @@ const NuevoIngresoReportes = () => {
         const fechaGen = new Date().toLocaleString();
         const htmlRows = rows.map((it, idx) => {
             const nombre = [it.primernombre, it.segundonombre, it.otrosnombres, it.primerapellido, it.segundoapellido, it.apellidocasada].filter(Boolean).join(' ');
-            const estancia = diffDMA(it.fechaingreso, fechaCortePaciente(it));
+            const estancia = diferenciaDMA(it.fechaingreso, fechaCortePaciente(it));
             return `
               <tr>
                 <td>${idx + 1}</td>
@@ -201,7 +160,7 @@ const NuevoIngresoReportes = () => {
                   <th>Jornada</th>
                   <th>Acceso</th>
                   <th>No. Formulario</th>
-                  <th>Estancia (A-M-D)</th>
+                  <th>Estancia (D-M-A)</th>
                 </tr>
               </thead>
               <tbody>
@@ -225,7 +184,7 @@ const NuevoIngresoReportes = () => {
     const descargarPDFDetalle = (item) => {
         const it = item || {};
         const nombre = [it.primernombre, it.segundonombre, it.otrosnombres, it.primerapellido, it.segundoapellido, it.apellidocasada].filter(Boolean).join(' ');
-        const estancia = diffDMA(it.fechaingreso, fechaCortePaciente(it));
+        const estancia = diferenciaDMA(it.fechaingreso, fechaCortePaciente(it));
         const edad = calcularEdadHasta(it.fechanacimiento, fechaCortePaciente(it));
         const html = `
           <html>
@@ -475,7 +434,7 @@ const NuevoIngresoReportes = () => {
                             <th scope="col" className="min-w-[200px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Dirección</th>
                             <th scope="col" className="min-w-[160px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Departamento</th>
                             <th scope="col" className="min-w-[140px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Fecha Ingreso</th>
-                            <th scope="col" className="min-w-[160px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Estancia en el Programa</th>
+                            <th scope="col" className="min-w-[160px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Estancia en el Programa (D-M-A)</th>
                             <th scope="col" className="min-w-[140px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Estado del Paciente</th>
                             <th scope="col" className="min-w-[120px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Jornada</th>
                             <th scope="col" className="min-w-[160px] px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Acceso Vascular</th>
@@ -512,7 +471,7 @@ const NuevoIngresoReportes = () => {
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.direccion || ''}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.departamento || ''}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{formatearFecha(paciente.fechaingreso)}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{diffDMA(paciente.fechaingreso, fechaCortePaciente(paciente))}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{diferenciaDMA(paciente.fechaingreso, fechaCortePaciente(paciente))}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.estadopaciente || paciente.estado || ''}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.jornada || ''}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{paciente.accesovascular || ''}</td>
@@ -543,7 +502,7 @@ const NuevoIngresoReportes = () => {
                                 const it = detalle.item || {};
                                 const nombre = [it.primernombre, it.segundonombre, it.otrosnombres, it.primerapellido, it.segundoapellido, it.apellidocasada].filter(Boolean).join(' ');
                                 const edad = calcularEdadHasta(it.fechanacimiento, fechaCortePaciente(it));
-                                const estancia = diffDMA(it.fechaingreso, fechaCortePaciente(it));
+                                const estancia = diferenciaDMA(it.fechaingreso, fechaCortePaciente(it));
                                 return (
                                     <div className="space-y-4 text-sm">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -556,7 +515,7 @@ const NuevoIngresoReportes = () => {
                                             <div><span className="font-semibold">Dirección:</span> {it.direccion || ''}</div>
                                             <div><span className="font-semibold">Departamento:</span> {it.departamento || ''}</div>
                                             <div><span className="font-semibold">Fecha Ingreso:</span> {formatearFecha(it.fechaingreso)}</div>
-                                            <div><span className="font-semibold">Estancia (A-M-D):</span> {estancia || ''}</div>
+                                            <div><span className="font-semibold">Estancia (D-M-A):</span> {estancia || ''}</div>
                                             <div><span className="font-semibold">Estado:</span> {it.estadopaciente || it.estado || ''}</div>
                                             <div><span className="font-semibold">Jornada:</span> {it.jornada || ''}</div>
                                             <div><span className="font-semibold">Acceso Vascular:</span> {it.accesovascular || ''}</div>
