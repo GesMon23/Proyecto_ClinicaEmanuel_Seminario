@@ -26,6 +26,7 @@ carnets
 # Solo para desarrollo
 test
 db/semillas
+__pycache__
 
 # Otros
 Dockerfile

@@ -59,7 +59,10 @@ services:
     profiles: ["tls"]
     restart: unless-stopped
     environment:
-      DOMINIO: ${DOMINIO:?Defina DOMINIO en .env para usar el perfil tls}
+      # Compose valida las variables de todos los servicios aunque el perfil no esté activo: por eso no
+      # puede ser obligatoria. En los servidores DOMINIO debe estar en .env (con localhost Caddy usa un
+      # certificado autofirmado)
+      DOMINIO: ${DOMINIO:-localhost}
     ports:
       - "80:80"
       - "443:443"
