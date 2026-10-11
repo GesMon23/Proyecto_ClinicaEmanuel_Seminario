@@ -1,6 +1,10 @@
 const jwt = require('jsonwebtoken');
 
-const jwtSecret = () => process.env.JWT_SECRET || 'dev_secret_change_me';
+// Sin valor por defecto: un secreto conocido permitiría falsificar tokens
+function jwtSecret() {
+  if (!process.env.JWT_SECRET) throw new Error('Falta la variable de entorno JWT_SECRET');
+  return process.env.JWT_SECRET;
+}
 
 // Payload del JWT del encabezado Authorization: Bearer <token>; null si no hay token o es inválido
 function payloadFromRequest(req) {
@@ -66,4 +70,4 @@ function requireRole(roles = []) {
   };
 }
 
-module.exports = { payloadFromRequest, userIdFromRequest, userNameFromRequest, actorFromRequest, requireUser, verifyJWT, requireRole };
+module.exports = { jwtSecret, payloadFromRequest, userIdFromRequest, userNameFromRequest, actorFromRequest, requireUser, verifyJWT, requireRole };

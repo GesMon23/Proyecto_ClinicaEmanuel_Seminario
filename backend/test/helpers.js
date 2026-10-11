@@ -2,6 +2,8 @@
 // prueba usa una transacción que SIEMPRE se revierte, así que no dejan datos ni tocan los existentes.
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env'), quiet: true });
+// Las pruebas firman sus propios tokens: basta un secreto cualquiera si el .env no lo define
+process.env.JWT_SECRET ??= 'secreto_de_prueba';
 
 const assert = require('node:assert/strict');
 const pool = require('../db/pool');

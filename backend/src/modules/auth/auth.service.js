@@ -6,8 +6,8 @@ const repo = require('./auth.repository');
 const mail = require('./auth.mail');
 const { intentos, tokensUsados } = require('./memoria');
 const { HttpError } = require('../../shared/http');
+const { jwtSecret } = require('../../shared/auth');
 
-const jwtSecret = () => process.env.JWT_SECRET || 'dev_secret_change_me';
 const ROL_ADMIN = 'RolGestionUsuarios';
 // 8+ caracteres con minúscula, mayúscula, dígito y símbolo
 const PASSWORD_FUERTE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;

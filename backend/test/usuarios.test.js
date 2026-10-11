@@ -10,7 +10,7 @@ const service = require('../src/modules/usuarios/usuarios.service');
 let servidor;
 let puerto;
 
-const secreto = process.env.JWT_SECRET || 'dev_secret_change_me';
+const secreto = process.env.JWT_SECRET;
 const tokenAdmin = jwt.sign({ sub: 999999, nombre_usuario: 'prueba', roles: ['RolGestionUsuarios'] }, secreto);
 const tokenSinRol = jwt.sign({ sub: 999998, nombre_usuario: 'otro', roles: ['RolTurnos'] }, secreto);
 

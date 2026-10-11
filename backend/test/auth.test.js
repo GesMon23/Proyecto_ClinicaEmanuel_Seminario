@@ -12,7 +12,7 @@ const { escapeHtml } = require('../src/modules/auth/auth.mail');
 
 let servidor;
 let puerto;
-const secreto = process.env.JWT_SECRET || 'dev_secret_change_me';
+const secreto = process.env.JWT_SECRET;
 
 before(async () => {
   const app = express();

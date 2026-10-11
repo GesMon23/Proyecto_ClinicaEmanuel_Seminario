@@ -1,4 +1,6 @@
 require('dotenv').config();
+const { jwtSecret } = require('./src/shared/auth');
+jwtSecret(); // sin JWT_SECRET no se arranca (la BD se valida al cargar db/pool.js)
 const { crearApp } = require('./src/app');
 const turnos = require('./src/modules/turnos');
 
