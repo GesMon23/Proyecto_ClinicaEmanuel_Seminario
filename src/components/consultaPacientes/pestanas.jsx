@@ -5,6 +5,7 @@ import { formatearFecha, calcularEstanciaRango } from '@/utils/fechas';
 import { useDetalleLaboratorio } from './useDetalleLaboratorio';
 import { calcularEdad } from './calculos';
 import TablaPaginada, { BotonDetalle } from './TablaPaginada';
+import { EtiquetaIMC } from '../IndicadorIMC';
 import {
   DetalleFaltista, DetalleFormulario, DetalleLaboratorio, DetalleNutricion, DetallePsicologia, DetalleTurno,
 } from './detalles';
@@ -104,11 +105,10 @@ export function Nutricion({ items }) {
         columnas={[
           { titulo: 'ID Informe', celda: (n) => n.id_informe || '' },
           { titulo: 'Motivo Consulta', celda: (n) => n.motivo_consulta || '' },
-          { titulo: 'Estado Nutricional', celda: (n) => n.estado_nutricional || '' },
+          { titulo: 'IMC / Estado Nutricional', celda: (n) => <EtiquetaIMC imc={n.imc} estado={n.estado_nutricional} /> },
           { titulo: 'Observaciones', celda: (n) => n.observaciones || '' },
           { titulo: 'Altura (Cm)', celda: (n) => n.altura_cm ?? '' },
           { titulo: 'Peso (kg)', celda: (n) => n.peso_kg ?? '' },
-          { titulo: 'IMC', celda: (n) => n.imc ?? '' },
           { titulo: 'Fecha', celda: (n) => formatearFecha(n.fecha_creacion) || '' },
           { titulo: 'Usuario', celda: (n) => n.usuario_creacion || '' },
           { titulo: 'Acciones', celda: (n) => <BotonDetalle onClick={() => setDetalle(n)} /> },

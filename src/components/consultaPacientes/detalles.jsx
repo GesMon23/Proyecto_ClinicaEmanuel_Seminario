@@ -6,6 +6,7 @@ import {
   imprimirFaltista, imprimirFormulario, imprimirLaboratorio, imprimirNutricion, imprimirPsicologia, imprimirReferencia, imprimirTurno,
 } from './documentos';
 import { useDetalleLaboratorio } from './useDetalleLaboratorio';
+import IndicadorIMC from '../IndicadorIMC';
 
 function VentanaDetalle({ titulo, onClose, onPdf, children }) {
   return (
@@ -51,12 +52,14 @@ export function DetalleNutricion({ item, onClose }) {
         <Dato etiqueta="ID Informe">{it.id_informe ?? ''}</Dato>
         <Dato etiqueta="Fecha">{formatearFecha(it.fecha_creacion) || ''}</Dato>
         <Dato etiqueta="Usuario">{it.usuario_creacion ?? ''}</Dato>
-        <Dato etiqueta="IMC">{it.imc ?? ''}</Dato>
-        <Dato etiqueta="Motivo" ancho>{it.motivo_consulta ?? ''}</Dato>
-        <Dato etiqueta="Estado Nutricional">{it.estado_nutricional ?? ''}</Dato>
+        <Dato etiqueta="Motivo">{it.motivo_consulta ?? ''}</Dato>
         <Dato etiqueta="Altura (cm)">{it.altura_cm ?? ''}</Dato>
         <Dato etiqueta="Peso (kg)">{it.peso_kg ?? ''}</Dato>
       </Rejilla>
+      <div>
+        <span className="font-semibold">Estado Nutricional:</span>
+        <div className="mt-1"><IndicadorIMC imc={it.imc} vacio="Sin IMC registrado" /></div>
+      </div>
       <Texto etiqueta="Observaciones" valor={it.observaciones} />
     </VentanaDetalle>
   );

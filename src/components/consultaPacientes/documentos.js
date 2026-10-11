@@ -1,6 +1,7 @@
 // Detalles imprimibles (ventana nueva + diálogo de impresión) de cada sección de la ficha del paciente.
 import logoClinica from '@/assets/logoClinica2.png';
 import { formatearFecha } from '@/utils/fechas';
+import { estadoNutricional } from '@/utils/imc';
 import { nombreCompleto, resumenKdqol } from './calculos';
 
 const ESTILOS = `
@@ -215,7 +216,7 @@ export function imprimirNutricion(item) {
       ${campo('Paciente', nombreCompleto(it), true)}
       ${campo('Sexo', it.sexo ?? '')}
       ${campo('Fecha', formatearFecha(it.fecha_creacion))}
-      ${campo('Estado Nutricional', it.estado_nutricional || '')}
+      ${campo('Estado Nutricional', estadoNutricional(it))}
       ${campo('IMC', it.imc ?? '')}
       ${campo('Altura (cm)', it.altura_cm ?? '')}
       ${campo('Peso (kg)', it.peso_kg ?? '')}

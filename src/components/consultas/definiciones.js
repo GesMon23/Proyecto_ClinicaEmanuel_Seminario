@@ -1,7 +1,10 @@
 // Definición de cada pantalla de consulta de historiales (nutrición, psicología, laboratorios, referencias).
 // ConsultaHistorial arma la pantalla a partir de esto.
+import { createElement } from 'react';
 import api from '@/config/api';
 import { formatearFecha } from '@/utils/fechas';
+import { estadoNutricional } from '@/utils/imc';
+import { EtiquetaIMC } from '../IndicadorIMC';
 import { nombreCompleto } from '../consultaPacientes/calculos';
 import {
   DetalleLaboratorioAuto, DetalleNutricion, DetallePsicologia, DetalleReferencia,
@@ -34,7 +37,8 @@ const nutricion = {
     { titulo: 'ID Informe', valor: texto('id_informe') },
     { titulo: 'Fecha', valor: fecha('fecha_creacion') },
     { titulo: 'Motivo', valor: texto('motivo_consulta') },
-    { titulo: 'Estado Nutricional', valor: texto('estado_nutricional') },
+    // `celda` es lo que se ve en la tabla; `valor` (texto) se usa al imprimir el listado
+    { titulo: 'Estado Nutricional', valor: estadoNutricional, celda: (r) => createElement(EtiquetaIMC, { imc: r.imc, estado: r.estado_nutricional }) },
     { titulo: 'Altura (cm)', valor: texto('altura_cm') },
     { titulo: 'Peso (kg)', valor: texto('peso_kg') },
     { titulo: 'IMC', valor: texto('imc') },

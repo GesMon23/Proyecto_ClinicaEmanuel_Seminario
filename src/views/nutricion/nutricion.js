@@ -3,29 +3,6 @@ import api from '@/config/api';
 
 export const FORM_VACIO = { alturaCm: '', pesoKg: '', motivoConsulta: '', observaciones: '' };
 
-// IMC redondeado a 2 decimales; null si faltan datos válidos
-export function calcularIMC(alturaCm, pesoKg) {
-  const h = parseFloat(alturaCm);
-  const p = parseFloat(pesoKg);
-  if (!h || !p || h <= 0 || p <= 0) return null;
-  const metros = h / 100;
-  return Math.round((p / (metros * metros)) * 100) / 100;
-}
-
-export function clasificarIMC(imc) {
-  if (imc == null) return '';
-  if (imc < 18.5) return 'Bajo peso';
-  if (imc < 25) return 'Normal';
-  if (imc < 30) return 'Sobrepeso';
-  return 'Obesidad';
-}
-
-// "23.4 (Normal)" o '' mientras falten datos
-export function textoEstadoNutricional(alturaCm, pesoKg) {
-  const imc = calcularIMC(alturaCm, pesoKg);
-  return imc == null ? '' : `${imc} (${clasificarIMC(imc)})`;
-}
-
 // Mientras se escribe: nunca negativo; vacío o no numérico se borra
 export function normalizarMedida(valor) {
   if (valor === '') return '';

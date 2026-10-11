@@ -3,6 +3,7 @@ import jsPDF from 'jspdf';
 import logoClinica from '@/assets/logoClinica2.png';
 import api from '@/config/api';
 import { formatearFecha, calcularEstanciaRango } from '@/utils/fechas';
+import { estadoNutricional } from '@/utils/imc';
 import { calcularEdad } from './calculos';
 
 // `datos` trae las listas ya cargadas de cada pestaña (referencias, nutricion, psicologia, formularios, turnos, faltistas, laboratorios)
@@ -417,7 +418,7 @@ export async function generarReportePaciente(paciente, datos = {}) {
                 ['Fecha', formatearFecha(latestNut.fecha_creacion)],
                 ['Usuario', latestNut.usuario_creacion || ''],
                 ['Motivo', latestNut.motivo_consulta || ''],
-                ['Estado Nutricional', latestNut.estado_nutricional || ''],
+                ['Estado Nutricional', estadoNutricional(latestNut)],
                 ['IMC', latestNut.imc ?? ''],
                 ['Altura (cm)', latestNut.altura_cm ?? ''],
                 ['Peso (kg)', latestNut.peso_kg ?? ''],

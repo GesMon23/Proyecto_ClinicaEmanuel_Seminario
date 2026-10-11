@@ -164,7 +164,7 @@ export default function ConsultaHistorial({ consulta }) {
                     visibles.map((r, i) => (
                       <tr key={consulta.clave(r, inicio + i)} className="hover:bg-gray-50 dark:hover:bg-slate-700">
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{inicio + i + 1}</td>
-                        {consulta.columnas.map((c) => <td key={c.titulo} className={TD}>{c.valor(r)}</td>)}
+                        {consulta.columnas.map((c) => <td key={c.titulo} className={TD}>{(c.celda || c.valor)(r)}</td>)}
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <button type="button" onClick={() => setDetalle(r)} className="px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm">Ver detalle</button>
                         </td>

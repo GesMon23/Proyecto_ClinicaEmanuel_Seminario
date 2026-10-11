@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from 'react-bootstrap';
-import { textoEstadoNutricional } from './nutricion';
+import IndicadorIMC from '@/components/IndicadorIMC';
+import { calcularIMC } from '@/utils/imc';
 
 const ETIQUETA = 'block text-sm font-medium text-slate-700 dark:text-slate-200';
 const CAMPO = 'mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100';
@@ -30,18 +31,14 @@ export default function FormularioNutricion({ form, onCambio, onMedida, onGuarda
   return (
     <>
       <hr className="my-6 border-gray-300 dark:border-gray-600" />
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Medida etiqueta="Altura (CM)" valor={form.alturaCm} placeholder="Ingrese la altura en centímetros" onCambio={(v) => onMedida('alturaCm', v)} />
         <Medida etiqueta="Peso (KG)" valor={form.pesoKg} placeholder="Ingrese el peso en kilogramos" onCambio={(v) => onMedida('pesoKg', v)} />
-        <div>
-          <label className={ETIQUETA}>Estado Nutricional</label>
-          <input
-            type="text"
-            readOnly
-            value={textoEstadoNutricional(form.alturaCm, form.pesoKg)}
-            placeholder="IMC y clasificación"
-            className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-gray-100 dark:bg-slate-700 px-3 py-2 text-slate-800 dark:text-slate-100"
-          />
+      </div>
+      <div className="mt-4">
+        <label className={ETIQUETA}>Estado Nutricional</label>
+        <div className="mt-1">
+          <IndicadorIMC imc={calcularIMC(form.alturaCm, form.pesoKg)} />
         </div>
       </div>
 

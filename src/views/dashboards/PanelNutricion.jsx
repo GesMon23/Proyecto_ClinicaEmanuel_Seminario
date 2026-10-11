@@ -5,6 +5,7 @@ import {
   BotonAlternarFiltros, BotonAplicar, CabeceraPanel, CampoFiltro, MarcoGrafico, TarjetaCifra,
   TooltipEstadoNutricional, TooltipJornada, TooltipPorcentaje,
 } from './componentes';
+import { CATEGORIAS_IMC } from '@/utils/imc';
 import { sumar } from './calculos';
 import { useDatosNutricion } from './useDatosNutricion';
 
@@ -13,8 +14,9 @@ export default function PanelNutricion({ tema }) {
   const n = useDatosNutricion();
   const [verFiltros, setVerFiltros] = useState(false);
   const color = (i) => colorPalette[i % colorPalette.length];
-  // Color estable por estado nutricional (según su posición en la lista)
-  const colorDeEstado = Object.fromEntries(n.estados.filter((e) => e?.name).map((e, i) => [e.name, color(i)]));
+  // Las categorías de la OMS usan su color de la escala del IMC; otros estados ("Sin clasificar"), la paleta
+  const colorOMS = Object.fromEntries(CATEGORIAS_IMC.map((c) => [c.nombre, c.color]));
+  const colorDeEstado = Object.fromEntries(n.estados.filter((e) => e?.name).map((e, i) => [e.name, colorOMS[e.name] || color(i)]));
 
   return (
     <Row>
