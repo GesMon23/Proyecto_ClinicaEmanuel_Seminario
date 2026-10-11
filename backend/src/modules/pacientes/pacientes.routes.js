@@ -14,7 +14,7 @@ function nuevoRouter() {
   return router;
 }
 
-const conError = (mensaje) => (err) => [500, { error: mensaje }];
+const conError = (mensaje) => () => [500, { error: mensaje }];
 const conDetalle = (mensaje) => (err) => [500, { error: mensaje, detalle: err.message }];
 
 // ------------------------------------------------------------- Actualización

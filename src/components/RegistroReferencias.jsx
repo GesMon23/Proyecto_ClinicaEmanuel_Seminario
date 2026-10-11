@@ -14,8 +14,6 @@ const RegistroReferencias = () => {
       EspecialidadReferencia: ''
     });
     setPaciente(null);
-    setMensaje('');
-    setError(false);
     setBusquedaError('');
   };
 
@@ -98,7 +96,6 @@ const RegistroReferencias = () => {
     fetchMedicos();
   }, []);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(false);
   const [paciente, setPaciente] = useState(null);
   const [busquedaError, setBusquedaError] = useState('');
 
@@ -126,11 +123,9 @@ const RegistroReferencias = () => {
   const handleSubmit = async e => {
     e.preventDefault();
     setLoading(true);
-    setError(false);
     try {
       // Validación básica
       if (!form.noafiliacion || !form.FechaReferencia || !form.MotivoTraslado || !form.idMedico || !form.EspecialidadReferencia) {
-        setError(true);
         showModal('Campos requeridos', 'Todos los campos son obligatorios.', 'error');
         setLoading(false);
         return;
@@ -147,7 +142,6 @@ const RegistroReferencias = () => {
       if (response.data && response.data.success) {
         const idRef = response?.data?.referencia?.id_referencia || '';
         showModal('Éxito', idRef ? `Referencia registrada exitosamente. ID: ${idRef}` : 'Referencia registrada exitosamente.', 'success');
-        setError(false);
         setForm({
           noafiliacion: '',
           FechaReferencia: '',
@@ -157,11 +151,9 @@ const RegistroReferencias = () => {
         });
         setPaciente(null);
       } else {
-        setError(true);
         showModal('Error', response.data?.detail || 'Error al registrar la referencia.', 'error');
       }
     } catch (err) {
-      setError(true);
       showModal('Error', err.response?.data?.detail || err.message || 'Error inesperado.', 'error');
     } finally {
       setLoading(false);

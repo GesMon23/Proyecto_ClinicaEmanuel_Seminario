@@ -9,13 +9,13 @@ const GestionEmpleados = () => {
   const [q, setQ] = useState('');
   const [editing, setEditing] = useState(null); // objeto empleado en edición
   const [showEdit, setShowEdit] = useState(false);
-  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editSubmitting] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null); // { tipo: 'editar'|'estado', payload: {...} }
   const [confirmPassword, setConfirmPassword] = useState('');
   const [confirmError, setConfirmError] = useState('');
   // Paginación
   const [paginaActual, setPaginaActual] = useState(1);
-  const [filasPorPagina, setFilasPorPagina] = useState(10);
+  const [filasPorPagina] = useState(10);
 
   useEffect(() => {
     const fetchEmpleados = async () => {
