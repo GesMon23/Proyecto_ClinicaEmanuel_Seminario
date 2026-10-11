@@ -19,6 +19,14 @@ tmp
 coverage
 dist
 
+# Datos de pacientes: van en volúmenes, nunca dentro de la imagen
+fotos
+carnets
+
+# Solo para desarrollo
+test
+db/semillas
+
 # Otros
 Dockerfile
 docker-compose.yml

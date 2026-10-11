@@ -1,0 +1,6 @@
+# Proxy de entrada en los servidores: obtiene y renueva solo el certificado HTTPS de DOMINIO
+# (Let's Encrypt) y reenvía todo al contenedor del frontend. Se activa con el perfil "tls" de docker compose.
+{$DOMINIO} {
+	encode gzip
+	reverse_proxy frontend:80
+}

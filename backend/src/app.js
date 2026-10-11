@@ -15,10 +15,24 @@ const reportes = require('./modules/reportes');
 const turnos = require('./modules/turnos');
 const usuarios = require('./modules/usuarios');
 const { FOTOS_DIR } = require('./modules/pacientes/fotos');
+const { pool } = require('./shared/database');
+
+// Para Docker y el monitoreo: 200 si el proceso responde y la BD acepta consultas, 503 si no
+async function salud(_req, res) {
+  try {
+    await pool.query('SELECT 1');
+    res.json({ estado: 'ok' });
+  } catch {
+    res.status(503).json({ estado: 'error', detalle: 'Base de datos no disponible' });
+  }
+}
 
 function crearApp() {
   const app = express();
-  app.use(cors(opcionesCors));
+  app.get(['/health', '/api/health'], salud);
+  // Un origen no permitido recibe 403 (sin pasar por el manejador de errores ni ensuciar el log)
+  const politicaCors = cors(opcionesCors);
+  app.use((req, res, next) => politicaCors(req, res, (err) => (err ? res.status(403).json({ error: 'Origen no permitido' }) : next())));
   app.use(express.json({ limit: '50mb' }));
 
   // El frontend usa baseURL '/api', pero algunos proxies quitan el prefijo: cada router responde en ambos

@@ -23,8 +23,12 @@ dist-ssr
 *.sln
 *.sw?
 
-# Secretos (usar backend/.env.example como plantilla)
+# Secretos: .env de docker compose (plantilla .env.example) y backend/.env para desarrollo sin Docker
+.env
+.env.*
+!.env.example
 backend/.env
+backend/tmp/
 
 # Datos de pacientes generados en tiempo de ejecución
 backend/fotos/*

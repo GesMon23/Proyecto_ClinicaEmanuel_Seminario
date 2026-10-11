@@ -1,41 +1,44 @@
-// Política CORS: orígenes de producción y desarrollo, y cualquier subdominio de clinicaemanuel.com.gt.
-const ORIGENES_PERMITIDOS = new Set([
-  // producción (HTTP y HTTPS)
-  'http://172.235.145.142',
-  'https://172.235.145.142',
-  'http://clinicaemanuel.com.gt',
-  'https://clinicaemanuel.com.gt',
-  'http://www.clinicaemanuel.com.gt',
-  'https://www.clinicaemanuel.com.gt',
+// Política CORS. Detrás de nginx el frontend y la API comparten dominio, así que se acepta siempre el mismo
+// origen (Origin = Host de la petición) y no hace falta configurar nada por entorno.
+// CORS_ORIGENES (separados por coma) agrega orígenes externos: "https://app.ejemplo.com" o "*.ejemplo.com"
+// (cualquier subdominio). Fuera de producción también se aceptan los del servidor de Vite (localhost:3000).
+const DESARROLLO = ['http://localhost:3000', 'http://127.0.0.1:3000'];
 
-  'http://172.235.145.142:3000',
-  'http://clinicaemanuel.com.gt:3000',
-  'http://www.clinicaemanuel.com.gt:3000',
+function origenesConfigurados(env = process.env) {
+  const propios = (env.CORS_ORIGENES || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+  return env.NODE_ENV === 'production' ? propios : [...propios, ...DESARROLLO];
+}
 
-  // desarrollo local
-  'http://localhost:3000',
-  'http://127.0.0.1:3000',
-]);
+function coincide(url, entrada) {
+  if (!entrada.startsWith('*.')) return url.origin === entrada;
+  const dominio = entrada.slice(2);
+  return url.hostname.endsWith(`.${dominio}`);
+}
 
-const DOMINIO = 'clinicaemanuel.com.gt';
-
-// Sin origen (curl, Postman, mismo servidor) se acepta
-function origenPermitido(origin) {
+// `host` es el encabezado Host de la petición (con puerto si lo trae); sin Origin (curl, mismo servidor) se acepta
+function origenPermitido(origin, host, origenes = origenesConfigurados()) {
   if (!origin) return true;
-  if (ORIGENES_PERMITIDOS.has(origin)) return true;
+  let url;
   try {
-    const host = new URL(origin).hostname || '';
-    return host === DOMINIO || host.endsWith(`.${DOMINIO}`);
+    url = new URL(origin);
   } catch {
     return false;
   }
+  if (host && url.host === String(host).toLowerCase()) return true;
+  return origenes.some((e) => coincide(url, e));
 }
 
-const opcionesCors = {
-  origin: (origin, callback) => (origenPermitido(origin) ? callback(null, true) : callback(new Error('Not allowed by CORS'))),
+const BASE = {
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
   credentials: true,
 };
 
-module.exports = { origenPermitido, opcionesCors };
+// Opciones por petición (el paquete cors acepta una función (req, cb))
+function opcionesCors(req, callback) {
+  const origin = req.headers.origin;
+  if (!origenPermitido(origin, req.headers.host)) return callback(new Error('Not allowed by CORS'));
+  callback(null, { ...BASE, origin: Boolean(origin) });
+}
+
+module.exports = { origenPermitido, origenesConfigurados, opcionesCors };

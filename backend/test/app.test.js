@@ -3,7 +3,7 @@ const { test, before, after } = require('node:test');
 const http = require('node:http');
 const { assert, pool } = require('./helpers');
 const { crearApp } = require('../src/app');
-const { origenPermitido } = require('../src/config/cors');
+const { origenPermitido, origenesConfigurados } = require('../src/config/cors');
 const { EventosLlamado } = require('../src/modules/llamados');
 const { tamano } = require('../src/modules/qr');
 
@@ -42,13 +42,18 @@ function pedir(metodo, ruta, { cuerpo, headers = {}, binario = false } = {}) {
 
 // ------------------------------------------------------------------ unitarias
 
-test('CORS: orígenes conocidos, subdominios y extraños', () => {
-  assert.equal(origenPermitido(undefined), true);
-  assert.equal(origenPermitido('http://localhost:3000'), true);
-  assert.equal(origenPermitido('https://app.clinicaemanuel.com.gt'), true);
-  assert.equal(origenPermitido('https://clinicaemanuel.com.gt.evil.com'), false);
-  assert.equal(origenPermitido('https://evil.com'), false);
-  assert.equal(origenPermitido('no-es-url'), false);
+test('CORS: mismo origen, orígenes configurados, subdominios y extraños', () => {
+  const origenes = origenesConfigurados({ CORS_ORIGENES: 'https://app.ejemplo.com, *.clinicaemanuel.com.gt', NODE_ENV: 'production' });
+  assert.equal(origenPermitido(undefined, 'x', origenes), true);
+  assert.equal(origenPermitido('https://pre.clinicaemanuel.com.gt', 'pre.clinicaemanuel.com.gt', []), true, 'mismo origen');
+  assert.equal(origenPermitido('http://localhost:8080', 'localhost:8080', []), true, 'mismo origen con puerto');
+  assert.equal(origenPermitido('https://app.ejemplo.com', 'api.ejemplo.com', origenes), true);
+  assert.equal(origenPermitido('https://pre.clinicaemanuel.com.gt', 'otro', origenes), true, 'comodín de subdominio');
+  assert.equal(origenPermitido('https://clinicaemanuel.com.gt.evil.com', 'otro', origenes), false);
+  assert.equal(origenPermitido('https://evil.com', 'otro', origenes), false);
+  assert.equal(origenPermitido('http://localhost:3000', 'otro', origenes), false, 'Vite solo fuera de producción');
+  assert.equal(origenPermitido('http://localhost:3000', 'otro', origenesConfigurados({})), true);
+  assert.equal(origenPermitido('no-es-url', 'otro', origenes), false);
 });
 
 test('tamaño del QR: entre 80 y 1024, 220 por omisión', () => {
@@ -85,11 +90,22 @@ test('los módulos responden en la raíz y bajo /api', async () => {
   assert.equal((await pedir('GET', '/api/estadisticas/pacientes-total')).status, 200);
 });
 
+test('salud: responde ok con la BD disponible', async () => {
+  for (const ruta of ['/health', '/api/health']) {
+    const r = await pedir('GET', ruta);
+    assert.equal(r.status, 200);
+    assert.deepEqual(r.body, { estado: 'ok' });
+  }
+});
+
 test('CORS: rechaza un origen desconocido', async () => {
   const bueno = await pedir('GET', '/medicos', { headers: { Origin: 'http://localhost:3000' } });
   assert.equal(bueno.headers['access-control-allow-origin'], 'http://localhost:3000');
-  const malo = await pedir('GET', '/medicos', { headers: { Origin: 'https://evil.com' }, binario: true });
-  assert.notEqual(malo.status, 200);
+  const malo = await pedir('GET', '/medicos', { headers: { Origin: 'https://evil.com' } });
+  assert.equal(malo.status, 403);
+  assert.deepEqual(malo.body, { error: 'Origen no permitido' });
+  const mismo = await pedir('GET', '/medicos', { headers: { Origin: `http://localhost:${puerto}` } });
+  assert.equal(mismo.status, 200, 'el mismo origen siempre se acepta');
 });
 
 test('QR: PNG válido y texto requerido', async () => {

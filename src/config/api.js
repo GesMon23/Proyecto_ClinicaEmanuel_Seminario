@@ -24,11 +24,8 @@ api.interceptors.request.use(config => {
     return Promise.reject(error);
 });
 
-// Interceptor para responses
-api.interceptors.response.use(response => {
-    console.log('Respuesta recibida:', response);
-    return response;
-}, error => {
+// Interceptor para responses (las respuestas exitosas no se registran: traen datos de pacientes)
+api.interceptors.response.use(response => response, error => {
     if (error.response) {
         console.error('Error de respuesta:', {
             status: error.response.status,

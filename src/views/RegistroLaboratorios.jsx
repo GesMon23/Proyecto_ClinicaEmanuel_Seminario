@@ -4,10 +4,6 @@ import LaboratorioParametros from "../components/LaboratorioParametros";
 import logoClinica from "@/assets/logoClinica2.png"
 
 function RegistroLaboratorios() {
-  const handleSubmit = (noafiliacion, valores) => {
-    // Aquí puedes hacer la petición al backend para guardar los resultados
-    console.log("Guardar laboratorio para afiliación:", noafiliacion, valores);
-  };
   return (
     <div className="w-full px-4 md:px-8 py-6">
       <div className="w-full mb-10">
@@ -31,7 +27,7 @@ function RegistroLaboratorios() {
 
             {/* Contenido dinámico (formulario de parámetros) */}
             <div className="w-full">
-              <LaboratorioParametros onSubmit={handleSubmit} />
+              <LaboratorioParametros />
             </div>
           </div>
         </div>
