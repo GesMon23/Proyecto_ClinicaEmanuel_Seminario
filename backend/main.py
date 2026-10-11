@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import psycopg2
@@ -17,10 +18,11 @@ app.add_middleware(
 # Configuración de la base de datos
 def get_db_connection():
     conn = psycopg2.connect(
-        host="localhost",
-        database="db_clinica",
-        user="postgres",
-        password="root",
+        host=os.environ.get("PGHOST", "localhost"),
+        port=os.environ.get("PGPORT", "5432"),
+        database=os.environ["PGDATABASE"],
+        user=os.environ["PGUSER"],
+        password=os.environ["PGPASSWORD"],
         cursor_factory=RealDictCursor
     )
     return conn

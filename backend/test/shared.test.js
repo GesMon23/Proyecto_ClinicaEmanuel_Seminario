@@ -4,6 +4,10 @@ const assert = require('node:assert/strict');
 const jwt = require('jsonwebtoken');
 
 process.env.JWT_SECRET = 'secreto_de_prueba';
+// database.js crea el pool al importarse; estas pruebas nunca se conectan, solo necesitan que cargue
+process.env.PGDATABASE ??= 'prueba';
+process.env.PGUSER ??= 'prueba';
+process.env.PGPASSWORD ??= 'prueba';
 
 const auth = require('../src/shared/auth');
 const { HttpError, wrap, parseBusinessError } = require('../src/shared/http');
