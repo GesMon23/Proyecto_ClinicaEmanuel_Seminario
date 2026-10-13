@@ -6,6 +6,7 @@ import { describirRango } from './periodos';
 import { usePanel } from './usePanel';
 
 const MOTIVOS = [['Nuevo', 'Nuevo'], ['Reconsulta', 'Reconsulta']];
+const SEXOS = ['Masculino', 'Femenino'];
 const ORDEN_OMS = CATEGORIAS_IMC.map((c) => c.nombre);
 
 // Categorías de la OMS en su orden y con su color (el mismo de la escala del IMC); otras al final en el color de la serie
@@ -43,12 +44,12 @@ export default function PanelNutricion({ rango, sexo }) {
           </FilaCifras>
           <RejillaGraficas>
             <TarjetaGrafica
-              titulo="Por estado nutricional" nota="Clasificación del IMC según la OMS"
+              titulo="Por estado nutricional" nota="Clasificación del IMC según la OMS" tipo="pastel" ordenNatural
               datos={estadosNutricionales(datos.porEstadoNutricional)}
             />
-            <TarjetaGrafica titulo="Por jornada" datos={datos.porJornada} />
-            <TarjetaGrafica titulo="Por sexo" datos={datos.porSexo} />
+            <TarjetaGrafica titulo="Por jornada" tipo="columnas" datos={datos.porJornada} />
             <TarjetaGrafica titulo="Por motivo de consulta" datos={datos.porMotivo} />
+            <TarjetaGrafica titulo="Por sexo" tipo="anillo" orden={SEXOS} datos={datos.porSexo} />
           </RejillaGraficas>
         </>
       )}

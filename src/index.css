@@ -13,9 +13,28 @@
     --viz-rejilla: #e2e8f0;
     --viz-eje: #cbd5e1;
     --viz-resaltado: rgba(15, 23, 42, 0.05);
+    /* Categorías de pasteles/anillos, en este orden (validado para daltonismo entre vecinos); "Otros" en gris */
+    --viz-cat-1: #2a78d6;
+    --viz-cat-2: #eb6834;
+    --viz-cat-3: #1baf7a;
+    --viz-cat-4: #eda100;
+    --viz-cat-5: #e87ba4;
+    --viz-cat-6: #008300;
+    --viz-cat-7: #6250d6;
+    --viz-cat-8: #e34948;
+    --viz-otros: #94a3b8;
   }
 
   .dark {
+    --viz-cat-1: #3987e5;
+    --viz-cat-2: #d95926;
+    --viz-cat-3: #199e70;
+    --viz-cat-4: #c98500;
+    --viz-cat-5: #d55181;
+    --viz-cat-6: #008300;
+    --viz-cat-7: #9085e9;
+    --viz-cat-8: #e66767;
+    --viz-otros: #64748b;
     --viz-serie: #16a34a;
     --viz-superficie: #0f172a;
     --viz-texto: #f1f5f9;

@@ -4,6 +4,7 @@ import { FilaCifras, FilaFiltros, RejillaGraficas, Seccion, Selector, TarjetaCif
 import { usePanel } from './usePanel';
 
 const FILTROS_VACIOS = { estado: '', acceso: '', jornada: '' };
+const SEXOS = ['Masculino', 'Femenino']; // mismo color para cada sexo en todas las gráficas
 const SERIES_DE_FILTRO = { estado: 'porEstado', acceso: 'porAcceso', jornada: 'porJornada' };
 
 // Opciones de los filtros: lo visto en las respuestas (se acumula para que un filtro no esconda las demás)
@@ -48,11 +49,11 @@ export default function PanelPacientes({ sexo }) {
             <TarjetaCifra etiqueta="Fuera del programa" valor={datos.programa.fuera} nota="Egresados" />
           </FilaCifras>
           <RejillaGraficas>
-            <TarjetaGrafica titulo="Por estado" datos={datos.porEstado} etiquetaValor="Pacientes" />
+            <TarjetaGrafica titulo="Por estado" tipo="pastel" datos={datos.porEstado} etiquetaValor="Pacientes" />
+            <TarjetaGrafica titulo="Por jornada" tipo="columnas" datos={datos.porJornada} etiquetaValor="Pacientes" />
             <TarjetaGrafica titulo="Por acceso vascular" datos={datos.porAcceso} etiquetaValor="Pacientes" />
-            <TarjetaGrafica titulo="Por jornada" datos={datos.porJornada} etiquetaValor="Pacientes" />
-            <TarjetaGrafica titulo="Por sexo" datos={datos.porSexo} etiquetaValor="Pacientes" />
-            <TarjetaGrafica titulo="Por departamento" datos={datos.porDepartamento} etiquetaValor="Pacientes" ancho />
+            <TarjetaGrafica titulo="Por sexo" tipo="anillo" orden={SEXOS} datos={datos.porSexo} etiquetaValor="Pacientes" />
+            <TarjetaGrafica titulo="Por departamento" tipo="mapa" datos={datos.porDepartamento} etiquetaValor="Pacientes" ancho />
           </RejillaGraficas>
         </>
       )}
