@@ -8,6 +8,7 @@ import { navbarLinks } from "@/constants";
 import { BOTON_PRINCIPAL } from "@/constants/botones";
 import PropTypes from "prop-types";
 
+import { CAMPO, ETIQUETA } from "@/constants/formularios";
 export const Header = ({ collapsed, setCollapsed }) => {
     const { theme, setTheme } = useTheme();
     const { user, logout } = useAuth() || {};
@@ -263,27 +264,27 @@ export const Header = ({ collapsed, setCollapsed }) => {
                             </div>
                         )}
 
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Contraseña actual</label>
+                        <label className={ETIQUETA}>Contraseña actual</label>
                         <input
                             type="password"
                             value={currentPwd}
                             onChange={(e) => setCurrentPwd(e.target.value)}
-                            className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+                            className={CAMPO}
                         />
 
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mt-3">Nueva contraseña</label>
+                        <label className={`${ETIQUETA} mt-3`}>Nueva contraseña</label>
                         <input
                             type="password"
                             value={newPwd}
                             onChange={(e) => setNewPwd(e.target.value)}
-                            className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+                            className={CAMPO}
                         />
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mt-3">Confirmar nueva contraseña</label>
+                        <label className={`${ETIQUETA} mt-3`}>Confirmar nueva contraseña</label>
                         <input
                             type="password"
                             value={newPwd2}
                             onChange={(e) => setNewPwd2(e.target.value)}
-                            className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+                            className={CAMPO}
                         />
 
                         <div className="flex justify-end gap-3 mt-6">

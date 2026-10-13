@@ -3,6 +3,7 @@ import api from '../config/api';
 import logoClinica from "@/assets/logoClinica2.png";
 import CustomModal from '@/components/CustomModal';
 import { BOTON_PRINCIPAL } from '@/constants/botones';
+import { CAMPO, ETIQUETA } from '@/constants/formularios';
 
 const normalizar = (v) =>
     String(v ?? '')
@@ -133,16 +134,17 @@ const AsignarTurno = () => {
             <CustomModal show={showFaltanteModal} onClose={() => setShowFaltanteModal(false)} title="Registrar falta">
                 <div>
                     <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label htmlFor="motivo-falta" className={ETIQUETA}>
                             Motivo
                         </label>
                         <textarea
+                            id="motivo-falta"
                             rows={3}
                             value={motivoFalta}
                             onChange={e => setMotivoFalta(e.target.value)}
                             placeholder="Ingrese el motivo de la falta"
                             disabled={sendingFaltante}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
+                            className={CAMPO}
                         />
                     </div>
                     <div className="flex justify-end gap-2">

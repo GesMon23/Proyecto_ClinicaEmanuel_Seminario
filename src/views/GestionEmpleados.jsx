@@ -3,6 +3,7 @@ import logoClinica from '@/assets/logoClinica2.png';
 import api from '@/config/api';
 import { BOTON_PRINCIPAL } from '@/constants/botones';
 
+import { CAMPO, ETIQUETA } from '@/constants/formularios';
 const GestionEmpleados = () => {
   const [empleados, setEmpleados] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -278,52 +279,52 @@ const GestionEmpleados = () => {
             <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-4">Editar empleado</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">ID Empleado</label>
-                <input value={editing.id_empleado ?? ''} disabled className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-3 py-2 text-slate-500" />
+                <label className={ETIQUETA}>ID Empleado</label>
+                <input value={editing.id_empleado ?? ''} disabled className={CAMPO} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">DPI</label>
-                <input value={editing.dpi || ''} onChange={(e)=>setEditing(v=>({...v, dpi:e.target.value}))} className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2" />
+                <label className={ETIQUETA}>DPI</label>
+                <input value={editing.dpi || ''} onChange={(e)=>setEditing(v=>({...v, dpi:e.target.value}))} className={CAMPO} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Primer Nombre</label>
-                <input value={editing.primer_nombre || ''} onChange={(e)=>setEditing(v=>({...v, primer_nombre:e.target.value}))} className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2" />
+                <label className={ETIQUETA}>Primer Nombre</label>
+                <input value={editing.primer_nombre || ''} onChange={(e)=>setEditing(v=>({...v, primer_nombre:e.target.value}))} className={CAMPO} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Segundo Nombre</label>
-                <input value={editing.segundo_nombre || ''} onChange={(e)=>setEditing(v=>({...v, segundo_nombre:e.target.value}))} className="mt-1 w-full rounded-md border" />
+                <label className={ETIQUETA}>Segundo Nombre</label>
+                <input value={editing.segundo_nombre || ''} onChange={(e)=>setEditing(v=>({...v, segundo_nombre:e.target.value}))} className={CAMPO} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Otros Nombres</label>
-                <input value={editing.otros_nombres || ''} onChange={(e)=>setEditing(v=>({...v, otros_nombres:e.target.value}))} className="mt-1 w-full rounded-md border" />
+                <label className={ETIQUETA}>Otros Nombres</label>
+                <input value={editing.otros_nombres || ''} onChange={(e)=>setEditing(v=>({...v, otros_nombres:e.target.value}))} className={CAMPO} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Primer Apellido</label>
-                <input value={editing.primer_apellido || ''} onChange={(e)=>setEditing(v=>({...v, primer_apellido:e.target.value}))} className="mt-1 w-full rounded-md border" />
+                <label className={ETIQUETA}>Primer Apellido</label>
+                <input value={editing.primer_apellido || ''} onChange={(e)=>setEditing(v=>({...v, primer_apellido:e.target.value}))} className={CAMPO} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Segundo Apellido</label>
-                <input value={editing.segundo_apellido || ''} onChange={(e)=>setEditing(v=>({...v, segundo_apellido:e.target.value}))} className="mt-1 w-full rounded-md border" />
+                <label className={ETIQUETA}>Segundo Apellido</label>
+                <input value={editing.segundo_apellido || ''} onChange={(e)=>setEditing(v=>({...v, segundo_apellido:e.target.value}))} className={CAMPO} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Apellido Casada</label>
-                <input value={editing.apellido_casada || ''} onChange={(e)=>setEditing(v=>({...v, apellido_casada:e.target.value}))} className="mt-1 w-full rounded-md border" />
+                <label className={ETIQUETA}>Apellido Casada</label>
+                <input value={editing.apellido_casada || ''} onChange={(e)=>setEditing(v=>({...v, apellido_casada:e.target.value}))} className={CAMPO} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Fecha Ingreso</label>
-                <input type="date" value={editing.fecha_ingreso || ''} onChange={(e)=>setEditing(v=>({...v, fecha_ingreso:e.target.value}))} className="mt-1 w-full rounded-md border" />
+                <label className={ETIQUETA}>Fecha Ingreso</label>
+                <input type="date" value={editing.fecha_ingreso || ''} onChange={(e)=>setEditing(v=>({...v, fecha_ingreso:e.target.value}))} className={CAMPO} />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Dirección</label>
-                <textarea value={editing.direccion || ''} onChange={(e)=>setEditing(v=>({...v, direccion:e.target.value}))} rows={2} className="mt-1 w-full rounded-md border" />
+                <label className={ETIQUETA}>Dirección</label>
+                <textarea value={editing.direccion || ''} onChange={(e)=>setEditing(v=>({...v, direccion:e.target.value}))} rows={2} className={CAMPO} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Teléfono</label>
-                <input value={editing.telefono || ''} onChange={(e)=>setEditing(v=>({...v, telefono:e.target.value}))} className="mt-1 w-full rounded-md border" />
+                <label className={ETIQUETA}>Teléfono</label>
+                <input value={editing.telefono || ''} onChange={(e)=>setEditing(v=>({...v, telefono:e.target.value}))} className={CAMPO} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Email</label>
-                <input type="email" value={editing.email || ''} onChange={(e)=>setEditing(v=>({...v, email:e.target.value}))} className="mt-1 w-full rounded-md border" />
+                <label className={ETIQUETA}>Email</label>
+                <input type="email" value={editing.email || ''} onChange={(e)=>setEditing(v=>({...v, email:e.target.value}))} className={CAMPO} />
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">
@@ -361,12 +362,12 @@ const GestionEmpleados = () => {
             <p className="text-slate-600 dark:text-slate-300 mb-4">
               {confirmAction.tipo === 'estado' ? 'Confirma tu contraseña para cambiar el estado del empleado.' : 'Confirma tu contraseña para guardar los cambios.'}
             </p>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Contraseña</label>
+            <label className={ETIQUETA}>Contraseña</label>
             <input
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+              className={CAMPO}
             />
             {confirmError && (
               <div className="mt-2 p-2 rounded border border-red-300 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-900/20 dark:text-red-300">

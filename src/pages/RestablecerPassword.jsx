@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '@/config/api';
 import logoClinica from '@/assets/logoClinica2.png';
 import { BOTON_PRINCIPAL } from '@/constants/botones';
+import { CAMPO, ETIQUETA } from '@/constants/formularios';
 
 // Mismas reglas que el backend (PASSWORD_FUERTE)
 const REQUISITOS = [
@@ -15,8 +16,6 @@ const REQUISITOS = [
   ['Un símbolo (por ejemplo # . ! @)', (v) => /[^A-Za-z0-9]/.test(v)],
 ];
 
-const ENTRADA = 'mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 '
-  + 'focus:ring-green-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100';
 
 function Marco({ children }) {
   return (
@@ -104,8 +103,8 @@ export default function RestablecerPassword() {
       <p className="mb-5 text-slate-600 dark:text-slate-300">Usuario: <strong className="text-slate-900 dark:text-slate-50">{usuario}</strong></p>
       <form onSubmit={guardar} noValidate>
         <input type="text" name="username" autoComplete="username" value={usuario} readOnly hidden />
-        <label htmlFor="nueva" className="block text-sm font-medium text-slate-700 dark:text-slate-200">Nueva contraseña</label>
-        <input id="nueva" type="password" autoComplete="new-password" autoFocus value={nueva} onChange={(e) => setNueva(e.target.value)} className={ENTRADA} />
+        <label htmlFor="nueva" className={ETIQUETA}>Nueva contraseña</label>
+        <input id="nueva" type="password" autoComplete="new-password" autoFocus value={nueva} onChange={(e) => setNueva(e.target.value)} className={CAMPO} />
 
         <ul className="mb-4 mt-3 space-y-1 text-sm" aria-label="Requisitos de la contraseña">
           {REQUISITOS.map(([texto], i) => (
@@ -116,8 +115,8 @@ export default function RestablecerPassword() {
           ))}
         </ul>
 
-        <label htmlFor="confirmar" className="block text-sm font-medium text-slate-700 dark:text-slate-200">Confirmar contraseña</label>
-        <input id="confirmar" type="password" autoComplete="new-password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} className={ENTRADA} />
+        <label htmlFor="confirmar" className={ETIQUETA}>Confirmar contraseña</label>
+        <input id="confirmar" type="password" autoComplete="new-password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} className={CAMPO} />
         {confirmar && nueva !== confirmar && (
           <p className="mt-1 text-sm text-red-600 dark:text-red-400">Las contraseñas no coinciden.</p>
         )}

@@ -7,6 +7,7 @@ import api from '@/config/api';
 import { BOTON_PRINCIPAL } from '@/constants/botones';
 import { useAuth } from '@/contexts/auth-context';
 
+import { CAMPO, ETIQUETA } from '@/constants/formularios';
 const LoginComponent = () => {
   const [usuario, setUsuario] = useState("");
   const [password, setPassword] = useState("");
@@ -198,19 +199,19 @@ const LoginComponent = () => {
           <div className="relative z-[10000] bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-md p-6">
             <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-2">Cambiar contraseña</h3>
             <p className="text-slate-600 dark:text-slate-300 mb-4">Debes cambiar tu contraseña genérica antes de continuar.</p>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Nueva contraseña</label>
+            <label className={ETIQUETA}>Nueva contraseña</label>
             <input
               type="password"
               value={newPwd}
               onChange={(e) => setNewPwd(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+              className={CAMPO}
             />
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mt-3">Confirmar nueva contraseña</label>
+            <label className={`${ETIQUETA} mt-3`}>Confirmar nueva contraseña</label>
             <input
               type="password"
               value={newPwd2}
               onChange={(e) => setNewPwd2(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+              className={CAMPO}
             />
             {changeError && (
               <div className="mt-2 p-2 rounded border border-red-300 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-900/20 dark:text-red-300">
@@ -260,7 +261,7 @@ const LoginComponent = () => {
 
             {!fpMsg && (
               <>
-                <label htmlFor="fp-identificador" className="block text-sm font-medium text-slate-700 dark:text-slate-200">Usuario o correo electrónico</label>
+                <label htmlFor="fp-identificador" className={ETIQUETA}>Usuario o correo electrónico</label>
                 <input
                   id="fp-identificador"
                   type="text"
@@ -268,7 +269,7 @@ const LoginComponent = () => {
                   autoFocus
                   value={fpIdentificador}
                   onChange={(e) => setFpIdentificador((e.target.value || '').slice(0, 120))}
-                  className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+                  className={CAMPO}
                 />
               </>
             )}
