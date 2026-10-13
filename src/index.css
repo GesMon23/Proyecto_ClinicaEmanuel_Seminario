@@ -10,6 +10,33 @@
   .dark body {
     scrollbar-color: #334155 transparent;
   }
+
+  /* La lista desplegable de un <select> la dibuja el navegador: sin esto puede quedar con fondo claro
+     y heredar el texto claro del modo oscuro */
+  .dark select option,
+  .dark select optgroup {
+    background-color: #1e293b;
+    color: #f1f5f9;
+  }
+
+  .dark select option:disabled {
+    color: #94a3b8;
+  }
+
+  /* Campos deshabilitados (bg-gray-100/200 sin variante oscura en varios formularios) */
+  .dark input:disabled,
+  .dark select:disabled,
+  .dark textarea:disabled {
+    background-color: #334155;
+    border-color: #475569;
+    color: #94a3b8;
+  }
+
+  /* El logo (PNG transparente con letras verde oscuro) está hecho para fondo blanco */
+  .dark img[src*="logoClinica2"] {
+    background-color: #ffffff;
+    border-radius: 0.75rem;
+  }
 }
 
 
