@@ -4,6 +4,7 @@ import LlamadoTurnos from '@/components/LlamadoTurnos';
 import AsignarTurno from '@/components/AsignarTurno';
 import GestionTurno from '@/components/GestionTurno';
 import ConsultaTurnos from '@/components/ConsultaTurnos';
+import ClinicasUsuarios from '@/components/ClinicasUsuarios';
 import BarraPestanas from '@/components/BarraPestanas';
 import { usePestanas } from '@/hooks/usePestanas';
 
@@ -12,6 +13,7 @@ const CONTENIDO = {
     asignar: AsignarTurno,
     crear: GestionTurno,
     consulta: ConsultaTurnos,
+    clinicas: ClinicasUsuarios,
 };
 
 // La pantalla de la TV es pública: el botón está para cualquiera que entre a Turnos

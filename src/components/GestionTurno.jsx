@@ -39,8 +39,9 @@ const GestionTurno = () => {
     if (modal.limpiarAlCerrar) handleCancelar();
   };
 
+  // Solo las clínicas asignadas al usuario para crear turnos (todas si nadie lo restringió)
   useEffect(() => {
-    api.get("/GclinicasT")
+    api.get("/turnos/clinicas/crear")
       .then((r) => setClinicas(r.data))
       .catch((error) => {
         console.error("Error al cargar clínicas:", error);
@@ -151,7 +152,7 @@ const GestionTurno = () => {
       }
     } catch (error) {
       console.log("Error al crear turno:", error);
-      const detalle = error.response?.data?.detail || error.message || "Error al crear el turno";
+      const detalle = error.response?.data?.message || error.response?.data?.detail || error.message || "Error al crear el turno";
       showErrorModal(`Error al crear el turno: ${detalle}`);
     }
   };
@@ -173,13 +174,15 @@ const GestionTurno = () => {
         setOpcionSeleccionada("");
         setFechaSeleccionada(null);
       }
-    } catch {
-      showErrorModal("Error al actualizar el turno");
+    } catch (error) {
+      showErrorModal(error.response?.data?.message || "Error al actualizar el turno");
     }
   };
 
   const modoEdicion = Boolean(turnoEditando);
   const eventos = useMemo(() => turnosAEventos(turnos), [turnos]);
+  // Se ven todos los turnos del paciente, pero solo se editan o cancelan los de clínicas asignadas
+  const puedeModificar = (turno) => clinicas.some((c) => c.descripcion === turno.nombre_clinica);
 
   return (
     <div className="p-6 space-y-6">
@@ -259,7 +262,7 @@ const GestionTurno = () => {
             </div>
           )}
 
-          <TablaTurnos key={reinicio} turnos={turnos} onEditar={handleEditar} onCancelar={handleEliminar} />
+          <TablaTurnos key={reinicio} turnos={turnos} onEditar={handleEditar} onCancelar={handleEliminar} puedeModificar={puedeModificar} />
 
           <div className="mt-4">
             <select

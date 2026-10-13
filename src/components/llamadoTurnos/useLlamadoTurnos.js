@@ -43,7 +43,8 @@ export function useLlamadoTurnos({ avisar }) {
   // Carga inicial: el estado de los turnos vive en el servidor, se descarta cualquier copia vieja del navegador
   useEffect(() => {
     try { localStorage.removeItem('clinicasData'); localStorage.removeItem('turnoLlamado'); } catch { /* sin almacenamiento */ }
-    api.get('/GclinicasT')
+    // Solo las clínicas asignadas al usuario para el llamado (todas si nadie lo restringió)
+    api.get('/turnos/clinicas/llamado')
       .then(({ data }) => {
         if (data && data.length > 0) {
           setClinicas(data);

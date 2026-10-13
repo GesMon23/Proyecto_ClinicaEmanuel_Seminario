@@ -61,16 +61,37 @@ router.get('/GturnosT', wrap(async (req, res) => {
   }];
 }));
 
+// ---- Clínicas por usuario ----
+// Clínicas que el usuario puede usar en Llamado o en Crear (todas si nadie lo restringió). Dos rutas fijas:
+// cada una exige el permiso de su pestaña (config/permisos.js)
+for (const funcion of ['llamado', 'crear']) {
+  router.get(`/turnos/clinicas/${funcion}`, wrap(async (req, res) => {
+    noCache(res);
+    res.json(await service.clinicasDeUsuario(userIdFromRequest(req), funcion));
+  }, conDetalle));
+}
+
+// Administración (pestaña Clínicas por Usuario)
+router.get('/turnos/clinicas-usuarios', wrap(async (req, res) => {
+  noCache(res);
+  res.json(await service.usuariosClinicas());
+}, conError('Error al obtener las clínicas de los usuarios')));
+
+router.put('/turnos/clinicas-usuarios/:id', wrap(
+  async (req, res) => res.json(await service.guardarClinicasUsuario(req.params.id, req.body, userNameFromRequest(req))),
+  (err) => { console.error('Error al guardar las clínicas del usuario:', err); return conError('Error al guardar las clínicas del usuario')(err); }
+));
+
 // ---- Crear / editar / cancelar ----
-router.post('/Gcrear-turnoT', wrap(async (req, res) => res.json(await service.crearTurno(req.body)), conDetalle));
+router.post('/Gcrear-turnoT', wrap(async (req, res) => res.json(await service.crearTurno(req.body, userIdFromRequest(req))), conDetalle));
 
 router.put('/Gactualizar-turnoT/:turno_id', wrap(
-  async (req, res) => res.json(await service.actualizarTurno(req.params.turno_id, req.body)),
+  async (req, res) => res.json(await service.actualizarTurno(req.params.turno_id, req.body, userIdFromRequest(req))),
   (err) => { console.error('Error al actualizar turno:', err); return conDetalle(err); }
 ));
 
 router.put('/Gcancelar-turnoT/:idturno', wrap(
-  async (req, res) => res.json(await service.cancelarTurno(req.params.idturno, userNameFromRequest(req))),
+  async (req, res) => res.json(await service.cancelarTurno(req.params.idturno, userNameFromRequest(req), userIdFromRequest(req))),
   (err) => { console.error('Error al cancelar turno:', err); return conReglasDeNegocio('Error al cancelar turno.')(err); }
 ));
 
@@ -93,12 +114,12 @@ router.put('/Gasignar-turnoT/:turno_id', wrap(
 
 router.get('/Gsiguiente-turnoT/:descripcionClinica', wrap(async (req, res) => {
   noCache(res);
-  res.json(await service.siguienteTurno(req.params.descripcionClinica));
+  res.json(await service.siguienteTurno(req.params.descripcionClinica, userIdFromRequest(req)));
 }, (err) => { console.error('Error al obtener el siguiente turno:', err); return conError('Error al obtener el siguiente turno')(err); }));
 
 router.get('/Gsiguientes-turnosT/:clinica', wrap(async (req, res) => {
   noCache(res);
-  res.json(await service.siguientesTurnos(req.params.clinica));
+  res.json(await service.siguientesTurnos(req.params.clinica, userIdFromRequest(req)));
 }, (err) => {
   console.error('Error al obtener los siguientes turnos:', err);
   return [500, { success: false, message: 'Error al obtener los siguientes turnos', error: err.message }];

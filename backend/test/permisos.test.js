@@ -48,7 +48,8 @@ test('cada rol existente conserva todas las pestañas de su módulo', async () =
   assert.deepEqual(de.RolTurnos, ['turnos.asignacion', 'turnos.consulta', 'turnos.crear', 'turnos.llamado']);
   assert.deepEqual(de.RolConsulta, ['consulta.pacientes']);
   assert.equal(de.RolGestionPaciente.length, 5);
-  assert.equal(de.RolGestionUsuarios.length, 5, 'incluye Permisos de Roles (migración 006)');
+  assert.equal(de.RolGestionUsuarios.length, 6, 'incluye Permisos de Roles (006) y Turnos > Clínicas por Usuario (007)');
+  assert.ok(de.RolGestionUsuarios.includes('turnos.clinicas'));
   const asignados = Object.values(de).flat().sort();
   assert.deepEqual(asignados, codigosUsados(), 'todas las pestañas tienen un rol y ninguna está repetida');
 });

@@ -6,8 +6,9 @@ import { normalizarBusqueda } from './turnos';
 
 const TH = 'px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider';
 
-// Turnos del paciente con buscador (ID, clínica y fecha), filas por página y paginación numerada
-export default function TablaTurnos({ turnos, onEditar, onCancelar }) {
+// Turnos del paciente con buscador (ID, clínica y fecha), filas por página y paginación numerada.
+// puedeModificar(turno): false desactiva editar y cancelar (clínica no asignada al usuario)
+export default function TablaTurnos({ turnos, onEditar, onCancelar, puedeModificar = () => true }) {
   const [busqueda, setBusqueda] = useState('');
   const [pagina, setPagina] = useState(1);
   const [filas, setFilas] = useState(5);
@@ -55,7 +56,10 @@ export default function TablaTurnos({ turnos, onEditar, onCancelar }) {
             </thead>
             <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
               {filtrados.length > 0 ? (
-                visibles.map((turno) => (
+                visibles.map((turno) => {
+                  const permitido = puedeModificar(turno);
+                  const titulo = (accion) => (permitido ? accion : `${accion}: la clínica ${turno.nombre_clinica} no está asignada a tu usuario`);
+                  return (
                   <tr key={turno.id_turno} className="hover:bg-gray-50 dark:hover:bg-slate-700">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 dark:text-blue-400">{turno.id_turno_cod}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{turno.nombre_clinica}</td>
@@ -63,15 +67,19 @@ export default function TablaTurnos({ turnos, onEditar, onCancelar }) {
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex gap-2">
                         <button
-                          title="Editar"
-                          className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 hover:text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/30 transition-colors"
+                          title={titulo('Editar')}
+                          aria-label={titulo('Editar')}
+                          disabled={!permitido}
+                          className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 hover:text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                           onClick={() => onEditar(turno.id_turno)}
                         >
                           <PencilLine />
                         </button>
                         <button
-                          title="Cancelar turno"
-                          className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:text-red-700 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/30 transition-colors"
+                          title={titulo('Cancelar turno')}
+                          aria-label={titulo('Cancelar turno')}
+                          disabled={!permitido}
+                          className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:text-red-700 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                           onClick={() => onCancelar(turno.id_turno)}
                         >
                           <Trash />
@@ -79,7 +87,8 @@ export default function TablaTurnos({ turnos, onEditar, onCancelar }) {
                       </div>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan="4" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">

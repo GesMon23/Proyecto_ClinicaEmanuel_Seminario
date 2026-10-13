@@ -88,6 +88,11 @@ const REGLAS = [
   ['GET', '/referencias/consulta', ['referencias.consulta']],
   ['GET', '/referencias/:noafiliacion', ['consulta.pacientes']],
   ['GET', '/formularios/:noafiliacion', ['consulta.pacientes']],
+  // Clínicas por usuario (antes que /turnos/:noafiliacion)
+  ['GET', '/turnos/clinicas/llamado', ['turnos.llamado']],
+  ['GET', '/turnos/clinicas/crear', ['turnos.crear']],
+  ['GET', '/turnos/clinicas-usuarios', ['turnos.clinicas']],
+  ['PUT', '/turnos/clinicas-usuarios/:id', ['turnos.clinicas']],
   ['GET', '/turnos/:noafiliacion', ['consulta.pacientes']],
   ['GET', '/faltistas/dpi/:dpi', ['consulta.pacientes']],
   ['GET', '/faltistas/:noafiliacion', ['consulta.pacientes']],

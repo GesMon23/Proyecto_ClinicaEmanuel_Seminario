@@ -16,6 +16,7 @@ export const PESTANAS = {
     { clave: 'asignar', etiqueta: 'Asignación', permiso: 'turnos.asignacion' },
     { clave: 'crear', etiqueta: 'Crear', permiso: 'turnos.crear' },
     { clave: 'consulta', etiqueta: 'Consulta Turnos', permiso: 'turnos.consulta' },
+    { clave: 'clinicas', etiqueta: 'Clínicas por Usuario', permiso: 'turnos.clinicas' },
   ],
   nutricion: [
     { clave: 'registro', etiqueta: 'Registro', permiso: 'nutricion.registro' },

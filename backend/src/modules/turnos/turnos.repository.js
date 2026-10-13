@@ -1,6 +1,6 @@
 // Acceso a datos de turnos: cada función es una transacción que llama a un procedimiento almacenado.
 // Las reglas de negocio viven en PostgreSQL (BD/esquema_reconstruido.sql); aquí no hay lógica.
-const { withTransaction, callProcedure, fetchCursor } = require('../../shared/database');
+const { pool, withTransaction, runWithUser, callProcedure, fetchCursor } = require('../../shared/database');
 
 const estados = () => withTransaction((c) => fetchCursor(c, 'sp_mostrar_estados_turno', [], 'cur1'));
 const jornadas = () => withTransaction((c) => fetchCursor(c, 'sp_mostrar_jornadas_turnos', [], 'cur_jornadas'));
@@ -50,7 +50,26 @@ async function marcarFaltantesAutomaticos() {
   });
 }
 
+// Clínicas por usuario (funcion: 'llamado' | 'crear'); un usuario sin restricción puede usarlas todas
+const puedeClinica = async (idUsuario, funcion, clinica) =>
+  (await pool.query('SELECT public.fn_usuario_puede_clinica($1, $2, $3) AS ok', [idUsuario, funcion, clinica])).rows[0].ok;
+const puedeTurno = async (idUsuario, funcion, idTurno) =>
+  (await pool.query('SELECT public.fn_usuario_puede_turno($1, $2, $3) AS ok', [idUsuario, funcion, idTurno])).rows[0].ok;
+const clinicaDeTurno = async (idTurno) => (await pool.query(
+  'SELECT c.descripcion FROM public.tbl_turnos t JOIN public.tbl_clinica c ON c.id_clinica = t.id_clinica WHERE t.id_turno = $1',
+  [idTurno])).rows[0]?.descripcion || null;
+const clinicasDeUsuario = (idUsuario, funcion) =>
+  withTransaction((c) => fetchCursor(c, 'sp_clinicas_usuario', [idUsuario, funcion], 'cur_clinicas_usuario'));
+const usuariosClinicas = () => withTransaction((c) => fetchCursor(c, 'sp_usuarios_clinicas', [], 'cur_usuarios_clinicas'));
+// clinicas: null = todas; ambas funciones en una sola transacción
+const guardarClinicasUsuario = (idUsuario, { llamado, crear }, actor) =>
+  runWithUser(actor, async (c) => {
+    await callProcedure(c, 'sp_guardar_clinicas_usuario', [idUsuario, 'llamado', llamado, actor]);
+    await callProcedure(c, 'sp_guardar_clinicas_usuario', [idUsuario, 'crear', crear, actor]);
+  });
+
 module.exports = {
+  puedeClinica, puedeTurno, clinicaDeTurno, clinicasDeUsuario, usuariosClinicas, guardarClinicasUsuario,
   estados, jornadas, clinicas, pacienteDetalle,
   turnosPendientesPaciente, turnosFaltantesPaciente, turnosCreadosHoy, turnosTodos,
   siguienteTurno, siguientesTurnos, turnoActualClinica, turnoActualUsuario,
