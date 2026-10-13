@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import api from '../config/api';
 import CustomModal from '@/components/CustomModal.jsx';
+import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
 import { useAviso } from '@/hooks/useAviso';
 import { useToast } from '@/hooks/useToast';
+import { cn } from '@/utils/cn';
 import BuscadorPacientes from './pacientes/BuscadorPacientes';
 import CampoGestion from './pacientes/CampoGestion';
 import TarjetaPaciente from './pacientes/TarjetaPaciente';
@@ -140,14 +142,14 @@ const EgresoPacientes = () => {
                     <div className="flex flex-col sm:flex-row gap-4 justify-end">
                       <button
                         type="submit"
-                        className="w-full sm:w-56 px-8 py-3 bg-green-700 hover:bg-green-800 text-white text-lg font-semibold rounded-lg shadow-md transition duration-200 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
+                        className={cn(BOTON_PRINCIPAL, 'w-full sm:w-auto')}
                       >
                         Guardar Egreso
                       </button>
                       <button
                         type="button"
                         onClick={handleLimpiarEgreso}
-                        className="w-full sm:w-40 px-8 py-3 bg-red-600 hover:bg-red-700 text-white text-lg font-semibold rounded-lg shadow-md transition duration-200 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
+                        className={cn(BOTON_LIMPIAR, 'w-full sm:w-auto')}
                       >
                         Limpiar
                       </button>

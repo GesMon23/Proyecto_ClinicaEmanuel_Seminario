@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import api from "../config/api";
 import logoClinica from "@/assets/logoClinica2.png";
 import CustomModal from '@/components/CustomModal';
+import { BOTON_PRINCIPAL } from '@/constants/botones';
+import { cn } from '@/utils/cn';
 import CalendarioTurnos from "./gestionTurno/CalendarioTurnos";
 import TablaTurnos from "./gestionTurno/TablaTurnos";
 import { useTemaCalendario } from "./gestionTurno/temaCalendario";
@@ -211,7 +213,7 @@ const GestionTurno = () => {
             <button
               onClick={handleBuscar}
               disabled={buscando || !numeroAfiliacion}
-              className={`w-full sm:w-auto px-4 py-2 rounded-lg text-white ${buscando ? 'bg-gray-500 cursor-not-allowed' : 'bg-green-700 hover:bg-green-800'}`}
+              className={cn(BOTON_PRINCIPAL, 'w-full sm:w-auto')}
             >
               {buscando ? (
                 <span className="inline-flex items-center gap-2">
@@ -278,7 +280,7 @@ const GestionTurno = () => {
               Cancelar
             </button>
             <button
-              className="w-full sm:w-auto px-4 py-2 rounded-lg bg-green-700 text-white hover:bg-green-800"
+              className={cn(BOTON_PRINCIPAL, 'w-full sm:w-auto')}
               onClick={modoEdicion ? handleGuardar : handleAceptar}
             >
               {modoEdicion ? "Guardar" : "Aceptar"}

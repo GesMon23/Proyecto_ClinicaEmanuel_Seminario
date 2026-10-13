@@ -5,6 +5,7 @@ import CustomModal from '@/components/CustomModal';
 import logoClinica from '@/assets/logoClinica2.png';
 import avatarDefault from '@/assets/default-avatar.png';
 import api from '../config/api';
+import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
 import NavegacionPestanas from './consultaPacientes/NavegacionPestanas';
 import { descargarCarnet } from './consultaPacientes/carnet';
 import { generarReportePaciente } from './consultaPacientes/reportePdf';
@@ -263,19 +264,14 @@ const ConsultaPacientes = () => {
                                         />
                                         <div className="flex gap-4">
                                             <button
-                                                className="bg-green-700 hover:bg-green-800 disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed
-                                                           text-white text-base font-semibold py-2.5 px-5 rounded-lg shadow-sm transition-colors
-                                                           focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:ring-offset-white
-                                                           dark:bg-green-600 dark:hover:bg-green-700 dark:disabled:bg-gray-600 dark:focus:ring-offset-slate-900"
+                                                className={BOTON_PRINCIPAL}
                                                 type="submit"
                                                 disabled={loading}
                                             >
                                                 {loading ? 'Buscando...' : 'Buscar'}
                                             </button>
                                             <button
-                                                className="bg-red-600 hover:bg-red-700 text-white text-base font-semibold py-2.5 px-5 rounded-lg shadow-sm transition-colors
-                                                           focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 focus:ring-offset-white
-                                                           dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-offset-slate-900"
+                                                className={BOTON_LIMPIAR}
                                                 type="button"
                                                 onClick={handleLimpiarBusqueda}
                                             >

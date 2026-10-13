@@ -3,7 +3,9 @@ import logoClinica from '@/assets/logoClinica2.png';
 import api from '@/config/api';
 import CustomModal from '@/components/CustomModal';
 import Paginador from '@/components/Paginador';
+import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
 import { useAviso } from '@/hooks/useAviso';
+import { cn } from '@/utils/cn';
 import '../NuevoIngresoReportes.css';
 import { FILTROS } from './definiciones';
 import { imprimirDetalle, imprimirListado } from './impresion';
@@ -146,8 +148,8 @@ export default function ReporteTabular({ reporte }) {
               </div>
 
               <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:items-center sm:justify-start">
-                <button type="submit" className="bg-green-700 hover:bg-green-800 text-white font-medium px-4 py-2 rounded w-full sm:w-auto">Buscar</button>
-                <button type="button" onClick={limpiar} className="font-medium px-4 py-2 rounded border text-white bg-[#B91C1C] hover:bg-[#991B1B] border-[#991B1B] w-full sm:w-auto">
+                <button type="submit" className={cn(BOTON_PRINCIPAL, 'w-full sm:w-auto')}>Buscar</button>
+                <button type="button" onClick={limpiar} className={cn(BOTON_LIMPIAR, 'w-full sm:w-auto')}>
                   Limpiar
                 </button>
                 <button

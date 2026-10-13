@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import logoClinica from '@/assets/logoClinica2.png';
 import api from '@/config/api';
+import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
 
 const CreacionUsuarios = () => {
   const [form, setForm] = useState({
@@ -279,11 +280,11 @@ const CreacionUsuarios = () => {
             </div>
           </div>
           <div className="md:col-span-2 flex justify-end gap-3 mt-4">
-            <button type="reset" className="px-4 py-2 rounded-md border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">Limpiar</button>
+            <button type="reset" className={BOTON_LIMPIAR}>Limpiar</button>
             <button
               type="submit"
               disabled={loading || !/^[a-z]{8}$/.test(form.usuario) || !usuarioDisponible}
-              className="px-4 py-2 rounded-md bg-green-700 text-white hover:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              className={BOTON_PRINCIPAL}
             >
               Crear usuario
             </button>
@@ -310,7 +311,7 @@ const CreacionUsuarios = () => {
             )}
             <div className="flex justify-end gap-3 mt-6">
               <button type="button" onClick={closeConfirm} className="px-4 py-2 rounded-md border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">Cancelar</button>
-              <button type="button" onClick={doConfirmed} className="px-4 py-2 rounded-md bg-green-700 text-white hover:bg-green-800">Confirmar</button>
+              <button type="button" onClick={doConfirmed} className={BOTON_PRINCIPAL}>Confirmar</button>
             </div>
           </div>
         </div>

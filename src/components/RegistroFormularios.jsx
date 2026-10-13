@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import CustomModal from '@/components/CustomModal.jsx';
 import logoClinica from "@/assets/logoClinica2.png";
+import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from "@/constants/botones";
 import { useAviso } from "@/hooks/useAviso";
+import { cn } from "@/utils/cn";
 import CampoGestion from "./pacientes/CampoGestion";
 import {
   FORM_VACIO, MAX_PACIENTES, armarMasivo, cargarJornadas, guardarMasivo, prepararFila, problemaDelFormulario,
@@ -101,7 +103,7 @@ const RegistroFormularios = () => {
                   type="button"
                   onClick={handleAgregarPaciente}
                   disabled={llena}
-                  className={`text-white text-base font-semibold py-2 px-5 rounded ${llena ? "bg-gray-400 cursor-not-allowed" : "bg-green-700 hover:bg-green-800"}`}
+                  className={BOTON_PRINCIPAL}
                 >
                   {llena ? `Máximo ${MAX_PACIENTES}` : "Agregar Paciente"}
                 </button>
@@ -181,10 +183,10 @@ const RegistroFormularios = () => {
             </div>
 
             <div className="flex justify-end mt-4">
-              <button type="submit" className="bg-green-700 hover:bg-green-800 text-white text-lg font-semibold px-8 py-2 rounded mr-4">
+              <button type="submit" className={cn(BOTON_PRINCIPAL, 'mr-4')}>
                 Guardar Formulario
               </button>
-              <button type="button" onClick={handleLimpiar} className="bg-red-600 hover:bg-red-700 text-white text-lg font-semibold px-8 py-2 rounded">
+              <button type="button" onClick={handleLimpiar} className={BOTON_LIMPIAR}>
                 Limpiar
               </button>
             </div>

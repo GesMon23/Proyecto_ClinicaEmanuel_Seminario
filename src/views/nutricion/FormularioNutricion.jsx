@@ -1,6 +1,7 @@
 import React from 'react';
-import { Button } from 'react-bootstrap';
 import IndicadorIMC from '@/components/IndicadorIMC';
+import { BOTON_PRINCIPAL } from '@/constants/botones';
+import { cn } from '@/utils/cn';
 import { calcularIMC } from '@/utils/imc';
 
 const ETIQUETA = 'block text-sm font-medium text-slate-700 dark:text-slate-200';
@@ -66,13 +67,9 @@ export default function FormularioNutricion({ form, onCambio, onMedida, onGuarda
 
       <div className="border-t border-gray-200 dark:border-slate-700 pt-6">
         <div className="flex flex-col sm:flex-row gap-4 justify-end">
-          <Button
-            type="button"
-            className="!w-full sm:!w-56 !px-8 !py-3 !bg-blue-700 hover:!bg-blue-800 !text-white !text-lg !font-semibold !rounded-lg shadow-md transition duration-200 focus:!ring-2 focus:!ring-blue-600"
-            onClick={onGuardar}
-          >
+          <button type="button" className={cn(BOTON_PRINCIPAL, 'w-full sm:w-auto')} onClick={onGuardar}>
             Guardar Resultados
-          </Button>
+          </button>
         </div>
       </div>
     </>

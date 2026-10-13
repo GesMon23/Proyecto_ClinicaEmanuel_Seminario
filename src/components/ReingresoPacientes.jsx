@@ -2,7 +2,9 @@ import React, { useState } from "react";
 import { Alert } from "react-bootstrap";
 import api from "../config/api";
 import CustomModal from "@/components/CustomModal.jsx";
+import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from "@/constants/botones";
 import { useAviso } from "@/hooks/useAviso";
+import { cn } from "@/utils/cn";
 import BuscadorPacientes from "./pacientes/BuscadorPacientes";
 import CampoGestion from "./pacientes/CampoGestion";
 import TarjetaPaciente from "./pacientes/TarjetaPaciente";
@@ -168,14 +170,14 @@ const ReingresoPacientes = (props) => {
                         <button
                           type="submit"
                           disabled={!formularioValido(f)}
-                          className="w-full sm:w-56 px-8 py-3 bg-green-700 hover:bg-green-800 disabled:opacity-60 text-white text-lg font-semibold rounded-lg shadow-md transition duration-200 focus:outline-none focus:ring-2 focus:ring-green-600"
+                          className={cn(BOTON_PRINCIPAL, "w-full sm:w-auto")}
                         >
                           Guardar Reingreso
                         </button>
                         <button
                           type="button"
                           onClick={handleLimpiarTodo}
-                          className="w-full sm:w-40 px-8 py-3 bg-red-600 hover:bg-red-700 text-white text-lg font-semibold rounded-lg shadow-md transition duration-200 focus:outline-none focus:ring-2 focus:ring-red-600"
+                          className={cn(BOTON_LIMPIAR, "w-full sm:w-auto")}
                         >
                           Limpiar
                         </button>

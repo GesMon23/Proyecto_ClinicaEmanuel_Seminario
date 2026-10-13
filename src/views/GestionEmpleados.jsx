@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import logoClinica from '@/assets/logoClinica2.png';
 import api from '@/config/api';
+import { BOTON_PRINCIPAL } from '@/constants/botones';
 
 const GestionEmpleados = () => {
   const [empleados, setEmpleados] = useState([]);
@@ -343,7 +344,7 @@ const GestionEmpleados = () => {
                   telefono: editing.telefono,
                   email: editing.email,
                 } })}
-                className="px-4 py-2 rounded-md bg-green-700 text-white hover:bg-green-800"
+                className={BOTON_PRINCIPAL}
               >
                 Guardar cambios
               </button>
@@ -374,7 +375,7 @@ const GestionEmpleados = () => {
             )}
             <div className="flex justify-end gap-3 mt-6">
               <button type="button" onClick={closeConfirm} className="px-4 py-2 rounded-md border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">Cancelar</button>
-              <button type="button" onClick={doConfirmed} className="px-4 py-2 rounded-md bg-green-700 text-white hover:bg-green-800">Confirmar</button>
+              <button type="button" onClick={doConfirmed} className={BOTON_PRINCIPAL}>Confirmar</button>
             </div>
           </div>
         </div>

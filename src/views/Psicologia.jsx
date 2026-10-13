@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { Button, Col, Form, Row } from "react-bootstrap";
+import { Col, Form, Row } from "react-bootstrap";
 import logoClinica from '@/assets/logoClinica2.png';
+import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
+import { cn } from '@/utils/cn';
 import CustomModal from '@/components/CustomModal';
 import ConsultaPsicologia from '../components/ConsultaPsicologia';
 import { useAviso } from '@/hooks/useAviso';
@@ -106,12 +108,12 @@ const Psicologia = () => {
                           className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm dark:bg-gray-700 dark:text-gray-100"
                           style={{ flex: 2 }}
                         />
-                        <Button type="button" className="bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-16 rounded w-full sm:w-auto" onClick={handleBuscar}>
+                        <button type="button" className={cn(BOTON_PRINCIPAL, 'w-full sm:w-auto')} onClick={handleBuscar}>
                           Buscar
-                        </Button>
-                        <Button type="button" className="bg-red-700 hover:bg-red-800 text-white font-semibold py-2 px-16 rounded w-full sm:w-auto" onClick={limpiarFormulario}>
+                        </button>
+                        <button type="button" className={cn(BOTON_LIMPIAR, 'w-full sm:w-auto')} onClick={limpiarFormulario}>
                           Limpiar
-                        </Button>
+                        </button>
                       </div>
                     </Form.Group>
                   </Col>

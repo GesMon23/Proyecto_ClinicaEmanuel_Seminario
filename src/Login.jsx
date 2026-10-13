@@ -4,6 +4,7 @@ import logoClinica from "@/assets/logoClinica2.png"
 import Background from "@/assets/backgroundLogin.png";
 import { useNavigate } from "react-router-dom";
 import api from '@/config/api';
+import { BOTON_PRINCIPAL } from '@/constants/botones';
 import { useAuth } from '@/contexts/auth-context';
 
 const LoginComponent = () => {
@@ -217,7 +218,7 @@ const LoginComponent = () => {
                 type="button"
                 disabled={changeLoading}
                 onClick={doChangePassword}
-                className="px-4 py-2 rounded-md bg-green-700 text-white hover:bg-green-800 disabled:opacity-50"
+                className={BOTON_PRINCIPAL}
               >
                 {changeLoading ? 'Guardando...' : 'Guardar'}
               </button>

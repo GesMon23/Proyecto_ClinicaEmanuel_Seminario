@@ -1,5 +1,7 @@
 import React from 'react';
 import logoClinica from '@/assets/logoClinica2.png';
+import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
+import { cn } from '@/utils/cn';
 
 const CLASE_INPUT = 'w-full text-lg px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-700 dark:bg-slate-800 dark:text-white disabled:opacity-60';
 
@@ -56,14 +58,14 @@ export default function BuscadorPacientes({ titulo, busqueda, onCambiar, onBusca
               <button
                 type="submit"
                 disabled={loading}
-                className="w-36 px-4 py-2 bg-green-700 hover:bg-green-800 text-white text-base font-semibold rounded-md shadow transition duration-200 disabled:opacity-70"
+                className={cn(BOTON_PRINCIPAL, 'w-36')}
               >
                 {loading ? 'Buscando...' : 'Buscar'}
               </button>
               <button
                 type="button"
                 onClick={onLimpiar}
-                className="w-36 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-base font-semibold rounded-md shadow transition duration-200"
+                className={cn(BOTON_LIMPIAR, 'w-36')}
                 aria-label="Limpiar búsqueda y resultados"
               >
                 Limpiar

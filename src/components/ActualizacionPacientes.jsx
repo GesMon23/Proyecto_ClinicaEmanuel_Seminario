@@ -4,7 +4,9 @@ import { BrushCleaning, Camera, Edit, Image, Save, XIcon } from 'lucide-react';
 import CustomModal from '@/components/CustomModal.jsx';
 import WebcamFoto from '@/components/WebcamFoto.jsx';
 import defaultAvatar from '@/assets/img/default-avatar.png';
+import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
 import { useAviso } from '@/hooks/useAviso';
+import { cn } from '@/utils/cn';
 import BuscadorPacientes from './pacientes/BuscadorPacientes';
 import CampoEditable from './actualizacionPacientes/CampoEditable';
 import {
@@ -130,16 +132,16 @@ const ActualizacionPacientes = () => {
             <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md mt-0 mb-4">
               {!editando ? (
                 <>
-                  <button onClick={() => setEditando(true)} className={`${BOTON} bg-green-700 hover:bg-green-800 focus:ring-green-600`}>
+                  <button onClick={() => setEditando(true)} className={cn(BOTON_PRINCIPAL, 'flex-1')}>
                     <Edit /> Editar
                   </button>
-                  <button onClick={handleLimpiarTodo} className={`${BOTON} bg-gray-600 hover:bg-gray-700 focus:ring-gray-600`}>
+                  <button onClick={handleLimpiarTodo} className={cn(BOTON_LIMPIAR, 'flex-1')}>
                     <BrushCleaning /> Limpiar
                   </button>
                 </>
               ) : (
                 <>
-                  <button onClick={handleGuardar} disabled={loading} className={`${BOTON} bg-green-700 hover:bg-green-800 focus:ring-green-600`}>
+                  <button onClick={handleGuardar} disabled={loading} className={cn(BOTON_PRINCIPAL, 'flex-1')}>
                     {loading ? <Cargando texto="Guardando..." /> : <><Save />Guardar Cambios</>}
                   </button>
                   <button onClick={handleLimpiarTodo} className={`${BOTON} bg-red-600 hover:bg-red-700 focus:ring-gray-600`}>

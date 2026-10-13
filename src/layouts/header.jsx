@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { ChevronsLeft, Moon, Search, Sun, User as UserIcon, Settings, SquareArrowOutUpRight, CircleHelp } from "lucide-react";
 import api from "@/config/api";
 import { navbarLinks } from "@/constants";
+import { BOTON_PRINCIPAL } from "@/constants/botones";
 import PropTypes from "prop-types";
 
 export const Header = ({ collapsed, setCollapsed }) => {
@@ -335,7 +336,7 @@ export const Header = ({ collapsed, setCollapsed }) => {
                                         setChangeLoading(false);
                                     }
                                 }}
-                                className="px-4 py-2 rounded-md bg-green-700 text-white hover:bg-green-800 disabled:opacity-50"
+                                className={BOTON_PRINCIPAL}
                             >
                                 {changeLoading ? 'Guardando...' : 'Guardar'}
                             </button>

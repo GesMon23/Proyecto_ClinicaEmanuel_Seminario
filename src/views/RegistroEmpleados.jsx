@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import logoClinica from '@/assets/logoClinica2.png';
 import api from '@/config/api';
+import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
 
 const RegistroEmpleados = () => {
   const [form, setForm] = useState({
@@ -302,13 +303,13 @@ const RegistroEmpleados = () => {
                   onClick={() => setForm({
                     dpi: '', primer_nombre: '', segundo_nombre: '', otros_nombres: '', primer_apellido: '', segundo_apellido: '', apellido_casada: '', fecha_nacimiento: '', sexo: '', direccion: '', telefono: '', email: '', fecha_ingreso: '',
                   })}
-                  className="px-4 py-2 rounded-md border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className={BOTON_LIMPIAR}
                 >
                   Limpiar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-md bg-green-700 text-white hover:bg-green-800"
+                  className={BOTON_PRINCIPAL}
                 >
                   Guardar
                 </button>
@@ -347,7 +348,7 @@ const RegistroEmpleados = () => {
                       type="button"
                       disabled={submitting}
                       onClick={confirmAndSave}
-                      className="px-4 py-2 rounded-md bg-green-700 text-white hover:bg-green-800 disabled:opacity-60"
+                      className={BOTON_PRINCIPAL}
                     >
                       {submitting ? 'Guardando...' : 'Confirmar y Guardar'}
                     </button>

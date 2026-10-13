@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../config/api';
 import { Table, Form, Row, Col, Button, Card } from 'react-bootstrap';
 import logoClinica from '@/assets/logoClinica2.png';
+import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
 import { formatearFecha } from '@/utils/fechas';
 import './NuevoIngresoReportes.css';
 
@@ -193,7 +194,7 @@ const ConsultaTurnos = () => {
                     <div className="flex items-center gap-3">
                         <button
                             type="submit"
-                            className="px-6 py-2 bg-green-700 hover:bg-green-800 text-white font-semibold rounded-lg transition-colors"
+                            className={BOTON_PRINCIPAL}
                         >
                             Buscar
                         </button>
@@ -203,7 +204,7 @@ const ConsultaTurnos = () => {
                                 setFiltros({ numeroafiliacion: '', fechaDesde: '', fechaHasta: '', clinica: '', estado: '' });
                                 setTurnos([]);
                             }}
-                            className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors dark:bg-slate-600 dark:hover:bg-slate-700"
+                            className={BOTON_LIMPIAR}
                         >
                             Limpiar
                         </button>

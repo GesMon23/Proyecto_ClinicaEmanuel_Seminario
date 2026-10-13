@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import logoClinica from '@/assets/logoClinica2.png';
 import api from '@/config/api';
 import Paginador from '@/components/Paginador';
+import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
 import { imprimirListado } from '../reportes/impresion';
 
 const ENTRADA = 'focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 w-full border rounded-md px-4 py-2 dark:bg-slate-800 dark:text-white dark:border-slate-600';
@@ -112,11 +113,11 @@ export default function ConsultaHistorial({ consulta }) {
         <div className="flex items-end gap-3 col-span-1 lg:col-span-2">
           <button
             type="button" onClick={() => consultar(valores)} disabled={loading}
-            className={`px-6 py-2 font-semibold rounded-md transition-colors text-white ${loading ? 'bg-green-700 cursor-not-allowed' : 'bg-green-800 hover:bg-green-900 border border-green-900'}`}
+            className={BOTON_PRINCIPAL}
           >
             Buscar
           </button>
-          <button type="button" onClick={limpiar} disabled={loading} className="px-6 py-2 font-semibold rounded-md bg-red-700 hover:bg-red-800 text-white border border-red-800">
+          <button type="button" onClick={limpiar} disabled={loading} className={BOTON_LIMPIAR}>
             Limpiar
           </button>
           <button

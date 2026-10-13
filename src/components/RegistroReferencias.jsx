@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card } from 'react-bootstrap';
 import api from '../config/api';
 import logoClinica from "@/assets/logoClinica2.png"
+import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
 
 const RegistroReferencias = () => {
 
@@ -217,7 +218,7 @@ const RegistroReferencias = () => {
                     type="button"
                     onClick={handleBuscarAfiliado}
                     disabled={!!paciente}
-                    className="bg-green-800 hover:bg-green-900 text-white font-semibold text-base px-4 py-2 rounded-md border border-green-900"
+                    className={BOTON_PRINCIPAL}
                   >
                     Buscar
                   </button>
@@ -308,10 +309,7 @@ const RegistroReferencias = () => {
               <button
                 type="submit"
                 disabled={loading || !paciente}
-                className={`px-6 py-3 text-lg font-semibold rounded-md transition-colors ${loading || !paciente
-                    ? 'bg-green-700 cursor-not-allowed text-white'
-                    : 'bg-green-800 hover:bg-green-900 text-white border-green-900'
-                  }`}
+                className={BOTON_PRINCIPAL}
               >
                 {loading ? 'Guardando...' : 'Registrar Referencia'}
               </button>
@@ -319,7 +317,7 @@ const RegistroReferencias = () => {
                 type="button"
                 disabled={!paciente}
                 onClick={handleLimpiarFormulario}
-                className="px-6 py-3 text-lg font-semibold rounded-md bg-red-700 hover:bg-red-800 text-white border border-red-800"
+                className={BOTON_LIMPIAR}
               >
                 Limpiar
               </button>

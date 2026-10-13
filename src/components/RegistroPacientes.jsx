@@ -4,6 +4,7 @@ import logoClinica from "@/assets/logoClinica2.png";
 import api from "../config/api";
 import WebcamFoto from "@/components/WebcamFoto.jsx";
 import CustomModal from '@/components/CustomModal';
+import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
 import Campo, { Etiqueta } from "./registroPacientes/Campo";
 import { cargarCatalogos } from "./registroPacientes/catalogos";
 import {
@@ -197,7 +198,7 @@ const RegistroPacientes = () => {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="rounded bg-green-500 px-6 py-2 font-semibold text-white shadow-sm transition hover:bg-green-800 disabled:opacity-70"
+                      className={BOTON_PRINCIPAL}
                     >
                       {loading ? "Registrando..." : "Registrar Paciente"}
                     </button>
@@ -205,7 +206,7 @@ const RegistroPacientes = () => {
                       type="button"
                       onClick={handleLimpiarForm}
                       disabled={loading}
-                      className="rounded bg-red-500 px-6 py-2 font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:opacity-70"
+                      className={BOTON_LIMPIAR}
                     >
                       Limpiar
                     </button>

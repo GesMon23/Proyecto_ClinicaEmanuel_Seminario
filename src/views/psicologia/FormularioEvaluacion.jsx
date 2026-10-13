@@ -1,5 +1,6 @@
 import React from 'react';
-import { Button } from 'react-bootstrap';
+import { BOTON_PRINCIPAL } from '@/constants/botones';
+import { cn } from '@/utils/cn';
 import { AREAS_KDQOL, promedioKdqol } from './psicologia';
 
 const CLASE = 'mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600';
@@ -110,12 +111,9 @@ export default function FormularioEvaluacion({ ev, onCambio, onPuntaje }) {
 
       <div className="border-t border-gray-200 dark:border-slate-700 pt-6">
         <div className="flex flex-col sm:flex-row gap-4 justify-end">
-          <Button
-            type="submit"
-            className="!w-full sm:!w-56 !px-8 !py-3 !bg-blue-700 hover:!bg-blue-800 !text-white !text-lg !font-semibold !rounded-lg shadow-md transition duration-200 focus:!ring-2 focus:!ring-blue-600"
-          >
+          <button type="submit" className={cn(BOTON_PRINCIPAL, 'w-full sm:w-auto')}>
             Guardar Evaluación
-          </Button>
+          </button>
         </div>
       </div>
     </>

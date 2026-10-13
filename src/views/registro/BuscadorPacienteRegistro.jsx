@@ -1,5 +1,7 @@
 import React from 'react';
-import { Button, Col, Form, Row } from 'react-bootstrap';
+import { Col, Form, Row } from 'react-bootstrap';
+import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
+import { cn } from '@/utils/cn';
 
 // Banner del paciente encontrado + búsqueda por No. de afiliación (Buscar / Limpiar)
 export default function BuscadorPacienteRegistro({ paciente, noAfiliacion, onCambio, onBuscar, onLimpiar }) {
@@ -25,12 +27,12 @@ export default function BuscadorPacienteRegistro({ paciente, noAfiliacion, onCam
                 className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm dark:bg-gray-700 dark:text-gray-100"
                 style={{ flex: 2 }}
               />
-              <Button type="button" className="bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-16 rounded w-full sm:w-auto" onClick={onBuscar}>
+              <button type="button" className={cn(BOTON_PRINCIPAL, 'w-full sm:w-auto')} onClick={onBuscar}>
                 Buscar
-              </Button>
-              <Button type="button" className="bg-red-700 hover:bg-red-800 text-white font-semibold py-2 px-16 rounded w-full sm:w-auto" onClick={onLimpiar}>
+              </button>
+              <button type="button" className={cn(BOTON_LIMPIAR, 'w-full sm:w-auto')} onClick={onLimpiar}>
                 Limpiar
-              </Button>
+              </button>
             </div>
           </Form.Group>
         </Col>

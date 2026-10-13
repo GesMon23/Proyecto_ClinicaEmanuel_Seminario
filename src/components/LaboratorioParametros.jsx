@@ -1,14 +1,16 @@
 // Componente para ingresar resultados de laboratorio por paciente
 import React, { useRef } from "react";
-import { Button, Col, Form, Row } from "react-bootstrap";
+import { Col, Form, Row } from "react-bootstrap";
 import './LaboratorioParametros.css';
 import CustomModal from '@/components/CustomModal.jsx';
+import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
 import { useAviso } from '@/hooks/useAviso';
+import { cn } from '@/utils/cn';
 import { CampoLab, SelectPeriodicidad } from './laboratorioParametros/CampoLab';
 import SeccionExamen from './laboratorioParametros/SeccionExamen';
 import { useLaboratorio } from './laboratorioParametros/useLaboratorio';
 
-const BOTON_BUSQUEDA = "w-full sm:min-w-[100px] sm:w-auto text-white font-semibold py-2 px-4 rounded";
+const UBICACION_BUSQUEDA = "w-full sm:min-w-[100px] sm:w-auto";
 
 function LaboratorioParametros({ onSubmit }) {
   const { modal, mostrar } = useAviso();
@@ -50,8 +52,8 @@ function LaboratorioParametros({ onSubmit }) {
                   style={{ flex: 2 }}
                   ref={refAfiliacion}
                 />
-                <Button type="button" className={`${BOTON_BUSQUEDA} bg-green-700 hover:bg-green-800`} onClick={lab.buscar}>Buscar</Button>
-                <Button type="button" className={`${BOTON_BUSQUEDA} bg-red-700 hover:bg-red-800`} onClick={lab.limpiar}>Limpiar</Button>
+                <button type="button" className={cn(BOTON_PRINCIPAL, UBICACION_BUSQUEDA)} onClick={lab.buscar}>Buscar</button>
+                <button type="button" className={cn(BOTON_LIMPIAR, UBICACION_BUSQUEDA)} onClick={lab.limpiar}>Limpiar</button>
                 <div className="hidden md:block flex-grow" />
                 {paciente && (
                   <>
@@ -105,9 +107,9 @@ function LaboratorioParametros({ onSubmit }) {
 
         {paciente && (
           <div className="flex mt-4">
-            <Button type="submit" className="bg-green-800 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded shadow-md transition-colors duration-200" disabled={lab.guardando}>
+            <button type="submit" className={BOTON_PRINCIPAL} disabled={lab.guardando}>
               {lab.guardando ? 'Guardando...' : 'Guardar resultados'}
-            </Button>
+            </button>
           </div>
         )}
       </Form>

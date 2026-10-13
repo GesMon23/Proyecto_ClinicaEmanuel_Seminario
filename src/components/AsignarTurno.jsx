@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import api from '../config/api';
 import logoClinica from "@/assets/logoClinica2.png";
 import CustomModal from '@/components/CustomModal';
+import { BOTON_PRINCIPAL } from '@/constants/botones';
 
 const normalizar = (v) =>
     String(v ?? '')
@@ -148,7 +149,7 @@ const AsignarTurno = () => {
                         <button
                             onClick={handleEnviarFaltante}
                             disabled={sendingFaltante}
-                            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded transition-colors"
+                            className={BOTON_PRINCIPAL}
                         >
                             {sendingFaltante ? 'Enviando...' : 'Enviar'}
                         </button>
@@ -189,7 +190,7 @@ const AsignarTurno = () => {
                         type="button"
                         onClick={cargarTurnos}
                         disabled={loading}
-                        className="bg-green-700 hover:bg-green-800 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-base font-semibold py-2 px-5 rounded transition-colors"
+                        className={BOTON_PRINCIPAL}
                     >
                         {loading ? 'Actualizando...' : 'Actualizar'}
                     </button>
