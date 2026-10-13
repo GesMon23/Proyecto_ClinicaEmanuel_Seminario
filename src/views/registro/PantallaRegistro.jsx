@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React from 'react';
 import logoClinica from '@/assets/logoClinica2.png';
+import { usePestanas } from '@/hooks/usePestanas';
 
 const TAB = 'px-4 py-2 rounded-md font-semibold border transition-colors';
 const ACTIVA = 'bg-green-800 text-white border-green-900';
 const INACTIVA = 'bg-white dark:bg-slate-800 text-green-800 dark:text-white border-green-800 hover:bg-green-50 dark:hover:bg-slate-700';
 
-// Marco de las pantallas de registro clínico (Nutrición, Psicología): encabezado, pestañas Registro / Consulta.
-export default function PantallaRegistro({ titulo, registro, consulta }) {
-  const [tab, setTab] = useState('registro');
+// Marco de las pantallas de registro clínico (Nutrición, Psicología): encabezado, pestañas Registro / Consulta
+// (solo las que permite el usuario). modulo: 'nutricion' | 'psicologia' (ver constants/permisos.js)
+export default function PantallaRegistro({ modulo, titulo, registro, consulta }) {
+  const { visibles, activa, setActiva } = usePestanas(modulo);
+  const contenido = { registro, consulta };
   return (
     <div className="w-full px-4 md:px-8 py-6">
       <div className="w-full mb-10">
@@ -26,14 +29,20 @@ export default function PantallaRegistro({ titulo, registro, consulta }) {
             </div>
 
             <div className="flex flex-wrap gap-3 mb-6">
-              {[['registro', 'Registro'], ['consulta', 'Consulta']].map(([clave, texto]) => (
-                <button key={clave} type="button" onClick={() => setTab(clave)} className={`${TAB} ${tab === clave ? ACTIVA : INACTIVA}`}>
-                  {texto}
+              {visibles.map((p) => (
+                <button
+                  key={p.clave}
+                  type="button"
+                  aria-pressed={activa === p.clave}
+                  onClick={() => setActiva(p.clave)}
+                  className={`${TAB} ${activa === p.clave ? ACTIVA : INACTIVA}`}
+                >
+                  {p.etiqueta}
                 </button>
               ))}
             </div>
 
-            {tab === 'registro' ? registro : consulta}
+            {contenido[activa] ?? null}
           </div>
         </div>
       </div>

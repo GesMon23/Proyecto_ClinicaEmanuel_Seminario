@@ -72,7 +72,7 @@ const Nutricion = () => {
 
   return (
     <>
-      <PantallaRegistro titulo="Nutrición" registro={registro} consulta={<ConsultaNutricion />} />
+      <PantallaRegistro modulo="nutricion" titulo="Nutrición" registro={registro} consulta={<ConsultaNutricion />} />
       <CustomModal {...modal} />
     </>
   );

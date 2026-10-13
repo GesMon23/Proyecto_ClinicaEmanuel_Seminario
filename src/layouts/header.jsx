@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { ChevronsLeft, Moon, Search, Sun, User as UserIcon, Settings, SquareArrowOutUpRight, CircleHelp } from "lucide-react";
 import api from "@/config/api";
 import { navbarLinks } from "@/constants";
+import { tieneAlguno } from "@/constants/permisos";
 import { BOTON_PRINCIPAL } from "@/constants/botones";
 import PropTypes from "prop-types";
 
@@ -26,13 +27,7 @@ export const Header = ({ collapsed, setCollapsed }) => {
     const [query, setQuery] = useState("");
     const [results, setResults] = useState([]);
     const [openSearch, setOpenSearch] = useState(false);
-    const roles = user?.roles || [];
-
-    const canSee = (link) => {
-        const req = link.allowedRoles;
-        if (!Array.isArray(req) || req.length === 0) return true;
-        return roles.some((r) => req.includes(r));
-    };
+    const canSee = (link) => tieneAlguno(user, link.permisos);
 
     const onSearchChange = (e) => {
         const term = (e.target.value || "").trimStart();

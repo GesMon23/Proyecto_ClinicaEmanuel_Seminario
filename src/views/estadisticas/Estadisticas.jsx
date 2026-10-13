@@ -1,6 +1,7 @@
 // Pantalla de Estadísticas. Una fila de filtros global (período y sexo) arriba de todo: cada panel
 // muestra a qué período corresponde y se recalcula con los mismos filtros.
 import React, { useState } from 'react';
+import { usePestanas } from '@/hooks/usePestanas';
 import { Fecha, FilaFiltros, Selector } from './componentes';
 import PanelNutricion from './PanelNutricion';
 import PanelPacientes from './PanelPacientes';
@@ -13,6 +14,9 @@ export default function Estadisticas() {
   const [periodo, setPeriodo] = useState(PERIODO_INICIAL);
   const [personalizado, setPersonalizado] = useState({ desde: '', hasta: '' });
   const [sexo, setSexo] = useState('');
+  // Cada panel es una "pestaña" con su propio permiso
+  const { visibles } = usePestanas('estadisticas');
+  const ve = (panel) => visibles.some((p) => p.clave === panel);
 
   // null mientras el período personalizado esté incompleto: los paneles conservan lo que muestran
   const rango = rangoDe(periodo, personalizado);
@@ -38,14 +42,16 @@ export default function Estadisticas() {
         {rangoInvalido && (
           <p role="alert" className="mt-3 text-sm text-red-600 dark:text-red-400">La fecha inicial debe ser anterior o igual a la final.</p>
         )}
-        <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-          El período aplica a Nutrición y Psicología; Pacientes muestra la situación actual.
-        </p>
+        {ve('pacientes') && (ve('nutricion') || ve('psicologia')) && (
+          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+            El período aplica a Nutrición y Psicología; Pacientes muestra la situación actual.
+          </p>
+        )}
       </div>
 
-      <PanelPacientes sexo={sexo} />
-      <PanelNutricion rango={rango} sexo={sexo} />
-      <PanelPsicologia rango={rango} sexo={sexo} />
+      {ve('pacientes') && <PanelPacientes sexo={sexo} />}
+      {ve('nutricion') && <PanelNutricion rango={rango} sexo={sexo} />}
+      {ve('psicologia') && <PanelPsicologia rango={rango} sexo={sexo} />}
     </div>
   );
 }

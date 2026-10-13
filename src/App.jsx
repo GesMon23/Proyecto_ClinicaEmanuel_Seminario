@@ -11,7 +11,7 @@ import GestionLaboratorios from "@/views/GestionLaboratorios.jsx";
 import LoginComponent from "@/Login.jsx"; 
 import { AuthProvider } from "@/contexts/auth-context";
 import ProtectedRoute from "@/routes/ProtectedRoute";
-import RequireRole from "@/routes/RequireRole";
+import RequirePermiso from "@/routes/RequirePermiso";
 import GestionUsuarios from "@/views/GestionUsuarios.jsx";
 import Nutricion from "@/views/Nutricion.jsx";
 import Psicologia from "@/views/Psicologia.jsx";
@@ -45,81 +45,81 @@ function App() {
                 {
                     path: "estadisticas",
                     element: (
-                        <RequireRole roles={["RolEstadistica"]}>
+                        <RequirePermiso modulo="estadisticas">
                             <Estadisticas/>
-                        </RequireRole>
+                        </RequirePermiso>
                     ),
                 },
                 {
                     path: "consulta-pacientes",
                     element: (
-                        <RequireRole roles={["RolConsulta"]}>
+                        <RequirePermiso modulo="consultaPacientes">
                             <ConsultaPacientesView />
-                        </RequireRole>
+                        </RequirePermiso>
                     )
                 },
                 {
                     path: "gestion-pacientes",
                     element: (
-                        <RequireRole roles={["RolGestionPaciente"]}>
+                        <RequirePermiso modulo="gestionPacientes">
                             <GestionPacientes/>
-                        </RequireRole>
+                        </RequirePermiso>
                     )
                 },
                 {
                     path: "turnos",
                     element: (
-                        <RequireRole roles={["RolTurnos"]}>
+                        <RequirePermiso modulo="turnos">
                             <Turnos/>
-                        </RequireRole>
+                        </RequirePermiso>
                     ),
                 },
                 {
                     path: "gestion-reportes",
                     element: (
-                        <RequireRole roles={["RolReportes"]}>
+                        <RequirePermiso modulo="reportes">
                             <GestionReportes/>
-                        </RequireRole>
+                        </RequirePermiso>
                     ),
                 },
                 {
                     path: "gestion-referencias",
                     element: (
-                        <RequireRole roles={["RolReferencia"]}>
+                        <RequirePermiso modulo="referencias">
                             <GestionReferencias/>
-                        </RequireRole>
+                        </RequirePermiso>
                     ),
                 },
                 {
                     path: "gestion-laboratorios",
                     element: (
-                        <RequireRole roles={["RolLaboratorio"]}>
+                        <RequirePermiso modulo="laboratorios">
                             <GestionLaboratorios/>
-                        </RequireRole>
+                        </RequirePermiso>
                     ),
                 }, 
                 {
                     path: "gestion-usuarios",
                     element: (
-                        <RequireRole roles={["RolGestionUsuarios"]}>
+                        <RequirePermiso modulo="usuarios">
                             <GestionUsuarios/>
-                        </RequireRole>
+                        </RequirePermiso>
                     ),
                 },
                 {
                     path: "nutricion",
                     element: (
-                        <RequireRole roles={["RolNutricion"]}>
+                        <RequirePermiso modulo="nutricion">
                             <Nutricion/>
-                        </RequireRole>
+                        </RequirePermiso>
                     ),
                 },
                 {
                     path: "psicologia",
                     element: (
-                        <RequireRole roles={["RolPsicologia"]}>
+                        <RequirePermiso modulo="psicologia">
                             <Psicologia/>
-                        </RequireRole>
+                        </RequirePermiso>
                     ),
                 },
                 {

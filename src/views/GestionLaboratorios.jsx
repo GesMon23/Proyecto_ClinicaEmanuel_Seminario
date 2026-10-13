@@ -1,49 +1,23 @@
-import React, { useState } from "react";
+import React from "react";
 import "./GestionReferenciasNavButtons.css";
-import { Container, Card } from "react-bootstrap";
-
 import RegistroLaboratorios from "./RegistroLaboratorios.jsx";
 import ConsultaLaboratorios from "../components/ConsultaLaboratorios.jsx";
+import BarraPestanas from "@/components/BarraPestanas";
+import { usePestanas } from "@/hooks/usePestanas";
+
+const CONTENIDO = { registro: RegistroLaboratorios, consulta: ConsultaLaboratorios };
 
 function GestionLaboratorios() {
-  const [tab, setTab] = useState("registro");
+  const { visibles, activa, setActiva } = usePestanas('laboratorios');
+  const Contenido = CONTENIDO[activa];
+
   return (
     <div className="w-full px-4 py-6">
-  <div className="pt-6 w-full bg-white dark:bg-slate-900 rounded-lg shadow-lg p-6">
-    <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-      <button
-        className={`w-full font-bold px-4 py-2 rounded transition-colors ${
-          tab === 'registro'
-            ? 'bg-green-800 text-white'
-            : 'bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-white hover:bg-blue-100 dark:hover:bg-slate-600'
-        }`}
-        onClick={() => setTab('registro')}
-        disabled={tab === 'registro'}
-      >
-        Registro de Laboratorio
-      </button>
-
-      <button
-        className={`w-full font-bold px-4 py-2 rounded transition-colors ${
-          tab === 'consulta'
-            ? 'bg-green-800 text-white'
-            : 'bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-white hover:bg-blue-100 dark:hover:bg-slate-600'
-        }`}
-        onClick={() => setTab('consulta')}
-        disabled={tab === 'consulta'}
-      >
-        Consulta de Laboratorio
-      </button>
+      <div className="pt-6 w-full bg-white dark:bg-slate-900 rounded-lg shadow-lg p-6">
+        <BarraPestanas pestanas={visibles} activa={activa} onCambio={setActiva} />
+        <div>{Contenido && <Contenido />}</div>
+      </div>
     </div>
-
-    {/* Contenido dinámico */}
-    <div>
-      {tab === 'registro' && <RegistroLaboratorios />}
-      {tab === 'consulta' && <ConsultaLaboratorios />}
-    </div>
-  </div>
-</div>
-
   );
 }
 
