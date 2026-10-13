@@ -1,7 +1,8 @@
-// Correos del flujo de contraseñas. Todo dato ingresado por el usuario se escapa antes de entrar al HTML.
-const { enviarCorreo } = require('../../utils/mailer');
+// Correos del flujo de contraseñas. Nunca llevan contraseñas: solo un enlace de un solo uso o un aviso.
+// Todo dato que viene de la base o del usuario se escapa antes de entrar al HTML.
+const mailer = require('../../utils/mailer');
 
-const baseApp = () => process.env.APP_BASE_URL || 'http://localhost:3000';
+const baseApp = () => (process.env.APP_BASE_URL || 'http://localhost:3000').replace(/\/+$/, '');
 
 function escapeHtml(valor) {
   return String(valor ?? '')
@@ -36,66 +37,46 @@ function plantilla({ titulo, cuerpo, pie }) {
 const boton = (enlace, texto) =>
   `<a href="${escapeHtml(enlace)}" style="display:inline-block;background:#16a34a;color:#ffffff;text-decoration:none;padding:10px 16px;border-radius:6px;font-weight:600;">${texto}</a>`;
 
-// Al usuario: su contraseña fue restablecida
-function passwordRestablecida({ to, password }) {
-  return enviarCorreo({
+const PIE = 'Clínica Renal Emanuel — Este es un correo automático, no lo respondas.';
+
+// Enlace de un solo uso para crear una contraseña nueva
+function enlaceRestablecimiento({ to, nombreUsuario, token, minutos, porAdministrador = false }) {
+  const enlace = `${baseApp()}/restablecer-contrasena?token=${encodeURIComponent(token)}`;
+  const motivo = porAdministrador
+    ? 'Un administrador del sistema solicitó que restablezcas tu contraseña.'
+    : 'Recibimos una solicitud para restablecer tu contraseña.';
+  return mailer.enviarCorreo({
     to,
-    subject: 'Credenciales actualizadas',
+    subject: 'Restablece tu contraseña — Clínica Renal Emanuel',
+    text: `${motivo}\nUsuario: ${nombreUsuario}\nCrea tu nueva contraseña aquí (válido ${minutos} minutos, un solo uso):\n${enlace}\n\nSi no lo solicitaste, ignora este correo: tu contraseña actual sigue funcionando.`,
     html: plantilla({
-      titulo: 'Tu contraseña ha sido restablecida',
+      titulo: 'Restablece tu contraseña',
       cuerpo: `
-        <p style="margin:0 0 12px;">Se ha restablecido tu contraseña en el sistema.</p>
-        <p style="margin:0 0 8px;font-weight:bold;">Nueva contraseña temporal:</p>
-        <div style="background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:6px;padding:10px 12px;margin:0 0 16px;">
-          <code style="font-family:Consolas,Monaco,monospace;font-size:14px;">${escapeHtml(password)}</code>
-        </div>
-        ${boton(baseApp(), 'Ir al inicio de sesión')}
-        <p style="margin:16px 0 0;color:#64748b;">Por seguridad, cambia tu contraseña al iniciar sesión.</p>`,
-      pie: 'Clínica Renal Emanuel — Soporte',
+        <p style="margin:0 0 12px;">${motivo}</p>
+        <p style="margin:0 0 16px;">Usuario: <strong>${escapeHtml(nombreUsuario)}</strong></p>
+        ${boton(enlace, 'Crear nueva contraseña')}
+        <p style="margin:16px 0 0;color:#64748b;">El enlace vence en <strong>${minutos} minutos</strong> y solo se puede usar una vez.</p>
+        <p style="margin:8px 0 0;color:#64748b;">Si no lo solicitaste, ignora este correo: tu contraseña actual sigue funcionando.</p>`,
+      pie: PIE,
     }),
   });
 }
 
-// Al administrador: solicitud de recuperación con enlace de acción rápida (idUsuario/token opcionales)
-function solicitudRecuperacion({ to, datos, idUsuario, token }) {
-  const enlace = token ? `${baseApp()}/admin/reset-user?token=${token}` : `${baseApp()}/admin/reset-user`;
-  return enviarCorreo({
+// Aviso de seguridad: la contraseña acaba de cambiar
+function avisoPasswordCambiada({ to, nombreUsuario }) {
+  return mailer.enviarCorreo({
     to,
-    subject: 'Solicitud de recuperación de contraseña (acción requerida)',
+    subject: 'Tu contraseña fue cambiada — Clínica Renal Emanuel',
+    text: `La contraseña del usuario ${nombreUsuario} se cambió correctamente. Si no fuiste tú, contacta de inmediato al administrador del sistema.`,
     html: plantilla({
-      titulo: 'Solicitud de recuperación de contraseña',
+      titulo: 'Tu contraseña fue cambiada',
       cuerpo: `
-        <p style="margin:0 0 12px;">Se recibió una solicitud de recuperación de contraseña desde el login.</p>
-        <p style="margin:0 0 8px;font-weight:bold;">Datos suministrados por el usuario:</p>
-        <ul style="margin:0 0 16px;padding-left:18px;line-height:1.6;">
-          <li><strong>DPI:</strong> ${escapeHtml(datos.dpi)}</li>
-          <li><strong>Nombres:</strong> ${escapeHtml(datos.nombres)}</li>
-          <li><strong>Apellidos:</strong> ${escapeHtml(datos.apellidos)}</li>
-          <li><strong>Teléfono:</strong> ${escapeHtml(datos.telefono)}</li>
-          <li><strong>Usuario:</strong> ${escapeHtml(datos.usuario)}</li>
-        </ul>
-        ${idUsuario ? `<p style="margin:0 0 16px;"><strong>ID Usuario en sistema:</strong> ${escapeHtml(idUsuario)}</p>` : ''}
-        ${boton(enlace, 'Abrir acción rápida (expira en 15 min)')}
-        <p style="margin:16px 0 0;color:#64748b;">Favor validar la identidad y proceder al cambio de contraseña en el sistema si corresponde.</p>`,
-      pie: 'Clínica Renal Emanuel — Sistema de Gestión',
+        <p style="margin:0 0 12px;">La contraseña del usuario <strong>${escapeHtml(nombreUsuario)}</strong> se cambió correctamente.</p>
+        <p style="margin:0 0 16px;color:#b91c1c;"><strong>Si no fuiste tú</strong>, contacta de inmediato al administrador del sistema.</p>
+        ${boton(baseApp(), 'Ir al inicio de sesión')}`,
+      pie: PIE,
     }),
   });
 }
 
-// Al usuario: acuse de recibo de su solicitud
-function acuseSolicitud({ to }) {
-  return enviarCorreo({
-    to,
-    subject: 'Hemos recibido tu solicitud de recuperación de contraseña',
-    html: plantilla({
-      titulo: 'Solicitud recibida',
-      cuerpo: `
-        <p style="margin:0 0 12px;">Hemos recibido tu solicitud para recuperar tu contraseña.</p>
-        <p style="margin:0 0 12px;">El equipo de administración revisará tus datos y, de ser procedente, te enviará una nueva contraseña o un enlace para restablecerla.</p>
-        ${boton(baseApp(), 'Ir al inicio')}`,
-      pie: 'Clínica Renal Emanuel — Soporte',
-    }),
-  });
-}
-
-module.exports = { escapeHtml, passwordRestablecida, solicitudRecuperacion, acuseSolicitud };
+module.exports = { escapeHtml, enlaceRestablecimiento, avisoPasswordCambiada };

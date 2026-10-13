@@ -29,29 +29,25 @@ router.post('/auth/change-password', verifyJWT, wrap(async (req, res) => {
   res.json({ ok: true });
 }, falla('No fue posible cambiar la contraseña', 'Error en /auth/change-password:')));
 
+// Recuperación por autoservicio: pedir enlace -> validar enlace -> crear contraseña
 router.post('/auth/forgot-password', wrap(async (req, res) => {
-  await service.solicitarRecuperacion(req.body);
-  res.json({ ok: true });
+  res.json({ ok: true, ...(await service.solicitarRecuperacion(req.body)) });
 }, falla('No fue posible procesar la solicitud', 'Error en /auth/forgot-password:')));
+
+router.get('/auth/reset-password/info', wrap(async (req, res) => {
+  res.json(await service.infoRestablecimiento(req.query.token));
+}, falla('No fue posible validar el enlace', 'Error en /auth/reset-password/info:')));
 
 router.post('/auth/reset-password', wrap(async (req, res) => {
   await service.restablecerConToken(req.body);
   res.json({ ok: true });
 }, falla('No fue posible restablecer la contraseña', 'Error en /auth/reset-password:')));
 
+// El administrador envía el enlace de restablecimiento a un usuario (nunca fija ni ve su contraseña)
 router.post('/auth/admin/reset-user-password', verifyJWT, wrap(async (req, res) => {
-  await service.restablecerComoAdmin(req.user, req.body);
+  await service.enviarEnlaceComoAdmin(req.user, req.body);
   res.json({ ok: true });
-}, falla('No fue posible restablecer la contraseña', 'Error en /auth/admin/reset-user-password:')));
-
-router.post('/auth/admin/reset-user-password/token', wrap(async (req, res) => {
-  await service.restablecerConTokenDeAccion(req.body);
-  res.json({ ok: true });
-}, falla('No fue posible restablecer la contraseña', 'Error en /auth/admin/reset-user-password/token:')));
-
-router.get('/auth/admin/reset-user-token-info', wrap(async (req, res) => {
-  res.json(await service.infoTokenDeAccion(req.query.token));
-}, falla('No fue posible obtener la información del token', 'Error en /auth/admin/reset-user-token-info:')));
+}, falla('No fue posible enviar el enlace', 'Error en /auth/admin/reset-user-password:')));
 
 // La ruta conserva el prefijo /api porque así la consume el frontend (queda en /api/usuarios-activos y /api/api/...)
 router.get('/api/usuarios-activos', wrap(async (req, res) => {

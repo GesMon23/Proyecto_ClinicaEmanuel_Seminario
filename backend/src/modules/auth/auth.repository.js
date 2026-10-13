@@ -39,6 +39,21 @@ const actualizarPassword = (id, hash) => pool.query('CALL public.sp_actualizar_p
 
 const marcarCambioObligatorio = (id, valor) => pool.query('CALL public.sp_usuario_flag_force_change_set($1, $2)', [id, valor]);
 
+// Usuarios activos (con empleado activo) por nombre de usuario o correo del empleado, para la recuperación
+const usuariosParaRecuperacion = async (identificador) => (await pool.query(
+  `SELECT u.id_usuario, u.nombre_usuario, u.contrasenia, e.email
+   FROM public.tbl_usuarios u
+   JOIN public.tbl_empleados e ON e.id_empleado = u.id_empleado
+   WHERE u.estado = true AND e.estado = true
+     AND (lower(u.nombre_usuario) = lower($1) OR lower(e.email) = lower($1))`, [identificador])).rows;
+
+// Datos para validar un enlace de restablecimiento: hash vigente, estado y correo
+const credencial = async (id) => (await pool.query(
+  `SELECT u.id_usuario, u.nombre_usuario, u.contrasenia, u.estado, e.email, e.estado AS empleado_activo
+   FROM public.tbl_usuarios u
+   LEFT JOIN public.tbl_empleados e ON e.id_empleado = u.id_empleado
+   WHERE u.id_usuario = $1`, [id])).rows[0] || null;
+
 // Quita la marca de "debe cambiar la contraseña" tras un cambio voluntario
 const limpiarMarcaCambio = (id) =>
   pool.query('UPDATE public.tbl_usuarios SET usuario_actualizacion = NULL, fecha_actualizacion = NOW() WHERE id_usuario = $1', [id]);
@@ -46,4 +61,5 @@ const limpiarMarcaCambio = (id) =>
 module.exports = {
   buscarUsuarioAuth, usuarioAutenticado, empleadoActivo, nombresDeRoles, debeCambiarPassword, emailDeUsuario,
   passwordGuardada, usuariosActivos, actualizarPassword, marcarCambioObligatorio, limpiarMarcaCambio,
+  usuariosParaRecuperacion, credencial,
 };

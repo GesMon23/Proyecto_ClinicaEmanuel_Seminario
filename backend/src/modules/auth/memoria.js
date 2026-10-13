@@ -38,7 +38,31 @@ class IntentosFallidos {
   }
 }
 
-// Tokens de acción de un solo uso (enlace del correo al administrador) hasta que expiren
+// Espera mínima entre solicitudes con la misma clave (evita usar la recuperación para llenar un buzón)
+class Enfriamiento {
+  constructor({ segundos = 60, ahora = Date.now } = {}) {
+    this.ms = segundos * 1000;
+    this.ahora = ahora;
+    this.ultimos = new Map(); // clave (minúsculas) -> momento de la última solicitud
+  }
+
+  // ms que faltan para poder repetir (0 = puede); si puede, registra el intento
+  intentar(clave) {
+    const k = String(clave).toLowerCase();
+    const restante = (this.ultimos.get(k) || 0) + this.ms - this.ahora();
+    if (restante > 0) return restante;
+    this.ultimos.set(k, this.ahora());
+    return 0;
+  }
+
+  purgar() {
+    for (const [k, momento] of this.ultimos.entries()) {
+      if (this.ahora() - momento >= this.ms) this.ultimos.delete(k);
+    }
+  }
+}
+
+// Tokens de un solo uso (enlaces de restablecimiento) hasta que expiren
 class TokensUsados {
   constructor({ ahora = Date.now } = {}) {
     this.ahora = ahora;
@@ -74,8 +98,9 @@ const intentos = new IntentosFallidos({
   minutosBloqueo: parseInt(process.env.LOGIN_LOCK_MINUTES || '15', 10),
 });
 const tokensUsados = new TokensUsados();
+const solicitudesRecuperacion = new Enfriamiento({ segundos: 60 });
 
-const limpieza = setInterval(() => tokensUsados.purgar(), 5 * 60 * 1000);
+const limpieza = setInterval(() => { tokensUsados.purgar(); solicitudesRecuperacion.purgar(); }, 5 * 60 * 1000);
 if (limpieza.unref) limpieza.unref();
 
-module.exports = { IntentosFallidos, TokensUsados, intentos, tokensUsados };
+module.exports = { IntentosFallidos, TokensUsados, Enfriamiento, intentos, tokensUsados, solicitudesRecuperacion };

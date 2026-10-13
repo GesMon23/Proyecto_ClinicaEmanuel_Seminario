@@ -15,7 +15,7 @@ import RequireRole from "@/routes/RequireRole";
 import GestionUsuarios from "@/views/GestionUsuarios.jsx";
 import Nutricion from "@/views/Nutricion.jsx";
 import Psicologia from "@/views/Psicologia.jsx";
-import AdminResetUser from "@/pages/AdminResetUser.jsx";
+import RestablecerPassword from "@/pages/RestablecerPassword.jsx";
 import Estadisticas from "@/views/estadisticas/Estadisticas.jsx";
 import TurnosTVPage from "@/routes/turnos-tv/page";
 import CerrarSesion from "@/routes/CerrarSesion";
@@ -26,8 +26,9 @@ function App() {
                 element: <LoginComponent />,
         },
         {
-                path: "/admin/reset-user",
-                element: <AdminResetUser />,
+                // Enlace del correo de recuperación de contraseña (pública: el token es la autorización)
+                path: "/restablecer-contrasena",
+                element: <RestablecerPassword />,
         },
         {
             path: "layout/",

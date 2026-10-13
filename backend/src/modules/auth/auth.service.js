@@ -4,9 +4,10 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const repo = require('./auth.repository');
 const mail = require('./auth.mail');
-const { intentos, tokensUsados } = require('./memoria');
+const { intentos, tokensUsados, solicitudesRecuperacion } = require('./memoria');
 const { HttpError } = require('../../shared/http');
 const { jwtSecret } = require('../../shared/auth');
+const { correoConfigurado } = require('../../utils/mailer');
 
 const ROL_ADMIN = 'RolGestionUsuarios';
 // 8+ caracteres con minúscula, mayúscula, dígito y símbolo
@@ -21,23 +22,6 @@ const registrarFallo = (mensaje) => (err) => {
 async function coincidePassword(plano, guardada) {
   if (typeof guardada !== 'string' || !guardada.startsWith('$2')) return false;
   return bcrypt.compare(String(plano), guardada);
-}
-
-// Contraseña aleatoria con al menos una minúscula, mayúscula, dígito y símbolo
-function generarPasswordFuerte(largo = 12) {
-  const minusculas = 'abcdefghijklmnopqrstuvwxyz';
-  const mayusculas = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  const digitos = '0123456789';
-  const simbolos = '!@#$%^&*()_+[]{}|;:,.<>?';
-  const todos = minusculas + mayusculas + digitos + simbolos;
-  const elegir = (texto) => texto[crypto.randomInt(texto.length)];
-  const caracteres = [elegir(minusculas), elegir(mayusculas), elegir(digitos), elegir(simbolos)];
-  while (caracteres.length < Math.max(4, largo)) caracteres.push(elegir(todos));
-  for (let i = caracteres.length - 1; i > 0; i--) {
-    const j = crypto.randomInt(i + 1);
-    [caracteres[i], caracteres[j]] = [caracteres[j], caracteres[i]];
-  }
-  return caracteres.join('');
 }
 
 function mensajeBloqueo(msRestantes) {
@@ -123,112 +107,110 @@ async function cambiarPassword(user, { actual, nueva } = {}) {
   try { await repo.limpiarMarcaCambio(sub); } catch { /* la marca puede quedar; no invalida el cambio */ }
 }
 
-// -------------------------------------------------------------- Recuperación
+// ------------------------------------------------- Recuperación (autoservicio por correo)
+// El usuario pide un enlace con su usuario o su correo y crea él mismo la contraseña nueva. Las contraseñas
+// nunca viajan por correo y la respuesta no revela si el usuario existe.
 
-// Cambio con el token de recuperación (purpose = reset)
-async function restablecerConToken({ token, nueva } = {}) {
-  if (!token || !nueva) throw new HttpError(400, { error: 'token y nueva son requeridos' });
-  if (String(nueva).length < 8) throw new HttpError(400, { error: 'La nueva contraseña debe tener al menos 8 caracteres' });
-  let payload;
+const MINUTOS_ENLACE = 30;
+const SIN_CORREO = 'El envío de correos no está configurado. Contacta al administrador del sistema.';
+const FALLO_CORREO = 'No pudimos enviar el correo en este momento. Intenta más tarde o contacta al administrador.';
+const ENLACE_INVALIDO = 'El enlace no es válido, ya se usó o venció. Solicita uno nuevo desde "¿Olvidaste tu contraseña?".';
+const MENSAJE_SOLICITUD = 'Si el usuario existe y tiene un correo registrado, recibirás un enlace para crear una nueva contraseña. '
+  + 'Si no llega en unos minutos, revisa la carpeta de spam o contacta al administrador.';
+
+// Huella de la contraseña vigente dentro del token: cuando la contraseña cambia, todos los enlaces anteriores
+// dejan de servir (un solo uso que sobrevive a reinicios del servidor)
+const huella = (hash) => crypto.createHash('sha256').update(String(hash || '')).digest('hex').slice(0, 16);
+
+const tokenRestablecimiento = (usuario) => jwt.sign(
+  { purpose: 'reset', sub: usuario.id_usuario, h: huella(usuario.contrasenia) },
+  jwtSecret(),
+  { expiresIn: `${MINUTOS_ENLACE}m` },
+);
+
+async function enviarEnlace(usuario, porAdministrador = false) {
   try {
-    payload = jwt.verify(token, jwtSecret());
-  } catch {
-    throw new HttpError(401, { error: 'Token inválido o expirado' });
-  }
-  if (!payload || payload.purpose !== 'reset' || !payload.sub) throw new HttpError(401, { error: 'Token inválido' });
-  await repo.actualizarPassword(payload.sub, await bcrypt.hash(String(nueva), 10));
-}
-
-// Cambia la contraseña de otro usuario, lo obliga a cambiarla al entrar y le avisa por correo
-async function restablecerPasswordDeUsuario(id, plano) {
-  await repo.actualizarPassword(id, await bcrypt.hash(String(plano), 10));
-  try { await repo.marcarCambioObligatorio(id, true); } catch { /* no bloquea el restablecimiento */ }
-
-  try {
-    let correo = null;
-    try { correo = await repo.emailDeUsuario(id); } catch { /* usa el correo del administrador */ }
-    const destino = correo || process.env.ADMIN_EMAIL;
-    if (destino) await mail.passwordRestablecida({ to: destino, password: plano });
+    await mail.enlaceRestablecimiento({
+      to: usuario.email, nombreUsuario: usuario.nombre_usuario, token: tokenRestablecimiento(usuario), minutos: MINUTOS_ENLACE, porAdministrador,
+    });
   } catch (err) {
-    registrarFallo('No fue posible enviar el correo de nueva contraseña:')(err);
+    registrarFallo('No fue posible enviar el enlace de restablecimiento:')(err);
+    throw new HttpError(503, { error: FALLO_CORREO });
   }
 }
 
-// El administrador fija una contraseña nueva a un usuario
-async function restablecerComoAdmin(user, { id_usuario: idUsuario, nueva } = {}) {
-  const roles = Array.isArray(user && user.roles) ? user.roles : [];
-  if (!roles.includes(ROL_ADMIN)) throw new HttpError(403, { error: `Requiere rol de administrador (${ROL_ADMIN})` });
-  const id = Number(idUsuario);
-  if (!id || Number.isNaN(id)) throw new HttpError(400, { error: 'id_usuario inválido' });
-  if (!nueva) throw new HttpError(400, { error: 'La nueva contraseña es requerida' });
-  if (!PASSWORD_FUERTE.test(String(nueva))) throw new HttpError(400, { error: MENSAJE_PASSWORD_FUERTE });
-  await restablecerPasswordDeUsuario(id, String(nueva));
+// "¿Olvidaste tu contraseña?": identificador = usuario o correo del empleado
+async function solicitarRecuperacion({ identificador, usuario } = {}) {
+  const id = String(identificador ?? usuario ?? '').trim();
+  if (!id) throw new HttpError(400, { error: 'Ingresa tu usuario o tu correo electrónico' });
+  if (!correoConfigurado()) throw new HttpError(503, { error: SIN_CORREO });
+
+  // Misma espera para usuarios existentes o no: no revela cuáles existen
+  const espera = solicitudesRecuperacion.intentar(id);
+  if (espera) throw new HttpError(429, { error: `Ya recibimos una solicitud. Espera ${Math.ceil(espera / 1000)} segundos para intentarlo de nuevo.` });
+
+  const usuarios = (await repo.usuariosParaRecuperacion(id)).filter((u) => u.email);
+  for (const u of usuarios) await enviarEnlace(u);
+  return { mensaje: MENSAJE_SOLICITUD };
 }
 
-// Valida el token de acción del enlace de correo del administrador (sin consumirlo)
-function leerTokenAccion(token) {
+async function leerTokenRestablecimiento(token) {
   let payload;
   try {
     payload = jwt.verify(String(token), jwtSecret());
   } catch {
-    throw new HttpError(401, { error: 'Token inválido o expirado' });
+    throw new HttpError(401, { error: ENLACE_INVALIDO });
   }
-  if (tokensUsados.usado(token)) throw new HttpError(401, { error: 'Token ya utilizado' });
-  if (!payload || payload.purpose !== 'admin_reset_user' || !payload.target) throw new HttpError(401, { error: 'Token inválido' });
-  return payload;
-}
-
-// Restablece con el token de acción; sin contraseña en el cuerpo genera una fuerte aleatoria
-async function restablecerConTokenDeAccion({ token, nueva } = {}) {
-  if (!token) throw new HttpError(400, { error: 'token es requerido' });
-  const payload = leerTokenAccion(token);
-  const dada = nueva && String(nueva).trim().length > 0;
-  if (dada && !PASSWORD_FUERTE.test(String(nueva))) throw new HttpError(400, { error: MENSAJE_PASSWORD_FUERTE });
-
-  await restablecerPasswordDeUsuario(payload.target, dada ? String(nueva) : generarPasswordFuerte(12));
-  if (payload.exp) tokensUsados.marcar(token, payload.exp);
-}
-
-async function infoTokenDeAccion(token) {
-  if (!token) throw new HttpError(400, { error: 'token es requerido' });
-  const payload = leerTokenAccion(token);
-  let nombre = null;
-  try { nombre = (await repo.usuarioAutenticado(payload.target))?.nombre_usuario || null; } catch { /* solo informativo */ }
-  return { id_usuario: payload.target, nombre_usuario: nombre };
-}
-
-// Captura la solicitud y avisa al administrador; la respuesta al solicitante es siempre genérica
-async function solicitarRecuperacion(datos = {}) {
-  const { dpi, nombres, apellidos, telefono, usuario } = datos;
-  if (!dpi || String(dpi).length < 6) throw new HttpError(400, { error: 'DPI inválido' });
-  if (!nombres || !apellidos) throw new HttpError(400, { error: 'Nombres y apellidos son requeridos' });
-  if (!telefono) throw new HttpError(400, { error: 'Teléfono es requerido' });
-  if (!usuario) throw new HttpError(400, { error: 'Usuario es requerido' });
-
-  let user = null;
-  try { user = await repo.buscarUsuarioAuth(usuario); } catch { /* respuesta genérica igualmente */ }
-
-  try {
-    const admin = process.env.ADMIN_EMAIL;
-    if (admin) {
-      const token = user && user.id_usuario
-        ? jwt.sign({ purpose: 'admin_reset_user', target: user.id_usuario }, jwtSecret(), { expiresIn: '15m' })
-        : null;
-      // Sin await: el correo no debe retrasar la respuesta HTTP
-      mail.solicitudRecuperacion({ to: admin, datos, idUsuario: user && user.id_usuario, token })
-        .catch(registrarFallo('Error enviando correo forgot-password (async):'));
-    }
-    if (user && user.id_usuario) {
-      const correo = await repo.emailDeUsuario(user.id_usuario).catch(() => null);
-      if (correo) await mail.acuseSolicitud({ to: correo });
-    }
-  } catch (err) {
-    registrarFallo('Error enviando correo forgot-password:')(err);
+  if (!payload || payload.purpose !== 'reset' || !payload.sub || !payload.h || tokensUsados.usado(token)) {
+    throw new HttpError(401, { error: ENLACE_INVALIDO });
   }
+  const usuario = await repo.credencial(payload.sub);
+  if (!usuario || !usuario.estado || usuario.empleado_activo === false || huella(usuario.contrasenia) !== payload.h) {
+    throw new HttpError(401, { error: ENLACE_INVALIDO });
+  }
+  return { payload, usuario };
+}
+
+// La pantalla de restablecimiento valida el enlace al abrirse (muestra el usuario o el aviso de vencido)
+async function infoRestablecimiento(token) {
+  if (!token) throw new HttpError(400, { error: 'token es requerido' });
+  const { usuario } = await leerTokenRestablecimiento(token);
+  return { nombre_usuario: usuario.nombre_usuario, minutos: MINUTOS_ENLACE };
+}
+
+async function restablecerConToken({ token, nueva } = {}) {
+  if (!token || !nueva) throw new HttpError(400, { error: 'token y nueva son requeridos' });
+  if (!PASSWORD_FUERTE.test(String(nueva))) throw new HttpError(400, { error: MENSAJE_PASSWORD_FUERTE });
+  const { payload, usuario } = await leerTokenRestablecimiento(token);
+
+  await repo.actualizarPassword(usuario.id_usuario, await bcrypt.hash(String(nueva), 10));
+  try { await repo.limpiarMarcaCambio(usuario.id_usuario); } catch { /* la marca puede quedar; no invalida el cambio */ }
+  tokensUsados.marcar(token, payload.exp);
+  intentos.limpiar(usuario.nombre_usuario);
+
+  // Aviso de seguridad (no bloquea: la contraseña ya cambió)
+  if (usuario.email) {
+    mail.avisoPasswordCambiada({ to: usuario.email, nombreUsuario: usuario.nombre_usuario })
+      .catch(registrarFallo('No fue posible enviar el aviso de cambio de contraseña:'));
+  }
+}
+
+// El administrador envía el enlace a un usuario (p. ej. si sospecha que su contraseña se filtró)
+async function enviarEnlaceComoAdmin(user, { id_usuario: idUsuario } = {}) {
+  const roles = Array.isArray(user && user.roles) ? user.roles : [];
+  if (!roles.includes(ROL_ADMIN)) throw new HttpError(403, { error: `Requiere rol de administrador (${ROL_ADMIN})` });
+  const id = Number(idUsuario);
+  if (!id || Number.isNaN(id)) throw new HttpError(400, { error: 'id_usuario inválido' });
+  if (!correoConfigurado()) throw new HttpError(503, { error: SIN_CORREO });
+
+  const usuario = await repo.credencial(id);
+  if (!usuario || !usuario.estado) throw new HttpError(404, { error: 'Usuario no encontrado o inactivo' });
+  if (!usuario.email) throw new HttpError(409, { error: 'El usuario no tiene un correo registrado: actualiza los datos del empleado' });
+  await enviarEnlace(usuario, true);
 }
 
 module.exports = {
-  coincidePassword, generarPasswordFuerte, mensajeBloqueo, PASSWORD_FUERTE,
+  coincidePassword, mensajeBloqueo, PASSWORD_FUERTE, MINUTOS_ENLACE,
   login, perfil, usuariosActivos, confirmarPassword, cambiarPassword,
-  restablecerConToken, restablecerComoAdmin, restablecerConTokenDeAccion, infoTokenDeAccion, solicitarRecuperacion,
+  solicitarRecuperacion, infoRestablecimiento, restablecerConToken, enviarEnlaceComoAdmin,
 };
