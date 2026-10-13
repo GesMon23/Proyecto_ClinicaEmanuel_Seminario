@@ -7,6 +7,7 @@ import avatarDefault from '@/assets/default-avatar.png';
 import api from '../config/api';
 import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
 import NavegacionPestanas from './consultaPacientes/NavegacionPestanas';
+import FotoPaciente from './pacientes/FotoPaciente';
 import { descargarCarnet } from './consultaPacientes/carnet';
 import { generarReportePaciente } from './consultaPacientes/reportePdf';
 import {
@@ -26,7 +27,7 @@ const comoLista = (d) => (Array.isArray(d) ? d : []);
 
 async function cargarPsicologia(noAfiliacion) {
     try {
-        const { data } = await api.get(`/api/psicologia/historial/${noAfiliacion}`);
+        const { data } = await api.get(`/psicologia/historial/${noAfiliacion}`);
         return Array.isArray(data?.data) ? data.data : comoLista(data);
     } catch {
         try {
@@ -90,7 +91,6 @@ const ConsultaPacientes = () => {
     const [modal, setModal] = useState({ show: false, title: '', message: '', type: 'info' });
     const [fotoCargando, setFotoCargando] = useState(false);
     const [fotoVersion, setFotoVersion] = useState(0);
-    const [fotoSrc, setFotoSrc] = useState(avatarDefault);
     const [selectedTab, setSelectedTab] = useState('Datos Personales');
     const [datos, setDatos] = useState(SIN_DATOS);
 
@@ -112,13 +112,11 @@ const ConsultaPacientes = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Fuente de la foto: por id, luego por nombre de archivo, luego avatar
-    useEffect(() => {
-        const ts = String(fotoVersion);
-        const porId = paciente?.no_afiliacion ? `/api/foto/${encodeURIComponent(paciente.no_afiliacion)}?v=${ts}` : null;
-        const porArchivo = paciente?.url_foto ? `/api/fotos/${paciente.url_foto}?v=${ts}` : null;
-        setFotoSrc(porId || porArchivo || avatarDefault);
-    }, [paciente, fotoVersion]);
+    // Fuentes de la foto: por id, luego por nombre de archivo (si ninguna carga, el avatar)
+    const rutasFoto = [
+        paciente?.no_afiliacion && `/foto/${encodeURIComponent(paciente.no_afiliacion)}?v=${fotoVersion}`,
+        paciente?.url_foto && `/fotos/${paciente.url_foto}?v=${fotoVersion}`,
+    ];
 
     const cargarSecciones = async (noAfiliacion) => {
         const claves = Object.keys(CARGADORES);
@@ -183,12 +181,6 @@ const ConsultaPacientes = () => {
         } catch (err) {
             mostrarModal(String(err?.message || err || 'Error desconocido'), 'error', 'Error al descargar carné');
         }
-    };
-
-    const alFallarFoto = () => {
-        // Si falló la ruta por ID, probar el nombre de archivo; si no, avatar
-        const porArchivo = paciente?.url_foto ? `/api/fotos/${paciente.url_foto}?v=${fotoVersion}` : null;
-        setFotoSrc(fotoSrc.includes('/api/foto/') && porArchivo ? porArchivo : avatarDefault);
     };
 
     const nombreCompleto = paciente
@@ -291,7 +283,7 @@ const ConsultaPacientes = () => {
                                                 {fotoCargando ? (
                                                     <span>Cargando foto...</span>
                                                 ) : (
-                                                    <img alt="Foto del paciente" src={fotoSrc} className="w-full h-full object-cover" onError={alFallarFoto} />
+                                                    <FotoPaciente rutas={rutasFoto} alternativa={avatarDefault} className="w-full h-full object-cover" />
                                                 )}
                                             </div>
                                             <div className="flex-1 flex flex-col gap-4 w-full">

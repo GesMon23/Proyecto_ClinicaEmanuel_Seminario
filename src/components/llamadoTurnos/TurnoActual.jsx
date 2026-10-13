@@ -1,6 +1,7 @@
 import React from 'react';
 import { formatearFecha } from '@/utils/fechas';
-import { urlFotoDeTurno, volverALlamar } from './llamados';
+import FotoPaciente from '@/components/pacientes/FotoPaciente';
+import { rutasFotoDeTurno, volverALlamar } from './llamados';
 
 const TARJETA_DATO = 'bg-gray-50 dark:bg-slate-700/50 p-4 rounded-lg';
 
@@ -74,28 +75,18 @@ export default function TurnoActual({ clinica, turno }) {
   );
 }
 
-// Foto del paciente; si no carga (o no hay), una imagen con su inicial
+// Foto del paciente; si no carga (o no hay), su inicial. Sin servicios externos: el nombre no sale de la clínica.
 function Foto({ turno }) {
-  const src = urlFotoDeTurno(turno);
   const nombre = turno.nombrepaciente || '?';
+  const inicial = (
+    <div className="w-full h-full flex items-center justify-center bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300 text-5xl">
+      {nombre.charAt(0).toUpperCase()}
+    </div>
+  );
   return (
     <div className="relative group">
       <div className="w-36 h-36 rounded-xl overflow-hidden border-4 border-green-100 dark:border-green-900 bg-gray-100 dark:bg-slate-700 flex-shrink-0 relative transition-transform duration-300 group-hover:scale-105">
-        {src ? (
-          <img
-            src={src}
-            alt="Foto del paciente"
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=3B82F6&color=fff`;
-            }}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300 text-5xl">
-            {nombre.charAt(0).toUpperCase()}
-          </div>
-        )}
+        <FotoPaciente rutas={rutasFotoDeTurno(turno)} alternativa={inicial} className="w-full h-full object-cover" />
       </div>
     </div>
   );

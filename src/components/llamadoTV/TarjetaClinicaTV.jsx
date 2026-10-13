@@ -1,6 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Clock, User } from 'lucide-react';
 import { obtenerClinicaConfig } from './clinicas';
+
+// Foto del paciente en atención. La TV no tiene sesión: usa la ruta pública que solo entrega la foto de quien
+// está en atención. Si no hay foto, su inicial (sin servicios externos: el nombre no sale de la clínica).
+function FotoTV({ turno }) {
+  const [fallo, setFallo] = useState(false);
+  const src = `/api/turnos-tv/foto/${encodeURIComponent(turno.no_afiliacion)}?v=${encodeURIComponent(turno.id_turno_cod || '1')}`;
+  if (fallo) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-blue-500 text-white text-5xl font-bold">
+        {(turno.nombrepaciente || '?').charAt(0).toUpperCase()}
+      </div>
+    );
+  }
+  return <img key={src} src={src} alt="Foto del paciente" className="w-full h-full object-cover" onError={() => setFallo(true)} />;
+}
 
 // Una clínica en la pantalla de la TV: nombre, estado y paciente en atención
 export default function TarjetaClinicaTV({ clinica, turno }) {
@@ -24,15 +39,7 @@ export default function TarjetaClinicaTV({ clinica, turno }) {
           <div className="w-full h-full bg-white/90 rounded-lg p-3 shadow-sm flex items-center gap-6">
             <div className="h-[90%] aspect-square rounded-full overflow-hidden border-4 border-white shadow-md flex-shrink-0 bg-gray-100">
               {turno.no_afiliacion ? (
-                <img
-                  src={`/api/foto/${encodeURIComponent(turno.no_afiliacion)}?v=${encodeURIComponent(turno.id_turno_cod || '1')}`}
-                  alt="Foto del paciente"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(turno.nombrepaciente || '?')}&background=3B82F6&color=fff`;
-                  }}
-                />
+                <FotoTV key={`${turno.no_afiliacion}-${turno.id_turno_cod}`} turno={turno} />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-400">
                   <User className="w-1/2 h-1/2" />

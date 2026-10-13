@@ -257,10 +257,8 @@ test('restablecer: valida el enlace, exige contraseña fuerte y el enlace sirve 
   });
 });
 
-test('administrador: envía el enlace (nunca fija contraseñas) y valida rol, id y correo', async () => {
-  const sinRol = jwt.sign({ sub: 1, roles: ['RolTurnos'] }, secreto);
-  assert.equal((await pedir('POST', '/auth/admin/reset-user-password', { token: sinRol, cuerpo: { id_usuario: 5 } })).status, 403);
-
+// El permiso (usuarios.roles) lo exige la aplicación completa: ver app.test.js
+test('administrador: envía el enlace (nunca fija contraseñas) y valida id y correo', async () => {
   const admin = jwt.sign({ sub: 1, roles: ['RolGestionUsuarios'] }, secreto);
   const sinId = await pedir('POST', '/auth/admin/reset-user-password', { token: admin, cuerpo: {} });
   assert.equal(sinId.body.error, 'id_usuario inválido');

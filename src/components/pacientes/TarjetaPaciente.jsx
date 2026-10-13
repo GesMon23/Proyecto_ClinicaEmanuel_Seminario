@@ -1,6 +1,6 @@
 import React from 'react';
 import defaultAvatar from '@/assets/img/default-avatar.png';
-import { baseURL } from './fotos';
+import FotoPaciente from './FotoPaciente';
 
 const BADGE = 'bg-green-50 dark:bg-slate-800 rounded-lg p-4 sm:p-6 border-l-4 border-green-600 min-w-0 flex flex-col justify-center';
 const ETIQUETA_BADGE = 'text-xs sm:text-sm font-medium text-green-800 dark:text-green-400 mb-2';
@@ -9,26 +9,18 @@ const VALOR_BADGE = 'text-sm sm:text-base lg:text-lg font-semibold text-gray-900
 // Tarjeta con la ficha resumida del paciente encontrado.
 //   paciente: { nombre, noAfiliacion, dpi, sexo, archivoFoto, versionFoto, detalles: [{ label, value }], observaciones }
 export default function TarjetaPaciente({ paciente: p }) {
-  const base = baseURL();
-  const foto = p.archivoFoto ? `${base}/fotos/${p.archivoFoto}?v=${p.versionFoto || ''}` : defaultAvatar;
-
-  // Si la foto no carga: primero la ruta que resuelve por número de afiliación y, si tampoco, el avatar
-  const alFallarFoto = (e) => {
-    if (!e.currentTarget.getAttribute('data-tried') && p.noAfiliacion) {
-      e.currentTarget.setAttribute('data-tried', '1');
-      e.currentTarget.src = `${base}/foto/${encodeURIComponent(p.noAfiliacion)}`;
-      return;
-    }
-    e.currentTarget.onerror = null;
-    e.currentTarget.src = defaultAvatar;
-  };
+  // El archivo guardado; si no carga, la ruta que resuelve por número de afiliación y, si tampoco, el avatar
+  const rutasFoto = [
+    p.archivoFoto && `/fotos/${p.archivoFoto}?v=${p.versionFoto || ''}`,
+    p.noAfiliacion && `/foto/${encodeURIComponent(p.noAfiliacion)}`,
+  ];
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 overflow-hidden mb-6 transition-all duration-200 hover:shadow-xl">
       <div className="flex flex-col lg:flex-row gap-6 p-6">
         <div className="flex-shrink-0 mx-auto lg:mx-0">
           <div className="w-48 h-48 lg:w-56 lg:h-56 rounded-xl overflow-hidden border-4 border-green-700 dark:border-green-600 shadow-lg bg-gray-100 dark:bg-slate-800">
-            <img alt="Foto del paciente" src={foto} className="w-full h-full object-cover" onError={alFallarFoto} />
+            <FotoPaciente rutas={rutasFoto} alternativa={defaultAvatar} className="w-full h-full object-cover" />
           </div>
         </div>
 

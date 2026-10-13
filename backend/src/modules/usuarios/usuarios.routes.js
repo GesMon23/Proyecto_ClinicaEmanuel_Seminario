@@ -1,11 +1,13 @@
 // Rutas de empleados, usuarios y roles (server.js las monta en la raíz y bajo /api).
+// El permiso de cada pestaña lo exige config/permisos.js; aquí solo se exige la sesión.
 const express = require('express');
 const service = require('./usuarios.service');
 const { wrap } = require('../../shared/http');
-const { verifyJWT, requireRole } = require('../../shared/auth');
+const { verifyJWT } = require('../../shared/auth');
+const { olvidarAccesos } = require('../../config/acceso');
 
 const router = express.Router();
-const gestion = [verifyJWT, requireRole(['RolGestionUsuarios'])];
+const gestion = [verifyJWT];
 
 const falla = (mensaje, log) => (err) => {
   console.error(log, err);
@@ -52,6 +54,7 @@ router.put('/empleados/:dpi', ...gestion, wrap(async (req, res) => {
 
 router.patch('/empleados/:dpi/estado', ...gestion, wrap(async (req, res) => {
   await service.cambiarEstadoEmpleado(req.params.dpi, req.body?.activo, req.user);
+  olvidarAccesos(); // un empleado inactivo pierde el acceso de inmediato
   res.json({ success: true });
 }, falla('Error al cambiar estado', 'Error en PATCH /empleados/:dpi/estado:')));
 
@@ -79,11 +82,13 @@ router.get('/usuarios/:id/roles', ...gestion, wrap(async (req, res) => {
 
 router.put('/usuarios/:id/roles', ...gestion, wrap(async (req, res) => {
   await service.actualizarRoles(req.params.id, req.body, req.user);
+  olvidarAccesos();
   res.json({ ok: true });
 }, falla('No fue posible actualizar roles', 'Error en PUT /usuarios/:id/roles:')));
 
 router.patch('/usuarios/:id/estado', ...gestion, wrap(async (req, res) => {
   await service.actualizarEstadoUsuario(req.params.id, req.body, req.user);
+  olvidarAccesos();
   res.json({ ok: true });
 }, falla('No fue posible actualizar el estado del usuario', 'Error en PATCH /usuarios/:id/estado:')));
 

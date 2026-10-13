@@ -3,6 +3,7 @@ import { Spinner } from 'react-bootstrap';
 import { BrushCleaning, Camera, Edit, Image, Save, XIcon } from 'lucide-react';
 import CustomModal from '@/components/CustomModal.jsx';
 import WebcamFoto from '@/components/WebcamFoto.jsx';
+import FotoPaciente from '@/components/pacientes/FotoPaciente';
 import defaultAvatar from '@/assets/img/default-avatar.png';
 import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
 import { useAviso } from '@/hooks/useAviso';
@@ -188,11 +189,11 @@ const ActualizacionPacientes = () => {
               <div className="flex flex-col items-center space-y-6">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Fotografía del Paciente</h3>
                 <div className="w-48 h-48 sm:w-56 sm:h-56 lg:w-64 lg:h-64 rounded-2xl overflow-hidden border-4 border-green-600 dark:border-green-400 shadow-xl bg-gray-100 dark:bg-slate-800">
-                  <img
-                    alt="Foto del paciente"
-                    src={f.urlfoto || f.url_foto || defaultAvatar}
+                  {/* urlfoto: la foto recién tomada (data URL) o la ruta de la API; url_foto: el archivo guardado */}
+                  <FotoPaciente
+                    rutas={[f.urlfoto || (f.url_foto && (String(f.url_foto).startsWith('/') ? f.url_foto : `/fotos/${f.url_foto}`))]}
+                    alternativa={defaultAvatar}
                     className="w-full h-full object-cover"
-                    onError={(e) => { e.target.onerror = null; e.target.src = defaultAvatar; }}
                   />
                 </div>
                 <button

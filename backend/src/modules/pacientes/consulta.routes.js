@@ -74,6 +74,15 @@ router.get('/foto/:id', wrap(
   (err) => { console.error('Error en GET /foto/:id', err); return [500, { error: 'Error interno al servir la foto' }]; }
 ));
 
+// Pantalla de TV (sin sesión): solo la foto del paciente que está en atención
+router.get('/turnos-tv/foto/:noafiliacion', wrap(
+  async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    res.sendFile(await service.rutaFotoEnAtencion(req.params.noafiliacion));
+  },
+  (err) => { console.error('Error en GET /turnos-tv/foto/:noafiliacion', err); return [500, { error: 'Error interno al servir la foto' }]; }
+));
+
 // ---- Carné ----
 router.get('/carnet/forzar/:noafiliacion', wrap(
   async (req, res) => {

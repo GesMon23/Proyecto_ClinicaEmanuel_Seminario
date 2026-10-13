@@ -6,14 +6,24 @@ const { crearApp } = require('../src/app');
 const jwt = require('jsonwebtoken');
 const { origenPermitido, origenesConfigurados } = require('../src/config/cors');
 const { esPublica, sinPrefijoApi } = require('../src/config/acceso');
+const { codigosUsados } = require('../src/config/permisos');
 const { EventosLlamado } = require('../src/modules/llamados');
 const { tamano } = require('../src/modules/qr');
 
 let servidor;
 let puerto;
 
+// Usuarios simulados (el servidor no ve los datos de las transacciones de prueba):
+// 999999 con todas las pestañas, 999990 solo con Turnos > Llamado y 999980 dado de baja
+const USUARIOS = {
+  999999: { activo: true, permisos: codigosUsados() },
+  999990: { activo: true, permisos: ['turnos.llamado'] },
+  999980: { activo: false, permisos: codigosUsados() },
+};
+
 before(async () => {
-  servidor = await new Promise((ok) => { const s = crearApp().listen(0, () => ok(s)); });
+  const app = crearApp({ cargarAcceso: async (id) => USUARIOS[id] });
+  servidor = await new Promise((ok) => { const s = app.listen(0, () => ok(s)); });
   puerto = servidor.address().port;
 });
 
@@ -23,13 +33,14 @@ after(async () => {
   await pool.end();
 });
 
-// Las peticiones llevan sesión salvo { sinSesion: true }
-const TOKEN = jwt.sign({ sub: 999999, nombre_usuario: 'prueba', roles: [] }, process.env.JWT_SECRET);
+// Las peticiones llevan la sesión de 999999 salvo { sinSesion: true } o { token }
+const tokenDe = (sub) => jwt.sign({ sub, nombre_usuario: 'prueba', roles: [] }, process.env.JWT_SECRET);
+const TOKEN = tokenDe(999999);
 
-function pedir(metodo, ruta, { cuerpo, headers = {}, binario = false, sinSesion = false } = {}) {
+function pedir(metodo, ruta, { cuerpo, headers = {}, binario = false, sinSesion = false, token = TOKEN } = {}) {
   return new Promise((ok, fallo) => {
     const datos = cuerpo ? JSON.stringify(cuerpo) : null;
-    const h = sinSesion ? { ...headers } : { Authorization: `Bearer ${TOKEN}`, ...headers };
+    const h = sinSesion ? { ...headers } : { Authorization: `Bearer ${token}`, ...headers };
     if (datos) { h['Content-Type'] = 'application/json'; h['Content-Length'] = Buffer.byteLength(datos); }
     const req = http.request({ host: 'localhost', port: puerto, path: ruta, method: metodo, headers: h }, (res) => {
       const trozos = [];
@@ -67,11 +78,11 @@ test('acceso: solo las rutas de la lista son públicas, con o sin prefijo /api',
   for (const [m, r] of [['GET', '/health'], ['POST', '/api/auth/login'], ['POST', '/auth/forgot-password'],
     ['GET', '/api/auth/reset-password/info'], ['POST', '/api/api/auth/reset-password'], ['GET', '/api/GclinicasT'],
     ['GET', '/api/Gturno-actual/HEMODI%C3%81LISIS'], ['GET', '/api/turnos/llamado-sse'], ['GET', '/api/turnos/llamado-events'],
-    ['GET', '/api/foto/123'], ['HEAD', '/fotos/123.jpg']]) {
+    ['GET', '/api/turnos-tv/foto/123'], ['HEAD', '/turnos-tv/foto/123']]) {
     assert.equal(esPublica(m, r), true, `${m} ${r} debe ser pública`);
   }
   for (const [m, r] of [['POST', '/api/turnos/llamado'], ['GET', '/api/Gturno-actual-usuario'], ['GET', '/api/pacientes'],
-    ['GET', '/medicos'], ['POST', '/auth/change-password'], ['GET', '/api/qr'], ['DELETE', '/api/foto/123'],
+    ['GET', '/medicos'], ['POST', '/auth/change-password'], ['GET', '/api/qr'], ['GET', '/api/foto/123'], ['GET', '/fotos/123.jpg'],
     ['GET', '/api/estadisticas/panel/pacientes'], ['GET', '/fotos/../../etc/passwd'], ['GET', '/api/auth/reset-password/info/x']]) {
     assert.equal(esPublica(m, r), false, `${m} ${r} debe exigir sesión`);
   }
@@ -125,6 +136,40 @@ test('sin sesión: los datos exigen token y las rutas públicas responden', asyn
   assert.equal((await pedir('GET', '/api/GclinicasT', { sinSesion: true })).status, 200, 'la TV lee las clínicas sin sesión');
   assert.equal((await pedir('GET', '/api/turnos/llamado-events', { sinSesion: true })).status, 200);
   assert.equal((await pedir('POST', '/api/auth/login', { sinSesion: true, cuerpo: {} })).status, 400, 'el login no exige sesión');
+});
+
+test('permisos: cada pestaña abre solo sus rutas; usuario dado de baja -> 401', async () => {
+  const llamado = tokenDe(999990);
+  const propia = await pedir('GET', '/api/Gturno-actual-usuario', { token: llamado });
+  assert.ok(![401, 403].includes(propia.status), `su pestaña pasa el control de acceso (respondió ${propia.status})`);
+  assert.equal((await pedir('GET', '/api/medicos', { token: llamado })).status, 200, 'catálogo: basta la sesión');
+  for (const ruta of ['/api/GturnosT', '/api/pacientes/123', '/api/estadisticas/panel/pacientes', '/api/roles/activos']) {
+    const r = await pedir('GET', ruta, { token: llamado });
+    assert.equal(r.status, 403, `${ruta} sin la pestaña`);
+    assert.deepEqual(r.body, { error: 'No autorizado' });
+  }
+  const sinRegla = await pedir('GET', '/api/ruta-sin-regla');
+  assert.equal(sinRegla.status, 403, 'una ruta sin regla queda cerrada aunque tenga todas las pestañas');
+
+  const baja = await pedir('GET', '/api/medicos', { token: tokenDe(999980) });
+  assert.equal(baja.status, 401, 'la sesión de un usuario dado de baja deja de servir');
+  assert.deepEqual(baja.body, { error: 'Sesión requerida' });
+});
+
+test('fotos: exigen sesión y la TV solo recibe la del paciente en atención', async () => {
+  for (const ruta of ['/api/foto/123', '/api/fotos/123.jpg', '/fotos/123.jpg', '/api/Afoto/123', '/api/check-photo/123']) {
+    assert.equal((await pedir('GET', ruta, { sinSesion: true })).status, 401, `${ruta} sin sesión`);
+  }
+  const tv = await pedir('GET', '/api/turnos-tv/foto/NO-EXISTE-123', { sinSesion: true });
+  assert.equal(tv.status, 404, 'un paciente que no está en atención no expone su foto');
+  assert.deepEqual(tv.body, { error: 'Foto no encontrada' });
+});
+
+test('laboratorios: el registro responde bajo /api/laboratorios (antes daba 404)', async () => {
+  const ultimo = await pedir('GET', '/api/laboratorios/NO-EXISTE-123/parametros/ultimo');
+  assert.equal(ultimo.status, 200);
+  assert.deepEqual(ultimo.body.data, []);
+  assert.equal((await pedir('POST', '/api/laboratorios', { cuerpo: {} })).status, 400, 'llega al handler (valida antes de escribir)');
 });
 
 test('salud: responde ok con la BD disponible', async () => {

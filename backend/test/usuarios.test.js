@@ -65,7 +65,8 @@ test('camposEmpleado deja solo los campos permitidos y convierte "" en null', ()
 
 // ------------------------------------------------------------ autorización
 
-test('sin token -> 401; token inválido -> 401; sin el rol -> 403', async () => {
+// El permiso de cada pestaña lo exige la aplicación completa (config/permisos.js): ver app.test.js
+test('sin token -> 401; token inválido -> 401', async () => {
   const sin = await pedir('GET', '/roles/activos');
   assert.equal(sin.status, 401);
   assert.equal(sin.body.error, 'Token requerido');
@@ -73,10 +74,6 @@ test('sin token -> 401; token inválido -> 401; sin el rol -> 403', async () => 
   const malo = await pedir('GET', '/roles/activos', { token: 'x.y.z' });
   assert.equal(malo.status, 401);
   assert.equal(malo.body.error, 'Token inválido');
-
-  const prohibido = await pedir('GET', '/roles/activos', { token: tokenSinRol });
-  assert.equal(prohibido.status, 403);
-  assert.equal(prohibido.body.error, 'No autorizado');
 });
 
 test('registrar empleados solo exige sesión, no rol; valida antes de escribir', async () => {

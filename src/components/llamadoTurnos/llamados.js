@@ -21,16 +21,14 @@ export function volverALlamar(clinica) {
 export const mensajeDeError = (error, porDefecto) =>
   error.response?.data?.message || error.response?.data?.error || porDefecto;
 
-// Foto del paciente de un turno: la ruta que resuelve el backend por afiliación o, si no, el archivo guardado
-export function urlFotoDeTurno(turno) {
+// Rutas de la API para la foto del paciente de un turno: la que resuelve el backend por afiliación o, si no,
+// el archivo guardado (las fotos solo se sirven desde la API, con sesión)
+export function rutasFotoDeTurno(turno) {
   const noAfiliacion = turno?.no_afiliacion || turno?.noafiliacion || '';
-  if (noAfiliacion) return `/api/foto/${encodeURIComponent(noAfiliacion)}?v=${encodeURIComponent(turno?.id_turno_cod || '1')}`;
-  const guardada = turno?.url_foto;
-  if (!guardada) return null;
-  const s = String(guardada);
-  if (s.startsWith('http') || s.startsWith('/api/foto')) return s;
-  if (s.startsWith('/fotos/')) return `/api${s}`;
-  return `/api/fotos/${encodeURIComponent(s)}`;
+  if (noAfiliacion) return [`/foto/${encodeURIComponent(noAfiliacion)}?v=${encodeURIComponent(turno?.id_turno_cod || '1')}`];
+  const guardada = String(turno?.url_foto || '');
+  if (!guardada || /^https?:/.test(guardada)) return [];
+  return [guardada.startsWith('/') ? guardada : `/fotos/${encodeURIComponent(guardada)}`];
 }
 
 // Los dos modos de cerrar el turno en atención

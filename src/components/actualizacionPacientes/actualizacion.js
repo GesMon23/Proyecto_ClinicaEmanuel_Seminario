@@ -20,17 +20,18 @@ export function motivoNoActualizable(p) {
   return null;
 }
 
-// URL de la foto: la primera extensión que exista para el No. de afiliación (solo dígitos) y, si no, la ruta que resuelve el backend
+// Ruta de la API para la foto: la primera extensión que exista para el No. de afiliación (solo dígitos) y,
+// si no, la ruta que resuelve el backend (se muestra con FotoPaciente, que envía la sesión)
 export async function urlDeFoto(paciente) {
   const naf = (paciente?.no_afiliacion || '').toString().replace(/\D+/g, '').trim();
   if (!naf) return null;
   for (const ext of ['jpg', 'jpeg', 'png']) {
     try {
       const { data } = await api.get(`/Acheck-photo/${encodeURIComponent(`${naf}.${ext}`)}`);
-      if (data && data.exists) return `/api/fotos/${naf}.${ext}`;
+      if (data && data.exists) return `/fotos/${naf}.${ext}`;
     } catch { /* se prueba con la siguiente extensión */ }
   }
-  return `/api/Afoto/${encodeURIComponent(naf)}`;
+  return `/Afoto/${encodeURIComponent(naf)}`;
 }
 
 // Busca el paciente y lo deja listo para editar. Devuelve { paciente } o { mensaje } si no se puede continuar.

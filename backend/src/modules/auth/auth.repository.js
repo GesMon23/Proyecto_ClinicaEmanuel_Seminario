@@ -19,6 +19,12 @@ async function nombresDeRoles(idUsuario) {
   return filas.map((r) => r.nombre);
 }
 
+// { activo, permisos } vigentes: usuario y empleado activos y los códigos de pestaña de sus roles activos
+async function accesoDeUsuario(idUsuario) {
+  const fila = await primera(withTransaction((c) => fetchCursor(c, 'public.sp_acceso_usuario', [idUsuario], 'cur_acceso_usuario')));
+  return { activo: fila?.activo === true, permisos: fila?.permisos || [] };
+}
+
 async function debeCambiarPassword(idUsuario) {
   const fila = await primera(withTransaction((c) => fetchCursor(c, 'public.sp_usuario_flag_force_change_get', [idUsuario], 'cur_flag_force_change')));
   return fila?.usuario_actualizacion === 'FORCE_CHANGE_PASSWORD';
@@ -59,7 +65,7 @@ const limpiarMarcaCambio = (id) =>
   pool.query('UPDATE public.tbl_usuarios SET usuario_actualizacion = NULL, fecha_actualizacion = NOW() WHERE id_usuario = $1', [id]);
 
 module.exports = {
-  buscarUsuarioAuth, usuarioAutenticado, empleadoActivo, nombresDeRoles, debeCambiarPassword, emailDeUsuario,
+  buscarUsuarioAuth, usuarioAutenticado, empleadoActivo, nombresDeRoles, accesoDeUsuario, debeCambiarPassword, emailDeUsuario,
   passwordGuardada, usuariosActivos, actualizarPassword, marcarCambioObligatorio, limpiarMarcaCambio,
   usuariosParaRecuperacion, credencial,
 };

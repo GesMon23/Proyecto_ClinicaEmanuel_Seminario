@@ -51,6 +51,12 @@ async function urlFoto(noAfiliacion) {
   }
 }
 
+// ¿El paciente tiene un turno en atención? (la pantalla de TV solo muestra esa foto)
+async function enAtencion(noAfiliacion) {
+  const { rows } = await pool.query('SELECT public.fn_paciente_en_atencion($1) AS en_atencion', [noAfiliacion]);
+  return rows[0]?.en_atencion === true;
+}
+
 // ---- Historiales por afiliación ----
 const laboratorios = porAfiliacion('sp_laboratorios_historial_por_afiliacion', 'cur_lab_historial_afiliacion_consulta_pac');
 const turnos = porAfiliacion('sp_consulta_turnos_por_afiliacion', 'cur_turnos_pac');
@@ -90,7 +96,7 @@ async function crearEgreso(d) {
 
 module.exports = {
   departamentos, accesosVasculares, estadosPaciente,
-  pacientePorAfiliacion, pacientePorDpi, filaPaciente, noAfiliacionDeDpi, urlFoto,
+  pacientePorAfiliacion, pacientePorDpi, filaPaciente, noAfiliacionDeDpi, urlFoto, enAtencion,
   laboratorios, turnos, historial, referencias, nutricion, psicologia, formularios, faltistas,
   crearHistorialFormulario, crearEgreso,
 };

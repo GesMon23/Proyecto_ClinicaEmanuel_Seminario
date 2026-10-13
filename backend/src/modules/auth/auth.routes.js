@@ -45,7 +45,7 @@ router.post('/auth/reset-password', wrap(async (req, res) => {
 
 // El administrador envía el enlace de restablecimiento a un usuario (nunca fija ni ve su contraseña)
 router.post('/auth/admin/reset-user-password', verifyJWT, wrap(async (req, res) => {
-  await service.enviarEnlaceComoAdmin(req.user, req.body);
+  await service.enviarEnlaceComoAdmin(req.body);
   res.json({ ok: true });
 }, falla('No fue posible enviar el enlace', 'Error en /auth/admin/reset-user-password:')));
 

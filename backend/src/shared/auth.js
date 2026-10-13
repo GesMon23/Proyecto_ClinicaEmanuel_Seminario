@@ -61,13 +61,5 @@ function verifyJWT(req, res, next) {
   }
 }
 
-// Middleware (después de verifyJWT): exige al menos uno de los roles; lista vacía = cualquier usuario
-function requireRole(roles = []) {
-  return (req, res, next) => {
-    const userRoles = (req.user && req.user.roles) || [];
-    if (roles.length === 0 || roles.some((r) => userRoles.includes(r))) return next();
-    return res.status(403).json({ error: 'No autorizado' });
-  };
-}
-
-module.exports = { jwtSecret, payloadFromRequest, userIdFromRequest, userNameFromRequest, actorFromRequest, requireUser, verifyJWT, requireRole };
+// Los permisos por pestaña se validan en un solo lugar: config/acceso.js con las reglas de config/permisos.js
+module.exports = { jwtSecret, payloadFromRequest, userIdFromRequest, userNameFromRequest, actorFromRequest, requireUser, verifyJWT };

@@ -89,6 +89,14 @@ async function rutaFotoParaServir(rawId) {
   return ruta;
 }
 
+// Foto para la pantalla de TV (pública): solo la del paciente en atención; cualquier otra responde 404
+// (igual que una foto inexistente, para no revelar qué afiliaciones existen)
+async function rutaFotoEnAtencion(rawId) {
+  const id = idSinExtension(rawId);
+  if (!id || !(await repo.enAtencion(id))) throw new HttpError(404, { error: 'Foto no encontrada' });
+  return rutaFotoParaServir(id);
+}
+
 // ---- Carné ----
 // Foto del carné: url_foto (ruta absoluta o dentro de /fotos) o <no_afiliacion>.jpg / .png
 function rutaFotoDeCarnet(paciente, noAfiliacion) {
@@ -135,6 +143,6 @@ async function generarCarnet(noAfiliacion, baseFrontend) {
 module.exports = {
   laboratoriosPorAfiliacion, laboratoriosPorDpi, faltistasPorDpi,
   pacientePorAfiliacion, pacientePorDpi, crearHistorialFormulario, crearEgreso,
-  verificarFoto, rutaFotoParaServir, generarCarnet,
+  verificarFoto, rutaFotoParaServir, rutaFotoEnAtencion, generarCarnet,
   normalizarLaboratorio,
 };

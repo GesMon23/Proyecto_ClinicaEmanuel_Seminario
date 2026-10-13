@@ -9,7 +9,6 @@ const { HttpError } = require('../../shared/http');
 const { jwtSecret } = require('../../shared/auth');
 const { correoConfigurado } = require('../../utils/mailer');
 
-const ROL_ADMIN = 'RolGestionUsuarios';
 // 8+ caracteres con minúscula, mayúscula, dígito y símbolo
 const PASSWORD_FUERTE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 const MENSAJE_PASSWORD_FUERTE = 'La contraseña debe tener mínimo 8 caracteres, incluir minúscula, mayúscula, número y símbolo';
@@ -51,14 +50,16 @@ async function login({ usuario, password } = {}) {
   if (!(await repo.empleadoActivo(user.id_usuario))) throw new HttpError(401, { error: 'Credenciales inválidas' });
 
   const roles = await repo.nombresDeRoles(user.id_usuario);
+  const { permisos } = await repo.accesoDeUsuario(user.id_usuario);
   intentos.limpiar(usuario);
 
+  // Los permisos no van en el token: el backend los lee en cada petición, así un cambio aplica sin volver a entrar
   const token = jwt.sign({ sub: user.id_usuario, nombre_usuario: user.nombre_usuario, roles }, jwtSecret(), { expiresIn: '8h' });
   let mustChangePassword = false;
   try {
     mustChangePassword = await repo.debeCambiarPassword(user.id_usuario);
   } catch { /* la marca es opcional: no bloquea el ingreso */ }
-  return { token, user: { id_usuario: user.id_usuario, nombre_usuario: user.nombre_usuario, roles }, mustChangePassword };
+  return { token, user: { id_usuario: user.id_usuario, nombre_usuario: user.nombre_usuario, roles, permisos }, mustChangePassword };
 }
 
 async function perfil(sub) {
@@ -67,7 +68,8 @@ async function perfil(sub) {
   if (!user || !user.estado) throw new HttpError(401, { error: 'No autorizado' });
   if (!(await repo.empleadoActivo(user.id_usuario))) throw new HttpError(403, { error: 'Credenciales inválidas' });
   const roles = await repo.nombresDeRoles(user.id_usuario);
-  return { id_usuario: user.id_usuario, nombre_usuario: user.nombre_usuario, roles };
+  const { permisos } = await repo.accesoDeUsuario(user.id_usuario);
+  return { id_usuario: user.id_usuario, nombre_usuario: user.nombre_usuario, roles, permisos };
 }
 
 const usuariosActivos = () => repo.usuariosActivos();
@@ -195,10 +197,9 @@ async function restablecerConToken({ token, nueva } = {}) {
   }
 }
 
-// El administrador envía el enlace a un usuario (p. ej. si sospecha que su contraseña se filtró)
-async function enviarEnlaceComoAdmin(user, { id_usuario: idUsuario } = {}) {
-  const roles = Array.isArray(user && user.roles) ? user.roles : [];
-  if (!roles.includes(ROL_ADMIN)) throw new HttpError(403, { error: `Requiere rol de administrador (${ROL_ADMIN})` });
+// El administrador envía el enlace a un usuario (p. ej. si sospecha que su contraseña se filtró).
+// El permiso (pestaña Roles de Gestión de Usuarios) lo exige config/permisos.js.
+async function enviarEnlaceComoAdmin({ id_usuario: idUsuario } = {}) {
   const id = Number(idUsuario);
   if (!id || Number.isNaN(id)) throw new HttpError(400, { error: 'id_usuario inválido' });
   if (!correoConfigurado()) throw new HttpError(503, { error: SIN_CORREO });

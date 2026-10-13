@@ -3,7 +3,7 @@
 const express = require('express');
 const cors = require('cors');
 const { opcionesCors } = require('./config/cors');
-const { exigirSesion } = require('./config/acceso');
+const { crearControlDeAcceso } = require('./config/acceso');
 
 const auth = require('./modules/auth');
 const consultas = require('./modules/consultas');
@@ -28,14 +28,15 @@ async function salud(_req, res) {
   }
 }
 
-function crearApp() {
+// opciones.cargarAcceso: solo para pruebas (simula usuarios y permisos sin la base)
+function crearApp(opciones = {}) {
   const app = express();
   app.get(['/health', '/api/health'], salud);
   // Un origen no permitido recibe 403 (sin pasar por el manejador de errores ni ensuciar el log)
   const politicaCors = cors(opcionesCors);
   app.use((req, res, next) => politicaCors(req, res, (err) => (err ? res.status(403).json({ error: 'Origen no permitido' }) : next())));
-  // Sin sesión solo se llega a las rutas públicas de config/acceso.js (antes de leer el cuerpo)
-  app.use(exigirSesion);
+  // Sesión, usuario activo y permiso de la pestaña (config/acceso.js y config/permisos.js), antes de leer el cuerpo
+  app.use(crearControlDeAcceso({ cargarAcceso: opciones.cargarAcceso }));
   app.use(express.json({ limit: '50mb' }));
 
   // El frontend usa baseURL '/api', pero algunos proxies quitan el prefijo: cada router responde en ambos
@@ -58,8 +59,9 @@ function crearApp() {
     registros.referencias, reportes.nuevoIngreso, consultas.referencias, registros.catalogos,
     pacientes.actualizacion, pacientes.egreso, pacientes.reingreso, pacientes.consulta, pacientes.registro
   );
+  // Antes se montaba en '/api' a secas: el frontend pide /api/laboratorios/... y guardar laboratorios daba 404
   app.use('/laboratorios', registros.laboratorios);
-  app.use('/api', registros.laboratorios);
+  app.use('/api/laboratorios', registros.laboratorios);
   enRaizYApi(reportes.faltistas, reportes.egreso);
 
   return app;
