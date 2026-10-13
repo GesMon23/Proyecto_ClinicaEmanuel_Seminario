@@ -54,7 +54,7 @@ export const navbarLinks = [
                 label: "Referencias",
                 icon: ClipboardList    ,
                 path: "/gestion-referencias",
-                allowedRoles: ["RolReferencias"],
+                allowedRoles: ["RolReferencia"],
             },
             {
                 label: "Reportes",

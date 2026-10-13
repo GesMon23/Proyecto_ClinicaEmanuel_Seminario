@@ -3,6 +3,7 @@
 const express = require('express');
 const cors = require('cors');
 const { opcionesCors } = require('./config/cors');
+const { exigirSesion } = require('./config/acceso');
 
 const auth = require('./modules/auth');
 const consultas = require('./modules/consultas');
@@ -33,6 +34,8 @@ function crearApp() {
   // Un origen no permitido recibe 403 (sin pasar por el manejador de errores ni ensuciar el log)
   const politicaCors = cors(opcionesCors);
   app.use((req, res, next) => politicaCors(req, res, (err) => (err ? res.status(403).json({ error: 'Origen no permitido' }) : next())));
+  // Sin sesión solo se llega a las rutas públicas de config/acceso.js (antes de leer el cuerpo)
+  app.use(exigirSesion);
   app.use(express.json({ limit: '50mb' }));
 
   // El frontend usa baseURL '/api', pero algunos proxies quitan el prefijo: cada router responde en ambos

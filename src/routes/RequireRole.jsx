@@ -1,7 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth-context';
 
-// Uso: <RequireRole roles={["RolLaboratorios"]}><Componente/></RequireRole>
+// Uso: <RequireRole roles={["RolLaboratorio"]}><Componente/></RequireRole>  (nombres de tbl_roles)
 export default function RequireRole({ roles = [], children }) {
   const { user, loading } = useAuth() || {};
   if (loading) return null; // o spinner

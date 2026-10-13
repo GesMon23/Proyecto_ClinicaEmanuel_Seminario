@@ -3,7 +3,9 @@ const { test, before, after } = require('node:test');
 const http = require('node:http');
 const { assert, pool } = require('./helpers');
 const { crearApp } = require('../src/app');
+const jwt = require('jsonwebtoken');
 const { origenPermitido, origenesConfigurados } = require('../src/config/cors');
+const { esPublica, sinPrefijoApi } = require('../src/config/acceso');
 const { EventosLlamado } = require('../src/modules/llamados');
 const { tamano } = require('../src/modules/qr');
 
@@ -21,10 +23,13 @@ after(async () => {
   await pool.end();
 });
 
-function pedir(metodo, ruta, { cuerpo, headers = {}, binario = false } = {}) {
+// Las peticiones llevan sesión salvo { sinSesion: true }
+const TOKEN = jwt.sign({ sub: 999999, nombre_usuario: 'prueba', roles: [] }, process.env.JWT_SECRET);
+
+function pedir(metodo, ruta, { cuerpo, headers = {}, binario = false, sinSesion = false } = {}) {
   return new Promise((ok, fallo) => {
     const datos = cuerpo ? JSON.stringify(cuerpo) : null;
-    const h = { ...headers };
+    const h = sinSesion ? { ...headers } : { Authorization: `Bearer ${TOKEN}`, ...headers };
     if (datos) { h['Content-Type'] = 'application/json'; h['Content-Length'] = Buffer.byteLength(datos); }
     const req = http.request({ host: 'localhost', port: puerto, path: ruta, method: metodo, headers: h }, (res) => {
       const trozos = [];
@@ -54,6 +59,22 @@ test('CORS: mismo origen, orígenes configurados, subdominios y extraños', () =
   assert.equal(origenPermitido('http://localhost:3000', 'otro', origenes), false, 'Vite solo fuera de producción');
   assert.equal(origenPermitido('http://localhost:3000', 'otro', origenesConfigurados({})), true);
   assert.equal(origenPermitido('no-es-url', 'otro', origenes), false);
+});
+
+test('acceso: solo las rutas de la lista son públicas, con o sin prefijo /api', () => {
+  assert.equal(sinPrefijoApi('/api/api/pacientes'), '/pacientes');
+  assert.equal(sinPrefijoApi('/apisomething'), '/apisomething', 'solo quita el prefijo /api completo');
+  for (const [m, r] of [['GET', '/health'], ['POST', '/api/auth/login'], ['POST', '/auth/forgot-password'],
+    ['GET', '/api/auth/reset-password/info'], ['POST', '/api/api/auth/reset-password'], ['GET', '/api/GclinicasT'],
+    ['GET', '/api/Gturno-actual/HEMODI%C3%81LISIS'], ['GET', '/api/turnos/llamado-sse'], ['GET', '/api/turnos/llamado-events'],
+    ['GET', '/api/foto/123'], ['HEAD', '/fotos/123.jpg']]) {
+    assert.equal(esPublica(m, r), true, `${m} ${r} debe ser pública`);
+  }
+  for (const [m, r] of [['POST', '/api/turnos/llamado'], ['GET', '/api/Gturno-actual-usuario'], ['GET', '/api/pacientes'],
+    ['GET', '/medicos'], ['POST', '/auth/change-password'], ['GET', '/api/qr'], ['DELETE', '/api/foto/123'],
+    ['GET', '/api/estadisticas/panel/pacientes'], ['GET', '/fotos/../../etc/passwd'], ['GET', '/api/auth/reset-password/info/x']]) {
+    assert.equal(esPublica(m, r), false, `${m} ${r} debe exigir sesión`);
+  }
 });
 
 test('tamaño del QR: entre 80 y 1024, 220 por omisión', () => {
@@ -90,9 +111,25 @@ test('los módulos responden en la raíz y bajo /api', async () => {
   assert.equal((await pedir('GET', '/api/estadisticas/pacientes-total')).status, 200);
 });
 
+test('sin sesión: los datos exigen token y las rutas públicas responden', async () => {
+  for (const ruta of ['/api/medicos', '/medicos', '/api/estadisticas/panel/pacientes', '/api/GestadosTurnoT', '/api/qr?text=x']) {
+    const r = await pedir('GET', ruta, { sinSesion: true });
+    assert.equal(r.status, 401, `${ruta} sin sesión`);
+    assert.deepEqual(r.body, { error: 'Sesión requerida' });
+  }
+  const tokenFalso = await pedir('GET', '/api/medicos', { sinSesion: true, headers: { Authorization: 'Bearer x.y.z' } });
+  assert.equal(tokenFalso.status, 401, 'un token inválido tampoco sirve');
+  const publicar = await pedir('POST', '/api/turnos/llamado', { sinSesion: true, cuerpo: { clinica: 'X', accion: 'llamar' } });
+  assert.equal(publicar.status, 401, 'publicar un llamado exige sesión');
+
+  assert.equal((await pedir('GET', '/api/GclinicasT', { sinSesion: true })).status, 200, 'la TV lee las clínicas sin sesión');
+  assert.equal((await pedir('GET', '/api/turnos/llamado-events', { sinSesion: true })).status, 200);
+  assert.equal((await pedir('POST', '/api/auth/login', { sinSesion: true, cuerpo: {} })).status, 400, 'el login no exige sesión');
+});
+
 test('salud: responde ok con la BD disponible', async () => {
   for (const ruta of ['/health', '/api/health']) {
-    const r = await pedir('GET', ruta);
+    const r = await pedir('GET', ruta, { sinSesion: true });
     assert.equal(r.status, 200);
     assert.deepEqual(r.body, { estado: 'ok' });
   }

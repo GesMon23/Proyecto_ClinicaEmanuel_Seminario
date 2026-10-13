@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import logoClinica from '@/assets/logoClinica2.png';
-import api from '@/config/api';
+import api, { descargarArchivo } from '@/config/api';
 import CustomModal from '@/components/CustomModal';
 import Paginador from '@/components/Paginador';
 import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
@@ -111,11 +111,16 @@ export default function ReporteTabular({ reporte }) {
     setPagina(1);
   };
 
-  const exportarExcel = () => {
-    const consulta = new URLSearchParams(aParametros(reporte.filtros, valores)).toString();
-    const base = reporte.excelConBaseUrl ? (api?.defaults?.baseURL || '').replace(/\/$/, '') : '';
-    window.open(`${base}${reporte.rutaExcel}?${consulta}`);
-    if (reporte.avisos?.excel) mostrar('success', 'Éxito', reporte.avisos.excel);
+  // Con la sesión (antes se abría en una ventana nueva, que no envía el token)
+  const exportarExcel = async () => {
+    const ruta = reporte.excelConBaseUrl ? reporte.rutaExcel : reporte.rutaExcel.replace(/^\/api(?=\/)/, '');
+    const nombre = `${ruta.split('/').filter(Boolean)[0] || 'reporte'}.xlsx`;
+    try {
+      await descargarArchivo(ruta, nombre, aParametros(reporte.filtros, valores));
+      if (reporte.avisos?.excel) mostrar('success', 'Éxito', reporte.avisos.excel);
+    } catch {
+      mostrar('error', 'Error', 'No se pudo generar el archivo de Excel.');
+    }
   };
 
   const totalPaginas = Math.max(1, Math.ceil(pacientes.length / filasPorPagina));

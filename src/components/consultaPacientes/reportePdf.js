@@ -1,7 +1,7 @@
 // Reporte PDF del paciente (jsPDF): encabezado con logo y QR, foto, datos personales y resumen de cada sección.
 import jsPDF from 'jspdf';
 import logoClinica from '@/assets/logoClinica2.png';
-import api from '@/config/api';
+import api, { encabezadoSesion } from '@/config/api';
 import { formatearFecha, calcularEstanciaRango } from '@/utils/fechas';
 import { estadoNutricional } from '@/utils/imc';
 import { calcularEdad } from './calculos';
@@ -30,46 +30,11 @@ export async function generarReportePaciente(paciente, datos = {}) {
             });
         };
         const size = 300; // mayor resolución para mejor legibilidad al escalar en PDF
-        // Opción 0 (preferida): QR interno del backend
+        // Solo el QR del propio backend: el texto lleva No. de afiliación y DPI, así que nunca se envía a
+        // servicios externos (antes había respaldo en quickchart.io, qrserver.com y Google Charts)
         try {
             const url = `/api/qr?size=${size}&text=${encodeURIComponent(normText)}`;
-            const resp = await fetch(url, { cache: 'no-store' });
-            if (resp.ok) {
-                const b64 = await toBase64(resp);
-                if (b64) return b64;
-            }
-        } catch { /* se omite este elemento del PDF */ }
-        // Alias local sin prefijo /api por si el proxy lo remueve
-        try {
-            const url = `/qr?size=${size}&text=${encodeURIComponent(normText)}`;
-            const resp = await fetch(url, { cache: 'no-store' });
-            if (resp.ok) {
-                const b64 = await toBase64(resp);
-                if (b64) return b64;
-            }
-        } catch { /* se omite este elemento del PDF */ }
-        // Opción 1: quickchart.io con nivel de corrección alto
-        try {
-            const url = `https://quickchart.io/qr?size=${size}&ecLevel=H&margin=0&text=${encodeURIComponent(normText)}`;
-            const resp = await fetch(url, { cache: 'no-store' });
-            if (resp.ok) {
-                const b64 = await toBase64(resp);
-                if (b64) return b64;
-            }
-        } catch { /* se omite este elemento del PDF */ }
-        // Opción 2: qrserver.com
-        try {
-            const url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&qzone=2&data=${encodeURIComponent(normText)}`;
-            const resp = await fetch(url, { cache: 'no-store' });
-            if (resp.ok) {
-                const b64 = await toBase64(resp);
-                if (b64) return b64;
-            }
-        } catch { /* se omite este elemento del PDF */ }
-        // Opción 3: Google Charts
-        try {
-            const url = `https://chart.googleapis.com/chart?cht=qr&chs=${size}x${size}&chl=${encodeURIComponent(normText)}`;
-            const resp = await fetch(url, { cache: 'no-store' });
+            const resp = await fetch(url, { cache: 'no-store', headers: encabezadoSesion() });
             if (resp.ok) {
                 const b64 = await toBase64(resp);
                 if (b64) return b64;
@@ -629,13 +594,13 @@ async function getFotoPacienteBase64(paciente) {
         let response = null;
         // 1) Intentar endpoint resolutivo por id
         if (id) {
-            try { response = await fetch(`/api/foto/${encodeURIComponent(id)}?${Date.now()}`, { cache: 'no-store' }); } catch { /* se omite este elemento del PDF */ }
+            try { response = await fetch(`/api/foto/${encodeURIComponent(id)}?${Date.now()}`, { cache: 'no-store', headers: encabezadoSesion() }); } catch { /* se omite este elemento del PDF */ }
         }
         // 2) Fallback a filename
         if (!response || !response.ok) {
             const filename = (paciente.url_foto || '').toString().split(/[\\/]/).pop();
             if (!filename) return null;
-            response = await fetch(`/api/fotos/${filename}?${Date.now()}`, { cache: 'no-store' });
+            response = await fetch(`/api/fotos/${filename}?${Date.now()}`, { cache: 'no-store', headers: encabezadoSesion() });
             if (!response.ok) return null;
         }
         const blob = await response.blob();

@@ -85,7 +85,7 @@ function App() {
                 {
                     path: "gestion-referencias",
                     element: (
-                        <RequireRole roles={["RolReferencias"]}>
+                        <RequireRole roles={["RolReferencia"]}>
                             <GestionReferencias/>
                         </RequireRole>
                     ),
