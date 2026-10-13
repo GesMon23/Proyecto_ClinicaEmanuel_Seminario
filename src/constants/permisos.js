@@ -49,6 +49,7 @@ export const PESTANAS = {
     { clave: 'creacion', etiqueta: 'Creación Usuarios', permiso: 'usuarios.creacion' },
     { clave: 'empleados', etiqueta: 'Gestión de Empleados', permiso: 'usuarios.empleados' },
     { clave: 'roles', etiqueta: 'Roles', permiso: 'usuarios.roles' },
+    { clave: 'permisos', etiqueta: 'Permisos de Roles', permiso: 'usuarios.permisos' },
   ],
 };
 

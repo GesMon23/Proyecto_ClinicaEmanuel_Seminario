@@ -92,4 +92,25 @@ router.patch('/usuarios/:id/estado', ...gestion, wrap(async (req, res) => {
   res.json({ ok: true });
 }, falla('No fue posible actualizar el estado del usuario', 'Error en PATCH /usuarios/:id/estado:')));
 
+// ---- Permisos de roles (qué pestañas abre cada rol) ----
+router.get('/permisos', ...gestion, wrap(async (req, res) => {
+  res.json(await service.permisosCatalogo());
+}, falla('No fue posible obtener las pestañas', 'Error en GET /permisos:')));
+
+router.get('/roles', ...gestion, wrap(async (req, res) => {
+  res.json(await service.rolesConPermisos());
+}, falla('No fue posible obtener los roles', 'Error en GET /roles:')));
+
+router.post('/roles', ...gestion, wrap(async (req, res) => {
+  const idRol = await service.guardarRol(null, req.body, req.user);
+  olvidarAccesos();
+  res.status(201).json({ id_rol: idRol });
+}, falla('No fue posible crear el rol', 'Error en POST /roles:')));
+
+router.put('/roles/:id', ...gestion, wrap(async (req, res) => {
+  await service.guardarRol(req.params.id, req.body, req.user);
+  olvidarAccesos(); // los usuarios con este rol ven el cambio en su siguiente petición
+  res.json({ ok: true });
+}, falla('No fue posible guardar el rol', 'Error en PUT /roles/:id:')));
+
 module.exports = router;

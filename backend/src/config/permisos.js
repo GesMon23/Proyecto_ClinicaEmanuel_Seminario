@@ -9,7 +9,7 @@ const SESION = 'sesion';
 
 const REPORTES = ['reportes.pacientes', 'reportes.nuevo_ingreso', 'reportes.egreso', 'reportes.fallecidos'];
 const ESTADISTICAS = ['estadisticas.pacientes', 'estadisticas.nutricion', 'estadisticas.psicologia'];
-const USUARIOS = ['usuarios.registro_empleados', 'usuarios.creacion', 'usuarios.empleados', 'usuarios.roles'];
+const USUARIOS = ['usuarios.registro_empleados', 'usuarios.creacion', 'usuarios.empleados', 'usuarios.roles', 'usuarios.permisos'];
 // Pantallas que muestran la foto del paciente
 const FOTOS = ['consulta.pacientes', 'pacientes.reingreso', 'pacientes.egreso', 'pacientes.actualizacion', 'turnos.llamado'];
 // Pantallas que buscan al paciente por número de afiliación antes de registrar algo
@@ -156,6 +156,10 @@ const REGLAS = [
   ['GET', '/usuarios/:id/roles', ['usuarios.roles']],
   ['PUT', '/usuarios/:id/roles', ['usuarios.roles']],
   ['PATCH', '/usuarios/:id/estado', ['usuarios.roles']],
+  ['GET', '/permisos', ['usuarios.permisos']],
+  ['GET', '/roles', ['usuarios.permisos']],
+  ['POST', '/roles', ['usuarios.permisos']],
+  ['PUT', '/roles/:id', ['usuarios.permisos']],
 ];
 
 // '/pacientes/:noafiliacion' -> /^\/pacientes\/[^/]+\/?$/ ; un parámetro puede ir tras un prefijo fijo ('pacientes-:x')

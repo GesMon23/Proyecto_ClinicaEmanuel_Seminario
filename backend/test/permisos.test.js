@@ -1,6 +1,6 @@
 // Permisos por pestaña: reglas de config/permisos.js, catálogo de la base y control de acceso (config/acceso.js).
 const { test, after } = require('node:test');
-const { assert, pool, tx, paciente, clinicaHemodialisis, crearTurno } = require('./helpers');
+const { assert, pool, tx, rechaza, paciente, clinicaHemodialisis, crearTurno } = require('./helpers');
 const { crearApp } = require('../src/app');
 const { SESION, permisosDeRuta, codigosUsados } = require('../src/config/permisos');
 const { crearControlDeAcceso, olvidarAccesos, esPublica, sinPrefijoApi, VIGENCIA_MS } = require('../src/config/acceso');
@@ -48,7 +48,7 @@ test('cada rol existente conserva todas las pestañas de su módulo', async () =
   assert.deepEqual(de.RolTurnos, ['turnos.asignacion', 'turnos.consulta', 'turnos.crear', 'turnos.llamado']);
   assert.deepEqual(de.RolConsulta, ['consulta.pacientes']);
   assert.equal(de.RolGestionPaciente.length, 5);
-  assert.equal(de.RolGestionUsuarios.length, 4);
+  assert.equal(de.RolGestionUsuarios.length, 5, 'incluye Permisos de Roles (migración 006)');
   const asignados = Object.values(de).flat().sort();
   assert.deepEqual(asignados, codigosUsados(), 'todas las pestañas tienen un rol y ninguna está repetida');
 });
@@ -154,6 +154,44 @@ test('sp_acceso_usuario: permisos de los roles activos y baja del usuario', asyn
     assert.equal((await leer(u.id_usuario)).activo, false, 'empleado de baja');
     assert.equal(await leer(987654321), undefined, 'usuario inexistente: sin fila');
   });
+});
+
+test('sp_guardar_rol: crea, edita, valida nombre y pestañas, y no deja el sistema sin administradores', async () => {
+  await tx(async (c) => {
+    const guardar = async (id, nombre, permisos, estado = true) => {
+      await c.query(`CALL sp_guardar_rol($1, $2, 'prueba', $3, $4, 'test', 'rol_prueba')`, [id, nombre, estado, permisos]);
+      const fila = (await c.query('FETCH ALL FROM rol_prueba')).rows[0];
+      await c.query('CLOSE rol_prueba');
+      return fila.id_rol;
+    };
+    const pestanasDe = async (id) => (await c.query(
+      'SELECT array_agg(p.codigo ORDER BY p.codigo) AS c FROM tbl_rol_permiso rp JOIN tbl_permisos p USING (id_permiso) WHERE rp.id_rol = $1', [id])).rows[0].c;
+
+    const id = await guardar(null, 'Prueba Llamado', ['turnos.llamado']);
+    assert.deepEqual(await pestanasDe(id), ['turnos.llamado'], 'rol nuevo con una sola pestaña');
+    await guardar(id, 'Prueba Llamado', ['turnos.llamado', 'turnos.consulta'], false);
+    assert.deepEqual(await pestanasDe(id), ['turnos.consulta', 'turnos.llamado'], 'las pestañas se reemplazan');
+    assert.equal((await c.query('SELECT estado FROM tbl_roles WHERE id_rol = $1', [id])).rows[0].estado, false);
+
+    const rolPrueba = `CALL sp_guardar_rol($1, $2, NULL, true, $3, 'test', 'rol_error')`;
+    await rechaza(c, rolPrueba, [null, 'prueba llamado', []], /ROL_DUPLICADO/);
+    await rechaza(c, rolPrueba, [null, 'Otro Rol', ['turnos.inventado']], /PERMISO_INVALIDO: .*turnos\.inventado/);
+    await rechaza(c, rolPrueba, [987654321, 'No existe', []], /ROL_NO_ENCONTRADO/);
+
+    // Quitar "Permisos de Roles" al único rol que la tiene dejaría el sistema sin administradores
+    const admin = (await c.query(`SELECT id_rol, nombre FROM tbl_roles WHERE nombre = 'RolGestionUsuarios'`)).rows[0];
+    assert.ok((await c.query(`SELECT fn_usuarios_con_permiso('usuarios.permisos') AS n`)).rows[0].n > 0, 'hay administradores');
+    await rechaza(c, rolPrueba, [admin.id_rol, admin.nombre, ['usuarios.roles']], /SIN_ADMINISTRADOR/);
+  });
+});
+
+test('sinPerderAdministradores: revierte (409) si el cambio deja sin administradores a un sistema que los tenía', async () => {
+  const { sinPerderAdministradores, SIN_ADMINISTRADOR } = require('../src/modules/usuarios/usuarios.repository');
+  const cliente = (conteos) => ({ query: async () => ({ rows: [{ n: conteos.shift() }] }) });
+  assert.equal(await sinPerderAdministradores(cliente([2, 1]), async () => 'ok'), 'ok');
+  assert.equal(await sinPerderAdministradores(cliente([0, 0]), async () => 'ok'), 'ok', 'sin administradores previos no bloquea');
+  await assert.rejects(sinPerderAdministradores(cliente([1, 0]), async () => 'ok'),
+    (err) => err.status === 409 && err.body.error === SIN_ADMINISTRADOR);
 });
 
 test('fn_paciente_en_atencion: solo con un turno en atención (estado 4)', async () => {

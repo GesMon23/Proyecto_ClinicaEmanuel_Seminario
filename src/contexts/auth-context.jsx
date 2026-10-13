@@ -28,6 +28,13 @@ export function AuthProvider({ children }) {
     setAuth({ user, token, loading: false });
   };
 
+  // Vuelve a leer el usuario (p. ej. tras cambiar las pestañas de uno de sus roles)
+  const recargar = async () => {
+    const { data } = await api.get('/auth/me');
+    localStorage.setItem('user', JSON.stringify(data));
+    setAuth((a) => ({ ...a, user: data }));
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -35,7 +42,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ ...auth, login, logout }}>
+    <AuthContext.Provider value={{ ...auth, login, logout, recargar }}>
       {children}
     </AuthContext.Provider>
   );

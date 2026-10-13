@@ -3,6 +3,7 @@ import RegistroEmpleados from '@/views/RegistroEmpleados.jsx';
 import CreacionUsuarios from '@/views/CreacionUsuarios.jsx';
 import RolesUsuarios from '@/views/RolesUsuarios.jsx';
 import GestionEmpleados from '@/views/GestionEmpleados.jsx';
+import PermisosRoles from '@/views/PermisosRoles.jsx';
 import BarraPestanas from '@/components/BarraPestanas';
 import { usePestanas } from '@/hooks/usePestanas';
 
@@ -11,6 +12,7 @@ const CONTENIDO = {
   creacion: CreacionUsuarios,
   empleados: GestionEmpleados,
   roles: RolesUsuarios,
+  permisos: PermisosRoles,
 };
 
 const GestionUsuarios = () => {

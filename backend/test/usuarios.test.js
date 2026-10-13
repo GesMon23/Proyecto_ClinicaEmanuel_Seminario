@@ -126,6 +126,35 @@ test('roles y estado de usuario: id inválido, estado no booleano y auto-inactiv
   assert.match(vacio.body.error, /campos válidos/);
 });
 
+test('permisos de roles: valida nombre, estado, pestañas e id antes de escribir', async () => {
+  const casos = [
+    ['POST', '/roles', { nombre: 'ab', permisos: [] }, /entre 3 y 60/],
+    ['POST', '/roles', { nombre: 'Rol válido', permisos: 'turnos.llamado' }, /lista de códigos/],
+    ['POST', '/roles', { nombre: 'Rol válido', permisos: [], estado: 'si' }, /boolean/],
+    ['POST', '/roles', { nombre: 'Rol válido', descripcion: 'x'.repeat(201), permisos: [] }, /200 caracteres/],
+    ['PUT', '/roles/abc', { nombre: 'Rol válido', permisos: [] }, /id inválido/],
+  ];
+  for (const [metodo, ruta, cuerpo, patron] of casos) {
+    const r = await pedir(metodo, ruta, { token: tokenAdmin, cuerpo });
+    assert.equal(r.status, 400, `${metodo} ${ruta} ${JSON.stringify(cuerpo).slice(0, 60)}`);
+    assert.match(r.body.error, patron);
+  }
+  assert.deepEqual(service.datosDeRol({ nombre: '  Llamado ', permisos: ['a', 'a', 'b'] }),
+    { nombre: 'Llamado', descripcion: null, estado: true, permisos: ['a', 'b'] }, 'recorta y quita repetidos');
+});
+
+test('permisos de roles: catálogo de pestañas y roles con sus pestañas', async () => {
+  const catalogo = await pedir('GET', '/permisos', { token: tokenAdmin });
+  assert.equal(catalogo.status, 200);
+  assert.ok(catalogo.body.some((p) => p.codigo === 'turnos.llamado' && p.modulo === 'Turnos' && p.pestana === 'Llamado'));
+
+  const roles = await pedir('GET', '/roles', { token: tokenAdmin });
+  assert.equal(roles.status, 200);
+  const turnos = roles.body.find((r) => r.nombre === 'RolTurnos');
+  assert.ok(turnos.permisos.includes('turnos.llamado'));
+  assert.equal(typeof turnos.usuarios, 'number');
+});
+
 // ----------------------------------------------------------------- lecturas
 
 test('roles activos, empleados sin usuario y existencia de usuario', async () => {

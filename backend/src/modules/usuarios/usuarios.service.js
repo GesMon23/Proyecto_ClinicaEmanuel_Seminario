@@ -1,7 +1,7 @@
 // Casos de uso de empleados, usuarios y roles. Todos los errores conservan el formato { error } del frontend.
 const bcrypt = require('bcryptjs');
 const repo = require('./usuarios.repository');
-const { HttpError } = require('../../shared/http');
+const { HttpError, parseBusinessError } = require('../../shared/http');
 
 const PASSWORD_INICIAL = 'Clinica1.';
 const REGEX_USUARIO = /^[a-z]{8}$/;
@@ -89,7 +89,8 @@ async function cambiarEstadoEmpleado(dpi, activo, user) {
   let filas;
   try {
     filas = await repo.cambiarEstadoEmpleado(dpi, Boolean(activo), actor);
-  } catch {
+  } catch (err) {
+    if (err instanceof HttpError) throw err; // p. ej. dejaría el sistema sin administradores
     throw new HttpError(501, {
       error: 'Cambio de estado no disponible',
       detalle: 'Verifica que exista sp_cambiar_estado_empleado(dpi, activo, actor, refcursor) en la BD.',
@@ -157,9 +158,42 @@ async function actualizarEstadoUsuario(idParam, body, user) {
   await repo.actualizarEstadoUsuario(id, estado, String(user?.nombre_usuario || user?.sub || 'sistema'));
 }
 
+// ------------------------------------------------------- Permisos de roles
+
+// Errores de sp_guardar_rol -> respuesta HTTP
+const ERRORES_ROL = { PERMISO_INVALIDO: 400, ROL_NO_ENCONTRADO: 404, ROL_DUPLICADO: 409, SIN_ADMINISTRADOR: 409 };
+
+// Valida el cuerpo de un rol; devuelve { nombre, descripcion, estado, permisos } o lanza 400
+function datosDeRol(b) {
+  const nombre = String(b?.nombre ?? '').trim();
+  if (nombre.length < 3 || nombre.length > 60) throw new HttpError(400, { error: 'El nombre del rol debe tener entre 3 y 60 caracteres' });
+  const descripcion = String(b?.descripcion ?? '').trim();
+  if (descripcion.length > 200) throw new HttpError(400, { error: 'La descripción admite hasta 200 caracteres' });
+  if (b?.estado !== undefined && typeof b.estado !== 'boolean') throw new HttpError(400, { error: 'estado debe ser boolean' });
+  if (!Array.isArray(b?.permisos) || !b.permisos.every((p) => typeof p === 'string')) {
+    throw new HttpError(400, { error: 'permisos debe ser una lista de códigos de pestaña' });
+  }
+  return { nombre, descripcion: descripcion || null, estado: b.estado ?? true, permisos: [...new Set(b.permisos)] };
+}
+
+async function guardarRol(idParam, body, user) {
+  const idRol = idParam === null ? null : Number(idParam);
+  if (idParam !== null && !Number.isInteger(idRol)) throw new HttpError(400, { error: 'id inválido' });
+  const datos = datosDeRol(body);
+  try {
+    return await repo.guardarRol({ idRol, ...datos, actor: String(nombreDeToken(user) || idDeToken(user) || 'sistema') });
+  } catch (err) {
+    const negocio = parseBusinessError(err, Object.keys(ERRORES_ROL));
+    if (negocio) throw new HttpError(ERRORES_ROL[negocio.codigo], { error: negocio.mensaje });
+    if (err && err.code === '23505') throw new HttpError(409, { error: 'Ya existe un rol con ese nombre' });
+    throw err;
+  }
+}
+
 module.exports = {
   registrarEmpleados, registrarEmpleado, errorDeEmpleado, listarEmpleados, camposEmpleado, actualizarEmpleado, cambiarEstadoEmpleado,
   empleadosSinUsuario: repo.empleadosSinUsuario,
   usuarioExiste, crearUsuario,
   rolesActivos: repo.rolesActivos, buscarUsuario, rolesDeUsuario, actualizarRoles, actualizarEstadoUsuario,
+  permisosCatalogo: repo.permisosCatalogo, rolesConPermisos: repo.rolesConPermisos, datosDeRol, guardarRol,
 };
