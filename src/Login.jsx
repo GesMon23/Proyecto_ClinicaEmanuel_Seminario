@@ -121,7 +121,7 @@ const LoginComponent = () => {
         <div className="flex items-center w-full max-w-md px-6 mx-auto lg:w-2/6">
           <div className="flex-1">
             <div className="text-center">
-              <img src={logoClinica} alt="" className="text-4xl font-bold text-center text-gray-700 dark:text-white"></img>
+              <img src={logoClinica} alt="" className="logo-transparente text-4xl font-bold text-center text-gray-700 dark:text-white"></img>
             </div>
             <div className="mt-8">
               <form onSubmit={handleSubmit}>

@@ -32,8 +32,9 @@
     color: #94a3b8;
   }
 
-  /* El logo (PNG transparente con letras verde oscuro) está hecho para fondo blanco */
-  .dark img[src*="logoClinica2"] {
+  /* El logo (PNG transparente con letras verde oscuro) está hecho para fondo blanco. En el login y el
+     inicio va sobre la foto de fondo y se deja transparente (clase logo-transparente) */
+  .dark img[src*="logoClinica2"]:not(.logo-transparente) {
     background-color: #ffffff;
     border-radius: 0.75rem;
   }
