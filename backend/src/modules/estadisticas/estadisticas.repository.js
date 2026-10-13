@@ -4,6 +4,16 @@ const { withTransaction, fetchCursor, callProcedure } = require('../../shared/da
 const consultar = (procedimiento, valores, cursor) =>
   withTransaction((c) => fetchCursor(c, `public.${procedimiento}`, valores, cursor));
 
+// Varios procedimientos en una sola conexión/transacción: [[procedimiento, valores, cursor], ...] -> [filas, ...]
+// (cada cursor debe tener un nombre distinto)
+const consultarVarios = (consultas) => withTransaction(async (c) => {
+  const resultados = [];
+  for (const [procedimiento, valores, cursor] of consultas) {
+    resultados.push(await fetchCursor(c, `public.${procedimiento}`, valores, cursor));
+  }
+  return resultados;
+});
+
 // Cursores de sp_estadisticas_resumen, en el orden en que el procedimiento los recibe
 const CURSORES_RESUMEN = {
   pacientesActivos: 'cur_pac_act',
@@ -31,4 +41,4 @@ function resumenCursores(desde, hasta) {
   });
 }
 
-module.exports = { consultar, resumenCursores };
+module.exports = { consultar, consultarVarios, resumenCursores };

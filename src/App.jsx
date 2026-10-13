@@ -16,7 +16,7 @@ import GestionUsuarios from "@/views/GestionUsuarios.jsx";
 import Nutricion from "@/views/Nutricion.jsx";
 import Psicologia from "@/views/Psicologia.jsx";
 import AdminResetUser from "@/pages/AdminResetUser.jsx";
-import DashboardsInteractivos from "@/views/DashboardsInteractivos.jsx";
+import Estadisticas from "@/views/estadisticas/Estadisticas.jsx";
 import TurnosTVPage from "@/routes/turnos-tv/page";
 import CerrarSesion from "@/routes/CerrarSesion";
 function App() {
@@ -45,7 +45,7 @@ function App() {
                     path: "estadisticas",
                     element: (
                         <RequireRole roles={["RolEstadistica"]}>
-                            <DashboardsInteractivos/>
+                            <Estadisticas/>
                         </RequireRole>
                     ),
                 },

@@ -135,6 +135,66 @@ test('resumen general tiene KPIs, series y distribuciones', async () => {
   assert.ok('pacientesActivos' in r.body.kpis && 'tasaInasistenciaPct' in r.body.kpis);
 });
 
+// --------------------------------------------------------- paneles (pantalla Estadísticas)
+
+const sumar = (serie) => serie.reduce((a, f) => a + f.total, 0);
+
+test('panel de pacientes: los totales coinciden con todas sus distribuciones', async () => {
+  const r = await pedir('panel/pacientes');
+  assert.equal(r.status, 200);
+  const p = r.body;
+  for (const serie of ['porEstado', 'porAcceso', 'porJornada', 'porSexo', 'porDepartamento']) {
+    assert.equal(sumar(p[serie]), p.total, `${serie} debe sumar el total`);
+  }
+  assert.equal(p.programa.dentro + p.programa.fuera, p.total);
+});
+
+test('panel de pacientes: un filtro sin coincidencias da cero, no datos de otros filtros', async () => {
+  const r = await pedir('panel/pacientes?estado=NO-EXISTE&sexo=F');
+  assert.equal(r.body.total, 0);
+  for (const serie of ['porEstado', 'porAcceso', 'porJornada', 'porSexo', 'porDepartamento']) {
+    assert.deepEqual(r.body[serie], [], `${serie} debe quedar vacía`);
+  }
+  assert.deepEqual(r.body.filtros, { acceso: null, estado: 'NO-EXISTE', jornada: null, sexo: 'Femenino' });
+});
+
+test('panel de pacientes: el filtro de sexo deja solo ese sexo', async () => {
+  const r = await pedir('panel/pacientes?sexo=M');
+  assert.ok(r.body.porSexo.every((f) => f.nombre === 'Masculino'));
+  assert.equal(sumar(r.body.porEstado), r.body.total);
+});
+
+test('panel de nutrición: rango, total, promedios y filtros por la misma dimensión', async () => {
+  const r = await pedir('panel/nutricion?desde=2000-01-01&hasta=2999-12-31&sexo=F&motivo=Nuevo');
+  assert.equal(r.status, 200);
+  const n = r.body;
+  assert.deepEqual(n.rango, { desde: '2000-01-01', hasta: '2999-12-31' });
+  assert.equal(sumar(n.porEstadoNutricional), n.total);
+  assert.equal(sumar(n.porJornada), n.total);
+  assert.ok(n.porSexo.every((f) => f.nombre === 'Femenino'), 'por sexo respeta el filtro de sexo');
+  assert.ok(n.porMotivo.every((f) => f.nombre === 'Nuevo'), 'por motivo respeta el filtro de motivo');
+  assert.ok(['imc', 'peso', 'altura'].every((k) => k in n.promedios));
+});
+
+test('panel de psicología: sin informes en el rango todo queda en cero', async () => {
+  const r = await pedir('panel/psicologia?desde=2999-01-01&hasta=2999-12-31&sexo=M');
+  assert.equal(r.status, 200);
+  const p = r.body;
+  assert.equal(p.total, 0);
+  for (const serie of ['porTipo', 'porAtencion', 'porPronostico', 'porJornada', 'porSexo']) assert.deepEqual(p[serie], []);
+  assert.equal(p.kdqol.total, 0);
+  assert.equal(p.kdqol.global, null);
+  assert.equal(p.kdqol.promedios.length, 5);
+});
+
+test('panel de psicología: con todo el historial las distribuciones suman el total', async () => {
+  const p = (await pedir('panel/psicologia')).body;
+  assert.deepEqual(p.rango, { desde: null, hasta: null });
+  for (const serie of ['porTipo', 'porAtencion', 'porPronostico', 'porJornada', 'porSexo']) {
+    assert.equal(sumar(p[serie]), p.total, `${serie} debe sumar el total`);
+  }
+});
+
 test('un filtro de fechas futuras deja las series vacías', async () => {
   const r = await pedir('psicologia-por-tipo?desde=2999-01-01&hasta=2999-12-31');
   assert.deepEqual(r.body.items, []);

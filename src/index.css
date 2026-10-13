@@ -3,6 +3,28 @@
 @tailwind utilities;
 
 @layer base {
+  /* Colores de las gráficas (Recharts los usa como var(--viz-...)); el modo oscuro los cambia aquí.
+     Serie validada (contraste >= 3:1 y banda de luminosidad) contra la superficie de cada modo. */
+  :root {
+    --viz-serie: #15803d;
+    --viz-superficie: #ffffff;
+    --viz-texto: #0f172a;
+    --viz-texto-secundario: #475569;
+    --viz-rejilla: #e2e8f0;
+    --viz-eje: #cbd5e1;
+    --viz-resaltado: rgba(15, 23, 42, 0.05);
+  }
+
+  .dark {
+    --viz-serie: #16a34a;
+    --viz-superficie: #0f172a;
+    --viz-texto: #f1f5f9;
+    --viz-texto-secundario: #cbd5e1;
+    --viz-rejilla: #1e293b;
+    --viz-eje: #334155;
+    --viz-resaltado: rgba(255, 255, 255, 0.06);
+  }
+
   body {
     scrollbar-color: #cbd5e1 transparent;
   }

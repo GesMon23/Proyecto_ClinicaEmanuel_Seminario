@@ -2,6 +2,7 @@
 const express = require('express');
 const service = require('./estadisticas.service');
 const definiciones = require('./definiciones');
+const paneles = require('./paneles');
 const { wrap } = require('../../shared/http');
 
 const router = express.Router();
@@ -47,6 +48,11 @@ function publicar(ruta, consultar, mensajeError) {
 for (const def of definiciones) {
   publicar(def.ruta, (q) => service.ejecutar(def, q), def.error);
 }
+
+// Pantalla de Estadísticas: un panel completo por petición, con los mismos filtros en todas sus gráficas
+publicar('panel/pacientes', paneles.pacientes, 'Error al obtener las estadísticas de pacientes.');
+publicar('panel/nutricion', paneles.nutricion, 'Error al obtener las estadísticas de nutrición.');
+publicar('panel/psicologia', paneles.psicologia, 'Error al obtener las estadísticas de psicología.');
 
 publicar('resumen', service.resumen, 'Error al generar resumen de estadísticas.');
 publicar('pacientes-programa-resumen', () => service.programaResumen(), 'Error al obtener resumen de pacientes del programa.');
