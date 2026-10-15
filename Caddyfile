@@ -1,0 +1,17 @@
+# Proxy de entrada en los servidores: obtiene y renueva solo el certificado HTTPS de DOMINIO
+# (Let's Encrypt) y reenvía todo al contenedor del frontend. Se activa con el perfil "tls" de docker compose.
+{$DOMINIO} {
+	# Eventos en tiempo real de la pantalla de TV (SSE): sin comprimir y enviados al instante. Con gzip el
+	# compresor retenía los eventos pequeños y la TV de otro equipo no se enteraba de los llamados.
+	@eventos_tv path /api/turnos/llamado-sse
+	handle @eventos_tv {
+		reverse_proxy frontend:80 {
+			flush_interval -1
+		}
+	}
+
+	handle {
+		encode gzip
+		reverse_proxy frontend:80
+	}
+}

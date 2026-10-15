@@ -2,53 +2,44 @@ const nodemailer = require('nodemailer');
 let sgMail = null;
 try { sgMail = require('@sendgrid/mail'); } catch { /* opcional */ }
 
-// Transport configurable por variables de entorno
-// Ejemplo de .env para SMTP 2525 (SendGrid como referencia):
-// SMTP_HOST=smtp.sendgrid.net
-// SMTP_PORT=2525
-// SMTP_SECURE=false
-// SMTP_USER=apikey
-// SMTP_PASS=SG.xxxxxx
-// MAIL_FROM="Clinica Emanuel <no-reply@tudominio.gt>"
+// Envío de correos según variables de entorno (se leen en cada envío):
+//   SendGrid API: MAIL_PROVIDER=sendgrid, MAIL_API_KEY
+//   SMTP (Gmail, SES, Brevo...): SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS
+//   Remitente: MAIL_FROM (si no, ADMIN_EMAIL)
 
 let cachedTransport = null;
-let provider = (process.env.MAIL_PROVIDER || '').toLowerCase();
-const FROM_DEFAULT = process.env.MAIL_FROM || process.env.ADMIN_EMAIL || 'no-reply@example.com';
 
-function canUseSendgridApi() {
-  return provider === 'sendgrid' && !!sgMail && !!process.env.MAIL_API_KEY;
+const usaSendgrid = () => (process.env.MAIL_PROVIDER || '').toLowerCase() === 'sendgrid' && !!sgMail && !!process.env.MAIL_API_KEY;
+const smtpCompleto = () => ['SMTP_HOST', 'SMTP_USER', 'SMTP_PASS'].every((k) => !!process.env[k]);
+const remitente = () => process.env.MAIL_FROM || process.env.ADMIN_EMAIL || '';
+
+// true si hay un proveedor y un remitente configurados (sin esto no se intenta enviar)
+function correoConfigurado() {
+  return (usaSendgrid() || smtpCompleto()) && !!remitente();
 }
 
 function getTransport() {
   if (cachedTransport) return cachedTransport;
-  const host = process.env.SMTP_HOST;
-  const port = parseInt(process.env.SMTP_PORT || '2525', 10);
-  const secure = String(process.env.SMTP_SECURE || 'false').toLowerCase() === 'true';
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  if (!host || !port || !user || !pass) {
+  if (!smtpCompleto()) {
     throw new Error('SMTP config incompleta. Verifique SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS');
   }
   cachedTransport = nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: { user, pass },
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT || '587', 10),
+    secure: String(process.env.SMTP_SECURE || 'false').toLowerCase() === 'true',
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
   });
   return cachedTransport;
 }
 
 async function enviarCorreo({ to, subject, html, text }) {
-  const from = FROM_DEFAULT;
-  if (canUseSendgridApi()) {
+  const from = remitente();
+  if (usaSendgrid()) {
     sgMail.setApiKey(process.env.MAIL_API_KEY);
-    const msg = { to, from, subject, text, html };
-    const [resp] = await sgMail.send(msg);
-    return { messageId: resp?.headers?.['x-message-id'] || resp?.headers?.['x-message-id'.toLowerCase()] || null };
+    const [resp] = await sgMail.send({ to, from, subject, text, html });
+    return { messageId: resp?.headers?.['x-message-id'] || null };
   }
-  const transport = getTransport();
-  const info = await transport.sendMail({ from, to, subject, html, text });
-  return info;
+  return getTransport().sendMail({ from, to, subject, html, text });
 }
 
-module.exports = { getTransport, enviarCorreo };
+module.exports = { getTransport, enviarCorreo, correoConfigurado };

@@ -1,6 +1,7 @@
 import { forwardRef } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { navbarLinks } from "@/constants";
+import { tieneAlguno } from "@/constants/permisos";
 import logoLight from "@/assets/logoClinicaMin.png"
 import logoDark from "@/assets/logo64.png"
 import { cn } from "@/utils/cn";
@@ -12,22 +13,7 @@ import { useAuth } from "@/contexts/auth-context";
 export const Sidebar = forwardRef (({collapsed}, ref) => {
     const navigate = useNavigate();
     const { logout, user } = useAuth() || {};
-    const roles = user?.roles || [];
-
-    const canSee = (link) => {
-        const req = link.allowedRoles;
-        // Sin restricción
-        if (!Array.isArray(req) || req.length === 0) return true;
-        // Soporta roles como strings u objetos {name, rol, nombre, codigo}
-        return roles.some((r) => {
-            if (typeof r === 'string') return req.includes(r);
-            if (r && typeof r === 'object') {
-                const candidates = [r.name, r.rol, r.nombre, r.codigo, r.id, r.role];
-                return candidates.some((v) => typeof v === 'string' && req.includes(v));
-            }
-            return false;
-        });
-    };
+    const canSee = (link) => tieneAlguno(user, link.permisos);
     return (<aside 
                 ref={ref} 
                 className={

@@ -17,6 +17,14 @@ build
 *.log
 .DS_Store
 
+# El frontend no necesita el backend, la BD ni la documentación (y backend/ trae fotos de pacientes)
+backend
+BD
+docs
+.github
+.claude
+
 # Otros
 Dockerfile
 docker-compose.yml
+Caddyfile

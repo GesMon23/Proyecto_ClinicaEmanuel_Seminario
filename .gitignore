@@ -22,6 +22,18 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Secretos: .env de docker compose (plantilla .env.example) y backend/.env para desarrollo sin Docker
+.env
+.env.*
+!.env.example
 backend/.env
-backend/db/pool.js
-backend/.env
+backend/tmp/
+
+# Datos de pacientes generados en tiempo de ejecución
+backend/fotos/*
+backend/carnets/*
+!backend/carnets/.keep
+
+# Respaldos de base de datos (pueden contener datos reales)
+*.backup

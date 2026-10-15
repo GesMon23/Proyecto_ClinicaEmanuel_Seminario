@@ -24,7 +24,7 @@ const DashboardPage = () => {
         >
             <div className="absolute inset-0 bg-white/75 dark:bg-slate-900/60" />
             <div className="relative z-0 flex flex-col items-center text-center p-6">
-                <img src={logoClinica} alt="Clínica Renal Emanuel" className="w-[28rem] max-w-[85vw] h-auto mb-8 select-none" />
+                <img src={logoClinica} alt="Clínica Renal Emanuel" className="logo-transparente w-[28rem] max-w-[85vw] h-auto mb-8 select-none" />
                 <h1 className="text-3xl md:text-5xl font-extrabold uppercase text-green-800 dark:text-green-700 tracking-wide">
                     BIENVENIDO {displayName}
                 </h1>

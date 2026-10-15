@@ -5,8 +5,11 @@ import { useAuth } from "@/contexts/auth-context";
 import { ChevronsLeft, Moon, Search, Sun, User as UserIcon, Settings, SquareArrowOutUpRight, CircleHelp } from "lucide-react";
 import api from "@/config/api";
 import { navbarLinks } from "@/constants";
+import { tieneAlguno } from "@/constants/permisos";
+import { BOTON_PRINCIPAL } from "@/constants/botones";
 import PropTypes from "prop-types";
 
+import { CAMPO, ETIQUETA } from "@/constants/formularios";
 export const Header = ({ collapsed, setCollapsed }) => {
     const { theme, setTheme } = useTheme();
     const { user, logout } = useAuth() || {};
@@ -24,13 +27,7 @@ export const Header = ({ collapsed, setCollapsed }) => {
     const [query, setQuery] = useState("");
     const [results, setResults] = useState([]);
     const [openSearch, setOpenSearch] = useState(false);
-    const roles = user?.roles || [];
-
-    const canSee = (link) => {
-        const req = link.allowedRoles;
-        if (!Array.isArray(req) || req.length === 0) return true;
-        return roles.some((r) => req.includes(r));
-    };
+    const canSee = (link) => tieneAlguno(user, link.permisos);
 
     const onSearchChange = (e) => {
         const term = (e.target.value || "").trimStart();
@@ -262,27 +259,27 @@ export const Header = ({ collapsed, setCollapsed }) => {
                             </div>
                         )}
 
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Contraseña actual</label>
+                        <label className={ETIQUETA}>Contraseña actual</label>
                         <input
                             type="password"
                             value={currentPwd}
                             onChange={(e) => setCurrentPwd(e.target.value)}
-                            className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+                            className={CAMPO}
                         />
 
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mt-3">Nueva contraseña</label>
+                        <label className={`${ETIQUETA} mt-3`}>Nueva contraseña</label>
                         <input
                             type="password"
                             value={newPwd}
                             onChange={(e) => setNewPwd(e.target.value)}
-                            className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+                            className={CAMPO}
                         />
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mt-3">Confirmar nueva contraseña</label>
+                        <label className={`${ETIQUETA} mt-3`}>Confirmar nueva contraseña</label>
                         <input
                             type="password"
                             value={newPwd2}
                             onChange={(e) => setNewPwd2(e.target.value)}
-                            className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+                            className={CAMPO}
                         />
 
                         <div className="flex justify-end gap-3 mt-6">
@@ -335,7 +332,7 @@ export const Header = ({ collapsed, setCollapsed }) => {
                                         setChangeLoading(false);
                                     }
                                 }}
-                                className="px-4 py-2 rounded-md bg-green-700 text-white hover:bg-green-800 disabled:opacity-50"
+                                className={BOTON_PRINCIPAL}
                             >
                                 {changeLoading ? 'Guardando...' : 'Guardar'}
                             </button>

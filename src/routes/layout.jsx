@@ -3,8 +3,10 @@ import { cn } from "@/utils/cn"
 import { Header } from "@/layouts/header"
 import { Outlet } from "react-router-dom"
 import { useMediaQuery } from "@uidotdev/usehooks"
-import { useState, useRef, useEffect} from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import { useClickOutside } from "@/hooks/use-click-outside";
+import BarraActividad from "@/components/BarraActividad";
+import Cargando from "@/components/Cargando";
 
 const Layout = () => {
   const isDesktopDevice = useMediaQuery("(min-width: 768px)");
@@ -23,6 +25,7 @@ const Layout = () => {
 
   return (
     <div className="min-h-screen bg-slate-100 transition-colors dark:bg-slate-950">
+        <BarraActividad />
         <div className={cn("pointer-events-none fixed inset-0 -z-10 bg-black opacity-0 transition-opacity",
             !collapsed && "max-md:pointer-events-auto max-md:opacity-30 max-md:z-50",
         )}/>
@@ -31,7 +34,10 @@ const Layout = () => {
             <Header collapsed={collapsed}
             setCollapsed={setCollapsed}/>
             <div className="h [calc(100vh-60px)] overflow-y-auto overflow-x-hidden p-6">
-                <Outlet></Outlet>
+                {/* Cada módulo se descarga al abrirlo: mientras tanto, la animación de carga */}
+                <Suspense fallback={<Cargando variante="pantalla" texto="Cargando módulo..." />}>
+                    <Outlet />
+                </Suspense>
             </div>
         </div>
     </div>

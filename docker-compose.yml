@@ -1,0 +1,81 @@
+# Sistema completo: PostgreSQL + backend + frontend (nginx) y, en los servidores, Caddy para HTTPS.
+# El mismo archivo sirve para local, preproducción y producción; lo que cambia es el .env (ver .env.example).
+#
+#   Local:     docker compose up --build              -> http://localhost:8080
+#   Servidor:  docker compose --profile tls pull && docker compose --profile tls up -d
+#              (usa las imágenes publicadas por el CI con la etiqueta ETIQUETA del .env)
+
+x-logs: &logs
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "5" }
+
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${PGDATABASE:?Defina PGDATABASE en .env}
+      POSTGRES_USER: ${PGUSER:?Defina PGUSER en .env}
+      POSTGRES_PASSWORD: ${PGPASSWORD:?Defina PGPASSWORD en .env}
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    <<: *logs
+
+  backend:
+    image: ${IMAGEN_PREFIJO:-ghcr.io/gesmon23/proyecto_clinicaemanuel_seminario}/backend:${ETIQUETA:-local}
+    build: ./backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PGHOST: db
+      PGPORT: "5432"
+    volumes:
+      - fotos:/app/fotos
+      - tmp:/app/tmp
+    depends_on:
+      db: { condition: service_healthy }
+    <<: *logs
+
+  frontend:
+    image: ${IMAGEN_PREFIJO:-ghcr.io/gesmon23/proyecto_clinicaemanuel_seminario}/frontend:${ETIQUETA:-local}
+    build: .
+    restart: unless-stopped
+    ports:
+      # En los servidores: PUERTO_HTTP=127.0.0.1:8080 para que solo Caddy llegue al frontend
+      - "${PUERTO_HTTP:-8080}:80"
+    depends_on:
+      backend: { condition: service_healthy }
+    <<: *logs
+
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["tls"]
+    restart: unless-stopped
+    environment:
+      # Compose valida las variables de todos los servicios aunque el perfil no esté activo: por eso no
+      # puede ser obligatoria. En los servidores DOMINIO debe estar en .env (con localhost Caddy usa un
+      # certificado autofirmado)
+      DOMINIO: ${DOMINIO:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [frontend]
+    <<: *logs
+
+volumes:
+  pgdata:
+  fotos:
+  tmp:
+  caddy_data:
+  caddy_config:

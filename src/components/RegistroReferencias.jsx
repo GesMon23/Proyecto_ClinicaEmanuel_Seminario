@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card } from 'react-bootstrap';
 import api from '../config/api';
 import logoClinica from "@/assets/logoClinica2.png"
+import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
+import { IconoCargando } from '@/components/Cargando';
 
 const RegistroReferencias = () => {
 
@@ -14,8 +16,6 @@ const RegistroReferencias = () => {
       EspecialidadReferencia: ''
     });
     setPaciente(null);
-    setMensaje('');
-    setError(false);
     setBusquedaError('');
   };
 
@@ -98,7 +98,6 @@ const RegistroReferencias = () => {
     fetchMedicos();
   }, []);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(false);
   const [paciente, setPaciente] = useState(null);
   const [busquedaError, setBusquedaError] = useState('');
 
@@ -126,11 +125,9 @@ const RegistroReferencias = () => {
   const handleSubmit = async e => {
     e.preventDefault();
     setLoading(true);
-    setError(false);
     try {
       // Validación básica
       if (!form.noafiliacion || !form.FechaReferencia || !form.MotivoTraslado || !form.idMedico || !form.EspecialidadReferencia) {
-        setError(true);
         showModal('Campos requeridos', 'Todos los campos son obligatorios.', 'error');
         setLoading(false);
         return;
@@ -147,7 +144,6 @@ const RegistroReferencias = () => {
       if (response.data && response.data.success) {
         const idRef = response?.data?.referencia?.id_referencia || '';
         showModal('Éxito', idRef ? `Referencia registrada exitosamente. ID: ${idRef}` : 'Referencia registrada exitosamente.', 'success');
-        setError(false);
         setForm({
           noafiliacion: '',
           FechaReferencia: '',
@@ -157,11 +153,9 @@ const RegistroReferencias = () => {
         });
         setPaciente(null);
       } else {
-        setError(true);
         showModal('Error', response.data?.detail || 'Error al registrar la referencia.', 'error');
       }
     } catch (err) {
-      setError(true);
       showModal('Error', err.response?.data?.detail || err.message || 'Error inesperado.', 'error');
     } finally {
       setLoading(false);
@@ -225,7 +219,7 @@ const RegistroReferencias = () => {
                     type="button"
                     onClick={handleBuscarAfiliado}
                     disabled={!!paciente}
-                    className="bg-green-800 hover:bg-green-900 text-white font-semibold text-base px-4 py-2 rounded-md border border-green-900"
+                    className={BOTON_PRINCIPAL}
                   >
                     Buscar
                   </button>
@@ -316,18 +310,15 @@ const RegistroReferencias = () => {
               <button
                 type="submit"
                 disabled={loading || !paciente}
-                className={`px-6 py-3 text-lg font-semibold rounded-md transition-colors ${loading || !paciente
-                    ? 'bg-green-700 cursor-not-allowed text-white'
-                    : 'bg-green-800 hover:bg-green-900 text-white border-green-900'
-                  }`}
+                className={BOTON_PRINCIPAL}
               >
-                {loading ? 'Guardando...' : 'Registrar Referencia'}
+                {loading ? <><IconoCargando />Guardando...</> : 'Registrar Referencia'}
               </button>
               <button
                 type="button"
                 disabled={!paciente}
                 onClick={handleLimpiarFormulario}
-                className="px-6 py-3 text-lg font-semibold rounded-md bg-red-700 hover:bg-red-800 text-white border border-red-800"
+                className={BOTON_LIMPIAR}
               >
                 Limpiar
               </button>

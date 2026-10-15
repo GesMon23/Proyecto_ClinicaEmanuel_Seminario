@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import logoClinica from '@/assets/logoClinica2.png';
 import api from '@/config/api';
+import { BOTON_PRINCIPAL } from '@/constants/botones';
 
+import { CAMPO, ETIQUETA } from '@/constants/formularios';
+import { CargandoFila } from '@/components/Cargando';
 const GestionEmpleados = () => {
   const [empleados, setEmpleados] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -9,13 +12,13 @@ const GestionEmpleados = () => {
   const [q, setQ] = useState('');
   const [editing, setEditing] = useState(null); // objeto empleado en edición
   const [showEdit, setShowEdit] = useState(false);
-  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editSubmitting] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null); // { tipo: 'editar'|'estado', payload: {...} }
   const [confirmPassword, setConfirmPassword] = useState('');
   const [confirmError, setConfirmError] = useState('');
   // Paginación
   const [paginaActual, setPaginaActual] = useState(1);
-  const [filasPorPagina, setFilasPorPagina] = useState(10);
+  const [filasPorPagina] = useState(10);
 
   useEffect(() => {
     const fetchEmpleados = async () => {
@@ -164,45 +167,44 @@ const GestionEmpleados = () => {
             )}
 
             {/* Tabla */}
+            <div className="bg-white dark:bg-slate-800 shadow overflow-hidden sm:rounded-lg">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                <thead className="bg-slate-50 dark:bg-slate-800">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-slate-700">
                   <tr>
-                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">ID</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">DPI</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">Nombre</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">Teléfono</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">Email</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">Estado</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">Acciones</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">DPI</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Nombre</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Teléfono</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Email</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Estado</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {loading ? (
-                    <tr>
-                      <td colSpan={7} className="px-4 py-6 text-center text-slate-600 dark:text-slate-300">Cargando...</td>
-                    </tr>
+                    <CargandoFila colSpan={7} texto="Cargando empleados..." />
                   ) : filtrados.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-6 text-center text-slate-600 dark:text-slate-300">No hay empleados para mostrar.</td>
+                      <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">No hay empleados para mostrar.</td>
                     </tr>
                   ) : (
                     empleadosPaginados.map((e) => {
                       const nombre = `${e.primer_nombre || ''} ${e.segundo_nombre || ''} ${e.otros_nombres || ''} ${e.primer_apellido || ''} ${e.segundo_apellido || ''}`.replace(/\s+/g, ' ').trim();
                       return (
-                        <tr key={e.dpi} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
-                          <td className="px-4 py-2 text-slate-700 dark:text-slate-200">{e.id_empleado}</td>
-                          <td className="px-4 py-2 text-slate-700 dark:text-slate-200">{e.dpi}</td>
-                          <td className="px-4 py-2 text-slate-700 dark:text-slate-200">{nombre || '—'}</td>
-                          <td className="px-4 py-2 text-slate-700 dark:text-slate-200">{e.telefono || '—'}</td>
-                          <td className="px-4 py-2 text-slate-700 dark:text-slate-200">{e.email || '—'}</td>
-                          <td className="px-4 py-2">
+                        <tr key={e.dpi} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 dark:text-blue-400">{e.id_empleado}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{e.dpi}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{nombre || '—'}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{e.telefono || '—'}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{e.email || '—'}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
                             <span className={`px-2 py-0.5 rounded text-xs font-medium ${e.activo === false ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'}`}>
                               {e.activo === false ? 'Inactivo' : 'Activo'}
                             </span>
                           </td>
-                          <td className="px-4 py-2 text-right">
-                            <div className="flex gap-2 justify-end">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            <div className="flex gap-2">
                               <button
                                 type="button"
                                 disabled={e.activo === false}
@@ -231,6 +233,7 @@ const GestionEmpleados = () => {
                   )}
                 </tbody>
               </table>
+            </div>
             </div>
             {/* Paginación (estilo ConsultaNutricion) */}
             {totalPaginas > 1 && (
@@ -275,52 +278,52 @@ const GestionEmpleados = () => {
             <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-4">Editar empleado</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">ID Empleado</label>
-                <input value={editing.id_empleado ?? ''} disabled className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-3 py-2 text-slate-500" />
+                <label className={ETIQUETA}>ID Empleado</label>
+                <input value={editing.id_empleado ?? ''} disabled className={CAMPO} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">DPI</label>
-                <input value={editing.dpi || ''} onChange={(e)=>setEditing(v=>({...v, dpi:e.target.value}))} className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2" />
+                <label className={ETIQUETA}>DPI</label>
+                <input value={editing.dpi || ''} onChange={(e)=>setEditing(v=>({...v, dpi:e.target.value}))} className={CAMPO} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Primer Nombre</label>
-                <input value={editing.primer_nombre || ''} onChange={(e)=>setEditing(v=>({...v, primer_nombre:e.target.value}))} className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2" />
+                <label className={ETIQUETA}>Primer Nombre</label>
+                <input value={editing.primer_nombre || ''} onChange={(e)=>setEditing(v=>({...v, primer_nombre:e.target.value}))} className={CAMPO} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Segundo Nombre</label>
-                <input value={editing.segundo_nombre || ''} onChange={(e)=>setEditing(v=>({...v, segundo_nombre:e.target.value}))} className="mt-1 w-full rounded-md border" />
+                <label className={ETIQUETA}>Segundo Nombre</label>
+                <input value={editing.segundo_nombre || ''} onChange={(e)=>setEditing(v=>({...v, segundo_nombre:e.target.value}))} className={CAMPO} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Otros Nombres</label>
-                <input value={editing.otros_nombres || ''} onChange={(e)=>setEditing(v=>({...v, otros_nombres:e.target.value}))} className="mt-1 w-full rounded-md border" />
+                <label className={ETIQUETA}>Otros Nombres</label>
+                <input value={editing.otros_nombres || ''} onChange={(e)=>setEditing(v=>({...v, otros_nombres:e.target.value}))} className={CAMPO} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Primer Apellido</label>
-                <input value={editing.primer_apellido || ''} onChange={(e)=>setEditing(v=>({...v, primer_apellido:e.target.value}))} className="mt-1 w-full rounded-md border" />
+                <label className={ETIQUETA}>Primer Apellido</label>
+                <input value={editing.primer_apellido || ''} onChange={(e)=>setEditing(v=>({...v, primer_apellido:e.target.value}))} className={CAMPO} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Segundo Apellido</label>
-                <input value={editing.segundo_apellido || ''} onChange={(e)=>setEditing(v=>({...v, segundo_apellido:e.target.value}))} className="mt-1 w-full rounded-md border" />
+                <label className={ETIQUETA}>Segundo Apellido</label>
+                <input value={editing.segundo_apellido || ''} onChange={(e)=>setEditing(v=>({...v, segundo_apellido:e.target.value}))} className={CAMPO} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Apellido Casada</label>
-                <input value={editing.apellido_casada || ''} onChange={(e)=>setEditing(v=>({...v, apellido_casada:e.target.value}))} className="mt-1 w-full rounded-md border" />
+                <label className={ETIQUETA}>Apellido Casada</label>
+                <input value={editing.apellido_casada || ''} onChange={(e)=>setEditing(v=>({...v, apellido_casada:e.target.value}))} className={CAMPO} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Fecha Ingreso</label>
-                <input type="date" value={editing.fecha_ingreso || ''} onChange={(e)=>setEditing(v=>({...v, fecha_ingreso:e.target.value}))} className="mt-1 w-full rounded-md border" />
+                <label className={ETIQUETA}>Fecha Ingreso</label>
+                <input type="date" value={editing.fecha_ingreso || ''} onChange={(e)=>setEditing(v=>({...v, fecha_ingreso:e.target.value}))} className={CAMPO} />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Dirección</label>
-                <textarea value={editing.direccion || ''} onChange={(e)=>setEditing(v=>({...v, direccion:e.target.value}))} rows={2} className="mt-1 w-full rounded-md border" />
+                <label className={ETIQUETA}>Dirección</label>
+                <textarea value={editing.direccion || ''} onChange={(e)=>setEditing(v=>({...v, direccion:e.target.value}))} rows={2} className={CAMPO} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Teléfono</label>
-                <input value={editing.telefono || ''} onChange={(e)=>setEditing(v=>({...v, telefono:e.target.value}))} className="mt-1 w-full rounded-md border" />
+                <label className={ETIQUETA}>Teléfono</label>
+                <input value={editing.telefono || ''} onChange={(e)=>setEditing(v=>({...v, telefono:e.target.value}))} className={CAMPO} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Email</label>
-                <input type="email" value={editing.email || ''} onChange={(e)=>setEditing(v=>({...v, email:e.target.value}))} className="mt-1 w-full rounded-md border" />
+                <label className={ETIQUETA}>Email</label>
+                <input type="email" value={editing.email || ''} onChange={(e)=>setEditing(v=>({...v, email:e.target.value}))} className={CAMPO} />
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">
@@ -341,7 +344,7 @@ const GestionEmpleados = () => {
                   telefono: editing.telefono,
                   email: editing.email,
                 } })}
-                className="px-4 py-2 rounded-md bg-green-700 text-white hover:bg-green-800"
+                className={BOTON_PRINCIPAL}
               >
                 Guardar cambios
               </button>
@@ -358,12 +361,12 @@ const GestionEmpleados = () => {
             <p className="text-slate-600 dark:text-slate-300 mb-4">
               {confirmAction.tipo === 'estado' ? 'Confirma tu contraseña para cambiar el estado del empleado.' : 'Confirma tu contraseña para guardar los cambios.'}
             </p>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Contraseña</label>
+            <label className={ETIQUETA}>Contraseña</label>
             <input
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+              className={CAMPO}
             />
             {confirmError && (
               <div className="mt-2 p-2 rounded border border-red-300 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-900/20 dark:text-red-300">
@@ -372,7 +375,7 @@ const GestionEmpleados = () => {
             )}
             <div className="flex justify-end gap-3 mt-6">
               <button type="button" onClick={closeConfirm} className="px-4 py-2 rounded-md border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">Cancelar</button>
-              <button type="button" onClick={doConfirmed} className="px-4 py-2 rounded-md bg-green-700 text-white hover:bg-green-800">Confirmar</button>
+              <button type="button" onClick={doConfirmed} className={BOTON_PRINCIPAL}>Confirmar</button>
             </div>
           </div>
         </div>

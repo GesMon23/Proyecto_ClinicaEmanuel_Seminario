@@ -1,4 +1,52 @@
-// Utilidades de fechas para cálculos de estancia
+// Utilidades de fechas.
+
+// Extrae la parte de fecha (YYYY-MM-DD) de un valor que puede venir como
+// ISO con hora/zona ("2000-01-01T06:00:00.000Z"), con espacio en vez de
+// "T", como "YYYY-MM-DD" plano, o como instancia Date. Nunca pasa por
+// `new Date(...)` para evitar el corrimiento de un dia por zona horaria
+// que eso produce - se toma el texto literal tal como lo guardo la BD.
+function extraerPartesFecha(valor) {
+  if (!valor) return null;
+  let raw;
+  if (valor instanceof Date) {
+    if (isNaN(valor)) return null;
+    const y = valor.getFullYear();
+    const m = String(valor.getMonth() + 1).padStart(2, '0');
+    const d = String(valor.getDate()).padStart(2, '0');
+    raw = `${y}-${m}-${d}`;
+  } else {
+    raw = String(valor).trim();
+  }
+  if (!raw) return null;
+  const soloFecha = raw.split('T')[0].split(' ')[0];
+  const m = soloFecha.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  const [, y, mo, d] = m;
+  return { y, mo, d };
+}
+
+// Formatea cualquier valor de fecha a "dd-mm-aaaa". Devuelve '' si no hay
+// valor o no se puede interpretar (nunca lanza ni devuelve el string
+// crudo sin formatear).
+export function formatearFecha(valor) {
+  const partes = extraerPartesFecha(valor);
+  if (!partes) return '';
+  return `${partes.d}-${partes.mo}-${partes.y}`;
+}
+
+// Igual que formatearFecha pero agrega la hora local ("dd-mm-aaaa HH:mm"),
+// para los pocos casos que sí necesitan mostrar hora (turnos llamados,
+// timestamps de generación de reportes, etc).
+export function formatearFechaHora(valor) {
+  const partes = extraerPartesFecha(valor);
+  if (!partes) return '';
+  const d = new Date(valor instanceof Date ? valor : String(valor));
+  if (isNaN(d)) return `${partes.d}-${partes.mo}-${partes.y}`;
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${partes.d}-${partes.mo}-${partes.y} ${hh}:${mm}`;
+}
+
 // Formatea la diferencia entre dos fechas en "X años, Y meses, Z días" o "Menos de un día"
 export function calcularEstanciaRango(inicioStr, finStr) {
   if (!inicioStr) return '';
@@ -61,4 +109,4 @@ export function calcularEstanciaRango(inicioStr, finStr) {
   return partes.join(', ');
 }
 
-// diffDMA existente en reportes devuelve "D-M-A". Se mantiene separado por compatibilidad.
+// La estancia "D-M-A" (días-meses-años) de los reportes está en utils/reportes.js (diferenciaDMA).

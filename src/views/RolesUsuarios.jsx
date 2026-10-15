@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import logoClinica from '@/assets/logoClinica2.png';
 import api from '@/config/api';
+import { BOTON_PRINCIPAL } from '@/constants/botones';
 
+import { CAMPO, ETIQUETA } from '@/constants/formularios';
+import { IconoCargando } from '@/components/Cargando';
 const RolesUsuarios = () => {
   const [usuarioQuery, setUsuarioQuery] = useState('');
   const [user, setUser] = useState(null); // {id_usuario, nombre_usuario}
@@ -35,7 +38,8 @@ const RolesUsuarios = () => {
         api.get(`/usuarios/${data.id_usuario}/roles`),
       ]);
       setRolesActivos(rActivos.data || []);
-      setRolesUsuario((rUsuario.data || []).map(r => r.id_rol));
+      // El servidor devuelve todos los roles activos con "asignado": solo se marcan los del usuario
+      setRolesUsuario((rUsuario.data || []).filter((r) => r.asignado === true).map((r) => r.id_rol));
     } catch (e) {
       setMensaje(e?.response?.data?.error || e.message || 'No fue posible buscar');
     } finally {
@@ -143,9 +147,9 @@ const RolesUsuarios = () => {
                 type="button"
                 onClick={buscarUsuario}
                 disabled={loading}
-                className="px-4 py-2 rounded-md bg-green-700 text-white hover:bg-green-800 disabled:opacity-50"
+                className={BOTON_PRINCIPAL}
               >
-                {loading ? 'Buscando...' : 'Buscar'}
+                {loading ? <><IconoCargando />Buscando...</> : 'Buscar'}
               </button>
             </div>
 
@@ -180,7 +184,7 @@ const RolesUsuarios = () => {
                       type="button"
                       onClick={guardar}
                       disabled={saving}
-                      className="px-4 py-2 rounded-md bg-green-700 text-white hover:bg-green-800 disabled:opacity-50"
+                      className={BOTON_PRINCIPAL}
                     >
                       {saving ? 'Guardando...' : 'Guardar cambios'}
                     </button>
@@ -215,12 +219,12 @@ const RolesUsuarios = () => {
                   <p className="text-slate-600 dark:text-slate-300 mb-4">
                     {confirmAction.tipo === 'estado' ? 'Confirma tu contraseña para cambiar el estado del usuario.' : 'Confirma tu contraseña para guardar los cambios de roles.'}
                   </p>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Contraseña</label>
+                  <label className={ETIQUETA}>Contraseña</label>
                   <input
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+                    className={CAMPO}
                   />
                   {confirmError && (
                     <div className="mt-2 p-2 rounded border border-red-300 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-900/20 dark:text-red-300">
@@ -229,7 +233,7 @@ const RolesUsuarios = () => {
                   )}
                   <div className="flex justify-end gap-3 mt-6">
                     <button type="button" onClick={closeConfirm} className="px-4 py-2 rounded-md border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">Cancelar</button>
-                    <button type="button" onClick={doConfirmed} className="px-4 py-2 rounded-md bg-green-700 text-white hover:bg-green-800">Confirmar</button>
+                    <button type="button" onClick={doConfirmed} className={BOTON_PRINCIPAL}>Confirmar</button>
                   </div>
                 </div>
               </div>

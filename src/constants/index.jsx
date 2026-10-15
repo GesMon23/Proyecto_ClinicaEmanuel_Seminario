@@ -1,9 +1,10 @@
+import { permisosDeModulo } from "./permisos";
 import { SquareUser , Home, User , Megaphone , ListTodo , Settings, ClipboardList , FileChartPie , Atom, BadgeAlert, Apple, Brain   } from "lucide-react";
 
 // import ProfileImage from "@/assets/profile-image.jpg";
 // import ProductImage from "@/assets/product-image.jpg";
 
-//AQUI VAN LOS LINKS
+// Enlaces del menú. permisos: el módulo se muestra si el usuario tiene alguna de sus pestañas ([] = todos)
 export const navbarLinks = [
     {
         title: "Opciones",
@@ -12,67 +13,67 @@ export const navbarLinks = [
                 label: "Inicio",
                 icon: Home,
                 path: "/dashboard",
-                allowedRoles: [],
+                permisos: [],
             },
             {
                 label: "Consulta Pacientes",
                 icon: SquareUser ,
                 path: "/consulta-pacientes",
-                allowedRoles: ["RolConsulta"],
+                permisos: permisosDeModulo('consultaPacientes'),
             },
             {
                 label: "Gestión Pacientes",
                 icon: User ,
                 path: "/gestion-pacientes",
-                allowedRoles: ["RolGestionPaciente"],
+                permisos: permisosDeModulo('gestionPacientes'),
             },
             {
                 label: "Turnos",
                 icon: ListTodo   ,
                 path: "/turnos",
-                allowedRoles: ["RolTurnos"],
+                permisos: permisosDeModulo('turnos'),
             },
             {
                 label: "Nutrición",
                 icon: Apple,
                 path: "/nutricion",
-                allowedRoles: ["RolNutricion"],
+                permisos: permisosDeModulo('nutricion'),
             },
             {
                 label: "Psicología",
                 icon: Brain,
                 path: "/psicologia",
-                allowedRoles: ["RolPsicologia"],
+                permisos: permisosDeModulo('psicologia'),
             },
             {
                 label: "Laboratorios",
                 icon: Atom     ,
                 path: "/gestion-laboratorios",
-                allowedRoles: ["RolLaboratorio"],
+                permisos: permisosDeModulo('laboratorios'),
             },
             {
                 label: "Referencias",
                 icon: ClipboardList    ,
                 path: "/gestion-referencias",
-                allowedRoles: ["RolReferencias"],
+                permisos: permisosDeModulo('referencias'),
             },
             {
                 label: "Reportes",
                 icon: FileChartPie    ,
                 path: "/gestion-reportes",
-                allowedRoles: ["RolReportes"],
+                permisos: permisosDeModulo('reportes'),
             },
             {
                 label: "Estadísticas",
                 icon: FileChartPie,
                 path: "/estadisticas",
-                allowedRoles: ["RolEstadistica"],
+                permisos: permisosDeModulo('estadisticas'),
             },
             {
                 label: "Gestión de Usuarios",
                 icon: Settings,
                 path: "/gestion-usuarios",
-                allowedRoles: ["RolGestionUsuarios"],
+                permisos: permisosDeModulo('usuarios'),
             },
         ],
     },
@@ -83,7 +84,7 @@ export const navbarLinks = [
                 label: "Cerrar Sesión",
                 icon: BadgeAlert,
                 path: "/cerrarsesion",
-                allowedRoles: [],
+                permisos: [],
             },
         ],
     },

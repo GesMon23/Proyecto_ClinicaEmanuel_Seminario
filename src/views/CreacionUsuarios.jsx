@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import logoClinica from '@/assets/logoClinica2.png';
 import api from '@/config/api';
+import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
 
+import { CAMPO, ETIQUETA } from '@/constants/formularios';
 const CreacionUsuarios = () => {
   const [form, setForm] = useState({
     usuario: '',
@@ -279,11 +281,11 @@ const CreacionUsuarios = () => {
             </div>
           </div>
           <div className="md:col-span-2 flex justify-end gap-3 mt-4">
-            <button type="reset" className="px-4 py-2 rounded-md border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">Limpiar</button>
+            <button type="reset" className={BOTON_LIMPIAR}>Limpiar</button>
             <button
               type="submit"
               disabled={loading || !/^[a-z]{8}$/.test(form.usuario) || !usuarioDisponible}
-              className="px-4 py-2 rounded-md bg-green-700 text-white hover:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              className={BOTON_PRINCIPAL}
             >
               Crear usuario
             </button>
@@ -296,12 +298,12 @@ const CreacionUsuarios = () => {
           <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-md p-6">
             <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-2">Confirmar acción</h3>
             <p className="text-slate-600 dark:text-slate-300 mb-4">Confirma tu contraseña para crear el usuario.</p>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Contraseña</label>
+            <label className={ETIQUETA}>Contraseña</label>
             <input
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+              className={CAMPO}
             />
             {confirmError && (
               <div className="mt-2 p-2 rounded border border-red-300 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-900/20 dark:text-red-300">
@@ -310,7 +312,7 @@ const CreacionUsuarios = () => {
             )}
             <div className="flex justify-end gap-3 mt-6">
               <button type="button" onClick={closeConfirm} className="px-4 py-2 rounded-md border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">Cancelar</button>
-              <button type="button" onClick={doConfirmed} className="px-4 py-2 rounded-md bg-green-700 text-white hover:bg-green-800">Confirmar</button>
+              <button type="button" onClick={doConfirmed} className={BOTON_PRINCIPAL}>Confirmar</button>
             </div>
           </div>
         </div>

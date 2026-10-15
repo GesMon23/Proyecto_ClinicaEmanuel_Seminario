@@ -1,5 +1,5 @@
 # ---------- FASE 1: BUILD ----------
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 
 COPY package*.json ./
@@ -8,20 +8,16 @@ RUN npm ci --no-audit --no-fund
 
 COPY . .
 
-# Normaliza artefactos a /_out (valen build/ o dist/)
-RUN set -eux; \
-    npm run build; \
-    mkdir -p /_out; \
-    if [ -d ./build ]; then cp -a ./build/. /_out/; \
-    elif [ -d ./dist ]; then cp -a ./dist/. /_out/; \
-    else echo "No existe build/ ni dist/"; ls -la; exit 1; fi; \
-    ls -la /_out
+# Vite deja el resultado en dist/
+RUN npm run build
 
 # ---------- FASE 2: NGINX ----------
 FROM nginx:alpine
 RUN rm -f /etc/nginx/conf.d/default.conf
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /_out /usr/share/nginx/html
+COPY --from=build /app/dist /usr/share/nginx/html
 
-EXPOSE 80 443
+# Solo HTTP: HTTPS lo termina el proxy de entrada (Caddy)
+EXPOSE 80
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD wget -qO- http://127.0.0.1/ >/dev/null || exit 1
 CMD ["nginx","-g","daemon off;"]

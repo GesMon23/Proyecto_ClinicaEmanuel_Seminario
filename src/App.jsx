@@ -1,23 +1,34 @@
+import { lazy, Suspense } from "react";
 import { createBrowserRouter, RouterProvider } from "react-router-dom"
 import { ThemeProvider } from "@/contexts/theme-context"
 import Layout from "@/routes/layout"
 import DashboardPage from "@/routes/dashboard/page"
-import ConsultaPacientesView from "@/views/ConsultaPacientesView.jsx";
-import GestionPacientes from "@/views/GestionPacientes.jsx";
-import Turnos from "@/views/Turnos.jsx";
-import GestionReportes from "@/views/GestionReportes.jsx";
-import GestionReferencias from "@/views/GestionReferencias.jsx";
-import GestionLaboratorios from "@/views/GestionLaboratorios.jsx"; 
-import LoginComponent from "@/Login.jsx"; 
+import LoginComponent from "@/Login.jsx";
 import { AuthProvider } from "@/contexts/auth-context";
 import ProtectedRoute from "@/routes/ProtectedRoute";
-import RequireRole from "@/routes/RequireRole";
-import GestionUsuarios from "@/views/GestionUsuarios.jsx";
-import Nutricion from "@/views/Nutricion.jsx";
-import Psicologia from "@/views/Psicologia.jsx";
-import AdminResetUser from "@/pages/AdminResetUser.jsx";
-import DashboardsInteractivos from "@/views/DashboardsInteractivos.jsx";
-import TurnosTVPage from "@/routes/turnos-tv/page";
+import RequirePermiso from "@/routes/RequirePermiso";
+import CerrarSesion from "@/routes/CerrarSesion";
+import Cargando from "@/components/Cargando";
+
+// Los módulos se descargan al abrirlos (la primera carga del sistema es más liviana); mientras tanto el layout
+// muestra la animación de carga (routes/layout.jsx)
+const ConsultaPacientesView = lazy(() => import("@/views/ConsultaPacientesView.jsx"));
+const GestionPacientes = lazy(() => import("@/views/GestionPacientes.jsx"));
+const Turnos = lazy(() => import("@/views/Turnos.jsx"));
+const GestionReportes = lazy(() => import("@/views/GestionReportes.jsx"));
+const GestionReferencias = lazy(() => import("@/views/GestionReferencias.jsx"));
+const GestionLaboratorios = lazy(() => import("@/views/GestionLaboratorios.jsx"));
+const GestionUsuarios = lazy(() => import("@/views/GestionUsuarios.jsx"));
+const Nutricion = lazy(() => import("@/views/Nutricion.jsx"));
+const Psicologia = lazy(() => import("@/views/Psicologia.jsx"));
+const Estadisticas = lazy(() => import("@/views/estadisticas/Estadisticas.jsx"));
+const RestablecerPassword = lazy(() => import("@/pages/RestablecerPassword.jsx"));
+const TurnosTVPage = lazy(() => import("@/routes/turnos-tv/page"));
+
+// Páginas fuera del layout (restablecer contraseña, TV)
+const conCarga = (elemento) => (
+    <Suspense fallback={<Cargando variante="pantalla" className="min-h-screen" />}>{elemento}</Suspense>
+);
 function App() {
     const router = createBrowserRouter([
         {
@@ -25,8 +36,9 @@ function App() {
                 element: <LoginComponent />,
         },
         {
-                path: "/admin/reset-user",
-                element: <AdminResetUser />,
+                // Enlace del correo de recuperación de contraseña (pública: el token es la autorización)
+                path: "/restablecer-contrasena",
+                element: conCarga(<RestablecerPassword />),
         },
         {
             path: "layout/",
@@ -43,92 +55,92 @@ function App() {
                 {
                     path: "estadisticas",
                     element: (
-                        <RequireRole roles={["RolEstadistica"]}>
-                            <DashboardsInteractivos/>
-                        </RequireRole>
+                        <RequirePermiso modulo="estadisticas">
+                            <Estadisticas/>
+                        </RequirePermiso>
                     ),
                 },
                 {
                     path: "consulta-pacientes",
                     element: (
-                        <RequireRole roles={["RolConsulta"]}>
+                        <RequirePermiso modulo="consultaPacientes">
                             <ConsultaPacientesView />
-                        </RequireRole>
+                        </RequirePermiso>
                     )
                 },
                 {
                     path: "gestion-pacientes",
                     element: (
-                        <RequireRole roles={["RolGestionPaciente"]}>
+                        <RequirePermiso modulo="gestionPacientes">
                             <GestionPacientes/>
-                        </RequireRole>
+                        </RequirePermiso>
                     )
                 },
                 {
                     path: "turnos",
                     element: (
-                        <RequireRole roles={["RolTurnos"]}>
+                        <RequirePermiso modulo="turnos">
                             <Turnos/>
-                        </RequireRole>
+                        </RequirePermiso>
                     ),
                 },
                 {
                     path: "gestion-reportes",
                     element: (
-                        <RequireRole roles={["RolReportes"]}>
+                        <RequirePermiso modulo="reportes">
                             <GestionReportes/>
-                        </RequireRole>
+                        </RequirePermiso>
                     ),
                 },
                 {
                     path: "gestion-referencias",
                     element: (
-                        <RequireRole roles={["RolReferencias"]}>
+                        <RequirePermiso modulo="referencias">
                             <GestionReferencias/>
-                        </RequireRole>
+                        </RequirePermiso>
                     ),
                 },
                 {
                     path: "gestion-laboratorios",
                     element: (
-                        <RequireRole roles={["RolLaboratorio"]}>
+                        <RequirePermiso modulo="laboratorios">
                             <GestionLaboratorios/>
-                        </RequireRole>
+                        </RequirePermiso>
                     ),
                 }, 
                 {
                     path: "gestion-usuarios",
                     element: (
-                        <RequireRole roles={["RolGestionUsuarios"]}>
+                        <RequirePermiso modulo="usuarios">
                             <GestionUsuarios/>
-                        </RequireRole>
+                        </RequirePermiso>
                     ),
                 },
                 {
                     path: "nutricion",
                     element: (
-                        <RequireRole roles={["RolNutricion"]}>
+                        <RequirePermiso modulo="nutricion">
                             <Nutricion/>
-                        </RequireRole>
+                        </RequirePermiso>
                     ),
                 },
                 {
                     path: "psicologia",
                     element: (
-                        <RequireRole roles={["RolPsicologia"]}>
+                        <RequirePermiso modulo="psicologia">
                             <Psicologia/>
-                        </RequireRole>
+                        </RequirePermiso>
                     ),
                 },
                 {
                     path: "cerrarsesion",
-                    element: <h1 className="title">Serrar Sesion</h1>,
+                    element: <CerrarSesion />,
                 }
             ],
         },
         {
             path: "/turnos-tv",
-            element: <TurnosTVPage />,
+            element: conCarga(<TurnosTVPage />),
         },
     ]);
 

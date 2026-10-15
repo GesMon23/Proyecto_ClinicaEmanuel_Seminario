@@ -3,12 +3,81 @@
 @tailwind utilities;
 
 @layer base {
+  /* Colores de las gráficas (Recharts los usa como var(--viz-...)); el modo oscuro los cambia aquí.
+     Serie validada (contraste >= 3:1 y banda de luminosidad) contra la superficie de cada modo. */
+  :root {
+    --viz-serie: #15803d;
+    --viz-superficie: #ffffff;
+    --viz-texto: #0f172a;
+    --viz-texto-secundario: #475569;
+    --viz-rejilla: #e2e8f0;
+    --viz-eje: #cbd5e1;
+    --viz-resaltado: rgba(15, 23, 42, 0.05);
+    /* Categorías de pasteles/anillos, en este orden (validado para daltonismo entre vecinos); "Otros" en gris */
+    --viz-cat-1: #2a78d6;
+    --viz-cat-2: #eb6834;
+    --viz-cat-3: #1baf7a;
+    --viz-cat-4: #eda100;
+    --viz-cat-5: #e87ba4;
+    --viz-cat-6: #008300;
+    --viz-cat-7: #6250d6;
+    --viz-cat-8: #e34948;
+    --viz-otros: #94a3b8;
+  }
+
+  .dark {
+    --viz-cat-1: #3987e5;
+    --viz-cat-2: #d95926;
+    --viz-cat-3: #199e70;
+    --viz-cat-4: #c98500;
+    --viz-cat-5: #d55181;
+    --viz-cat-6: #008300;
+    --viz-cat-7: #9085e9;
+    --viz-cat-8: #e66767;
+    --viz-otros: #64748b;
+    --viz-serie: #16a34a;
+    --viz-superficie: #0f172a;
+    --viz-texto: #f1f5f9;
+    --viz-texto-secundario: #cbd5e1;
+    --viz-rejilla: #1e293b;
+    --viz-eje: #334155;
+    --viz-resaltado: rgba(255, 255, 255, 0.06);
+  }
+
   body {
     scrollbar-color: #cbd5e1 transparent;
   }
 
   .dark body {
     scrollbar-color: #334155 transparent;
+  }
+
+  /* La lista desplegable de un <select> la dibuja el navegador: sin esto puede quedar con fondo claro
+     y heredar el texto claro del modo oscuro */
+  .dark select option,
+  .dark select optgroup {
+    background-color: #1e293b;
+    color: #f1f5f9;
+  }
+
+  .dark select option:disabled {
+    color: #94a3b8;
+  }
+
+  /* Campos deshabilitados (bg-gray-100/200 sin variante oscura en varios formularios) */
+  .dark input:disabled,
+  .dark select:disabled,
+  .dark textarea:disabled {
+    background-color: #334155;
+    border-color: #475569;
+    color: #94a3b8;
+  }
+
+  /* El logo (PNG transparente con letras verde oscuro) está hecho para fondo blanco. En el login y el
+     inicio va sobre la foto de fondo y se deja transparente (clase logo-transparente) */
+  .dark img[src*="logoClinica2"]:not(.logo-transparente) {
+    background-color: #ffffff;
+    border-radius: 0.75rem;
   }
 }
 
@@ -92,4 +161,10 @@
 
 .recharts-tooltip-item {
     @apply text-base font-medium !text-blue-500 dark:!text-blue-600;
+}
+
+/* Barra de actividad (BarraActividad.jsx): un tramo verde que recorre la parte superior */
+@keyframes barra-actividad {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(300%); }
 }
