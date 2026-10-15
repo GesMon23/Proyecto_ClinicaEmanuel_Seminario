@@ -1,9 +1,11 @@
-// Rutas de los registros clínicos. server.js monta cada router donde ya vivía:
+// Rutas de los registros clínicos. app.js monta cada router:
 //   nutricion -> /nutricion y /api/nutricion      psicologia -> /psicologia y /api/psicologia
-//   laboratorios -> /laboratorios y /api          referencias y catalogos -> raíz y /api
+//   laboratorios -> /laboratorios y /api/laboratorios      referencias y catalogos -> raíz y /api
+// Las rutas pasan al servicio los datos y la sesión (sesionDe), nunca la petición de Express.
 const express = require('express');
 const service = require('./registros.service');
 const { wrap } = require('../../shared/http');
+const { sesionDe } = require('../../shared/auth');
 
 const errorInterno = (mensaje, log) => (err) => {
   console.error(log, err);
@@ -13,7 +15,7 @@ const errorInterno = (mensaje, log) => (err) => {
 // ---- Nutrición ----
 const nutricion = express.Router();
 nutricion.post('/evaluacion', wrap(async (req, res) => {
-  const informe = await service.guardarNutricion(req);
+  const informe = await service.guardarNutricion(req.body, sesionDe(req));
   res.status(201).json({ message: 'Informe de nutrición guardado exitosamente', informe });
 }, (err) => {
   console.error('Error en Nutrición /evaluacion:', err);
@@ -23,7 +25,7 @@ nutricion.post('/evaluacion', wrap(async (req, res) => {
 // ---- Psicología ----
 const psicologia = express.Router();
 psicologia.post('/evaluacion', wrap(async (req, res) => {
-  const { informe, kdqol } = await service.guardarPsicologia(req);
+  const { informe, kdqol } = await service.guardarPsicologia(req.body, sesionDe(req));
   res.status(201).json({ message: 'Evaluación psicológica guardada exitosamente', informe, kdqol });
 }, (err) => {
   console.error('Error al guardar evaluación:', err);
@@ -40,7 +42,7 @@ laboratorios.get('/:noafiliacion', wrap(async (req, res) => {
 }));
 
 laboratorios.post('/', wrap(async (req, res) => {
-  const r = await service.guardarLaboratorio(req);
+  const r = await service.guardarLaboratorio(req.body, sesionDe(req));
   res.status(201).json({
     message: 'Registro de laboratorio guardado exitosamente',
     idlaboratorio: r.idlaboratorio,
@@ -58,7 +60,7 @@ laboratorios.get('/:noafiliacion/parametros/ultimo', wrap(async (req, res) => {
 // ---- Referencias ----
 const referencias = express.Router();
 referencias.post('/api/referencias', wrap(async (req, res) => {
-  res.status(201).json({ success: true, referencia: await service.registrarReferencia(req) });
+  res.status(201).json({ success: true, referencia: await service.registrarReferencia(req.body, sesionDe(req)) });
 }, (err) => {
   console.error('Error al registrar referencia:', err);
   return [500, { detail: 'Error al registrar referencia.' }];

@@ -8,12 +8,12 @@ const pacientePorAfiliacion = (noAfiliacion) =>
     return filas[0] || null;
   });
 
-// Nombre con el que se firma el registro (fn_resolver_actor); null si no se puede resolver
-async function resolverActor(payload) {
-  if (!payload) return null;
+// Nombre con el que se firma el registro (fn_resolver_actor); null si no se puede resolver.
+// Misma firma que usuarios.repository.resolverActor(nombre, id).
+async function resolverActor(nombreUsuario, idUsuario) {
+  if (!nombreUsuario && !idUsuario) return null;
   try {
-    const idJwt = payload.sub ? Number(payload.sub) : null;
-    const { rows } = await pool.query('SELECT public.fn_resolver_actor($1, $2) AS actor_nombre', [payload.nombre_usuario || null, idJwt]);
+    const { rows } = await pool.query('SELECT public.fn_resolver_actor($1, $2) AS actor_nombre', [nombreUsuario || null, idUsuario || null]);
     return rows[0]?.actor_nombre || null;
   } catch {
     return null;

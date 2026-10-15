@@ -146,3 +146,18 @@ test('médicos: devuelve { idmedico, nombrecompleto }', async () => {
     assert.ok('idmedico' in m && 'nombrecompleto' in m);
   }
 });
+
+test('servicios: reciben datos y sesión como objetos simples, sin la petición de Express', async () => {
+  const sesion = { idUsuario: 1, nombreUsuario: 'prueba', actor: 'prueba' };
+  await assert.rejects(service.guardarLaboratorio({}, sesion), (e) => e.status === 400 && /requeridos/.test(e.body.error));
+  await assert.rejects(service.registrarReferencia({ noafiliacion: '1' }, sesion), (e) => e.status === 400 && /obligatorios/.test(e.body.detail));
+  await assert.rejects(service.guardarNutricion({ no_afiliacion: 'NO-EXISTE-123' }), (e) => e.status === 404, 'sin sesión usa valores por defecto');
+});
+
+test('sesionDe: id, nombre y actor del token; valores vacíos sin sesión', () => {
+  const jwt = require('jsonwebtoken');
+  const { sesionDe } = require('../src/shared/auth');
+  const token = jwt.sign({ sub: 7, nombre_usuario: 'gemonzov' }, process.env.JWT_SECRET);
+  assert.deepEqual(sesionDe({ headers: { authorization: `Bearer ${token}` } }), { idUsuario: 7, nombreUsuario: 'gemonzov', actor: 'gemonzov' });
+  assert.deepEqual(sesionDe({ headers: {} }), { idUsuario: null, nombreUsuario: null, actor: 'web' });
+});

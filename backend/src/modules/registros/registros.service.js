@@ -1,9 +1,11 @@
 // Casos de uso de los registros clínicos. Cada uno conserva el formato de error que consume su pantalla:
 // nutrición, psicología y laboratorios responden { error }; referencias responde { detail }.
+// Reciben (datos, sesion): datos es el cuerpo de la petición y sesion = shared/auth.sesionDe(req). No dependen de Express.
 const repo = require('./registros.repository');
 const { motivoBloqueo } = require('../pacientes/pacientes.service');
 const { HttpError } = require('../../shared/http');
-const { payloadFromRequest, actorFromRequest } = require('../../shared/auth');
+
+const SIN_SESION = { idUsuario: null, nombreUsuario: null, actor: 'web' };
 
 // Un paciente inexistente, egresado o fallecido no admite registros nuevos.
 // `clave` es la propiedad del cuerpo de error ('error' o 'detail'); `que` completa "No se puede registrar ...".
@@ -23,16 +25,17 @@ async function validarPacienteActivo(noAfiliacion, { clave, que }) {
   }
 }
 
-const nombreActor = async (req) => (await repo.resolverActor(payloadFromRequest(req))) || 'sistema';
+// Nombre con que se firma el registro (el del empleado si se puede resolver)
+const nombreActor = async (sesion) => (await repo.resolverActor(sesion.nombreUsuario, sesion.idUsuario)) || 'sistema';
 
 // ---------------------------------------------------------------- Nutrición
 
-async function guardarNutricion(req) {
-  const b = req.body || {};
+async function guardarNutricion(datos, sesion = SIN_SESION) {
+  const b = datos || {};
   await validarPacienteActivo(b.no_afiliacion, { clave: 'error', que: 'nutrición' });
-  const params = [b.no_afiliacion, b.motivo_consulta, b.altura_cm, b.peso_kg, b.observaciones || null, await nombreActor(req)];
+  const params = [b.no_afiliacion, b.motivo_consulta, b.altura_cm, b.peso_kg, b.observaciones || null, await nombreActor(sesion)];
   try {
-    return await repo.guardarNutricion(params, actorFromRequest(req));
+    return await repo.guardarNutricion(params, sesion.actor);
   } catch (err) {
     if (err.code === 'P0001') {
       if (/Paciente no encontrado/i.test(err.message)) throw new HttpError(404, { error: 'Paciente no encontrado' });
@@ -59,9 +62,9 @@ function enteroONulo(valor) {
 
 const textoONulo = (valor) => (valor || '').trim() || null;
 
-async function guardarPsicologia(req) {
-  const b = req.body || {};
-  const actorNombre = await nombreActor(req);
+async function guardarPsicologia(datos, sesion = SIN_SESION) {
+  const b = datos || {};
+  const actorNombre = await nombreActor(sesion);
   await validarPacienteActivo(b.no_afiliacion, { clave: 'error', que: 'psicología' });
   const params = [
     b.no_afiliacion || null,
@@ -79,7 +82,7 @@ async function guardarPsicologia(req) {
     actorNombre,
   ];
   try {
-    const resultado = await repo.guardarPsicologia(params, actorFromRequest(req));
+    const resultado = await repo.guardarPsicologia(params, sesion.actor);
     return { informe: resultado?.informe || null, kdqol: resultado?.kdqol || null };
   } catch (err) {
     if (err.code === 'P0001' && /Paciente no encontrado/i.test(err.message)) {
@@ -91,8 +94,8 @@ async function guardarPsicologia(req) {
 
 // -------------------------------------------------------------- Laboratorios
 
-async function guardarLaboratorio(req) {
-  const b = req.body || {};
+async function guardarLaboratorio(datos, sesion = SIN_SESION) {
+  const b = datos || {};
   if (!b.no_afiliacion || !b.idperlaboratorio || !b.fecha_laboratorio) {
     throw new HttpError(400, { error: 'no_afiliacion, idperlaboratorio y fecha_laboratorio son requeridos' });
   }
@@ -114,7 +117,7 @@ async function guardarLaboratorio(req) {
     JSON.stringify(Array.isArray(b.parametros) ? b.parametros : []),
   ];
   try {
-    const fila = await repo.insertarLaboratorio(params, actorFromRequest(req));
+    const fila = await repo.insertarLaboratorio(params, sesion.actor);
     return { idlaboratorio: fila.idlaboratorio || null, parametros_insertados: fila.parametros_insertados || 0 };
   } catch (err) {
     if (err.code === 'P0001') throw new HttpError(400, { error: err.message });
@@ -124,8 +127,8 @@ async function guardarLaboratorio(req) {
 
 // --------------------------------------------------------------- Referencias
 
-async function registrarReferencia(req) {
-  const b = req.body || {};
+async function registrarReferencia(datos, sesion = SIN_SESION) {
+  const b = datos || {};
   if (!b.noafiliacion || !b.fechareferencia || !b.motivotraslado || !b.idmedico || !b.especialidadreferencia) {
     throw new HttpError(400, { detail: 'Todos los campos son obligatorios.' });
   }
@@ -137,10 +140,10 @@ async function registrarReferencia(req) {
     String(b.motivotraslado).trim(),
     Number(b.idmedico),
     String(b.especialidadreferencia).trim(),
-    await nombreActor(req),
+    await nombreActor(sesion),
   ];
   try {
-    const filas = await repo.registrarReferencia(params, actorFromRequest(req));
+    const filas = await repo.registrarReferencia(params, sesion.actor);
     return filas[0] || null;
   } catch (err) {
     const msg = err?.message || '';

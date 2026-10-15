@@ -39,6 +39,18 @@ function actorFromRequest(req, fallback = 'web') {
   return payload.nombre_usuario || String(payload.sub || fallback);
 }
 
+// Datos de la sesión que necesitan los servicios, como objeto simple: las rutas lo arman con la petición y los
+// servicios no dependen de Express. actor: nombre para las columnas de auditoría ('web' sin sesión).
+function sesionDe(req, fallback = 'web') {
+  const payload = payloadFromRequest(req);
+  const id = payload ? Number(payload.sub) : NaN;
+  return {
+    idUsuario: Number.isFinite(id) ? id : null,
+    nombreUsuario: payload?.nombre_usuario || null,
+    actor: actorFromRequest(req, fallback),
+  };
+}
+
 // Middleware: exige sesión y deja el id en req.userId
 function requireUser(req, res, next) {
   const id = userIdFromRequest(req);
@@ -62,4 +74,4 @@ function verifyJWT(req, res, next) {
 }
 
 // Los permisos por pestaña se validan en un solo lugar: config/acceso.js con las reglas de config/permisos.js
-module.exports = { jwtSecret, payloadFromRequest, userIdFromRequest, userNameFromRequest, actorFromRequest, requireUser, verifyJWT };
+module.exports = { jwtSecret, payloadFromRequest, userIdFromRequest, userNameFromRequest, actorFromRequest, sesionDe, requireUser, verifyJWT };
