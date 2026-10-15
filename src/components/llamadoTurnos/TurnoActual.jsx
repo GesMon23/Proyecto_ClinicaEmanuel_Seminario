@@ -49,7 +49,7 @@ export default function TurnoActual({ clinica, turno }) {
                 <span>En atención</span>
               </div>
               <button
-                onClick={() => volverALlamar(clinica)}
+                onClick={() => volverALlamar(clinica, turno)}
                 className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors duration-200"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

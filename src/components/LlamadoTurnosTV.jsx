@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw, VolumeX } from 'lucide-react';
 import logoClinica from "@/assets/logoClinica1Min.png";
 import TarjetaClinicaTV from './llamadoTV/TarjetaClinicaTV';
 import { useLlamadosTV } from './llamadoTV/useLlamadosTV';
@@ -16,7 +16,7 @@ function useReloj() {
 
 // Pantalla de la sala de espera: turno en atención de cada clínica, con anuncio por voz
 const LlamadoTurnosTV = () => {
-    const { clinicas, turnos, loading, error, audioHabilitado, habilitarAudio, recargar } = useLlamadosTV();
+    const { clinicas, turnos, loading, error, audioHabilitado, habilitarAudio, enVivo, recargar } = useLlamadosTV();
     const ahora = useReloj();
 
     if (loading) {
@@ -56,6 +56,13 @@ const LlamadoTurnosTV = () => {
                         </div>
                     </div>
                     <div className="text-right">
+                        <div
+                            className={`inline-flex items-center gap-1.5 text-xs font-semibold ${enVivo ? 'text-green-700' : 'text-amber-600'}`}
+                            title={enVivo ? 'Recibiendo los llamados al instante' : 'Sin conexión en tiempo real: los llamados llegan cada pocos segundos'}
+                        >
+                            <span className={`h-2 w-2 rounded-full ${enVivo ? 'bg-green-500' : 'bg-amber-500 animate-pulse'}`} />
+                            {enVivo ? 'En vivo' : 'Reconectando…'}
+                        </div>
                         <div className="text-gray-700 text-xs font-medium">
                             {ahora.toLocaleDateString('es-GT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                         </div>
@@ -68,12 +75,16 @@ const LlamadoTurnosTV = () => {
 
             {/* Una tarjeta por clínica, cada una con la misma altura */}
             <div className="flex-1 p-3 flex flex-col gap-2 overflow-hidden">
+                {/* El navegador no permite la voz hasta que alguien toca la pantalla o presiona una tecla (en cada carga) */}
                 {!audioHabilitado && (
-                    <div className="fixed bottom-4 right-4 z-50">
-                        <button onClick={habilitarAudio} className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow-lg">
-                            Habilitar sonido
-                        </button>
-                    </div>
+                    <button
+                        type="button"
+                        onClick={habilitarAudio}
+                        className="fixed inset-x-0 bottom-0 z-50 flex items-center justify-center gap-3 bg-amber-500 px-6 py-4 text-xl font-bold text-white shadow-2xl hover:bg-amber-600"
+                    >
+                        <VolumeX className="h-7 w-7" aria-hidden="true" />
+                        Toque la pantalla o presione cualquier tecla para activar la voz de los llamados
+                    </button>
                 )}
                 {clinicas.map((clinica) => <TarjetaClinicaTV key={clinica} clinica={clinica} turno={turnos[clinica]} />)}
             </div>

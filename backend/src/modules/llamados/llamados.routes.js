@@ -1,21 +1,23 @@
 // Llamados de turnos en tiempo real: publicación (LlamadoTurnos.jsx), suscripción SSE y polling (LlamadoTurnosTV.jsx).
 const express = require('express');
-const { eventos } = require('./llamados.store');
+const { eventos, EventosLlamado } = require('./llamados.store');
 
 const router = express.Router();
 const INTERVALO_PING_MS = 25000;
+const REINTENTO_SSE_MS = 3000;
 
 router.post('/api/turnos/llamado', (req, res) => {
-  const { clinica, accion, turnoId, ts } = req.body || {};
+  const { clinica, accion, turnoId, idLlamado } = req.body || {};
   if (!clinica || !accion) return res.status(400).json({ error: 'clinica y accion son requeridos' });
-  eventos.publicar({ clinica, accion, turnoId, ts });
-  return res.json({ ok: true });
+  const e = eventos.publicar({ clinica, accion, turnoId, idLlamado });
+  return res.json({ ok: true, id: e.id });
 });
 
 router.get('/api/turnos/llamado-sse', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // que ningún proxy retenga los eventos
   if (res.flushHeaders) res.flushHeaders();
 
   const cliente = eventos.conectar(res);
@@ -23,7 +25,12 @@ router.get('/api/turnos/llamado-sse', (req, res) => {
   const ping = setInterval(() => {
     try { res.write(': ping\n\n'); } catch { /* lo limpia close */ }
   }, INTERVALO_PING_MS);
-  try { res.write(': connected\n\n'); } catch { /* lo limpia close */ }
+  try {
+    // El navegador se reconecta solo a los REINTENTO_SSE_MS si la conexión se corta
+    res.write(`retry: ${REINTENTO_SSE_MS}\n: connected\n\n`);
+    // Al reconectarse envía el último id recibido: se reenvía lo que se perdió mientras estuvo desconectado
+    for (const e of eventos.despuesDeId(req.headers['last-event-id'])) res.write(EventosLlamado.comoSse(e));
+  } catch { /* lo limpia close */ }
 
   req.on('close', () => {
     clearInterval(ping);

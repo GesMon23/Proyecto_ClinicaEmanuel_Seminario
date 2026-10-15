@@ -44,14 +44,17 @@ test('cada rol existente conserva todas las pestañas de su módulo', async () =
     SELECT r.nombre, array_agg(p.codigo ORDER BY p.codigo) AS codigos
     FROM public.tbl_roles r JOIN public.tbl_rol_permiso rp USING (id_rol) JOIN public.tbl_permisos p USING (id_permiso)
     GROUP BY r.nombre`);
+  // Los administradores pueden agregar pestañas a los roles (Permisos de Roles): se comprueba que cada rol
+  // conserve al menos las de su módulo, no que esté exactamente como lo dejó la migración
   const de = Object.fromEntries(rows.map((r) => [r.nombre, r.codigos]));
-  assert.deepEqual(de.RolTurnos, ['turnos.asignacion', 'turnos.consulta', 'turnos.crear', 'turnos.llamado']);
-  assert.deepEqual(de.RolConsulta, ['consulta.pacientes']);
-  assert.equal(de.RolGestionPaciente.length, 5);
-  assert.equal(de.RolGestionUsuarios.length, 6, 'incluye Permisos de Roles (006) y Turnos > Clínicas por Usuario (007)');
-  assert.ok(de.RolGestionUsuarios.includes('turnos.clinicas'));
-  const asignados = Object.values(de).flat().sort();
-  assert.deepEqual(asignados, codigosUsados(), 'todas las pestañas tienen un rol y ninguna está repetida');
+  const incluye = (rol, codigos) => codigos.forEach((c) => assert.ok(de[rol]?.includes(c), `${rol} debe tener ${c}`));
+  incluye('RolTurnos', ['turnos.asignacion', 'turnos.consulta', 'turnos.crear', 'turnos.llamado']);
+  incluye('RolConsulta', ['consulta.pacientes']);
+  incluye('RolGestionPaciente', ['pacientes.registro', 'pacientes.reingreso', 'pacientes.egreso', 'pacientes.formularios', 'pacientes.actualizacion']);
+  incluye('RolGestionUsuarios', ['usuarios.registro_empleados', 'usuarios.creacion', 'usuarios.empleados', 'usuarios.roles',
+    'usuarios.permisos', 'turnos.clinicas']);
+  const asignados = new Set(Object.values(de).flat());
+  assert.deepEqual(codigosUsados().filter((c) => !asignados.has(c)), [], 'toda pestaña la tiene al menos un rol');
 });
 
 test('reglas: las rutas fijas ganan a las de parámetro, con o sin /api', () => {

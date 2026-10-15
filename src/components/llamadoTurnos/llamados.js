@@ -1,22 +1,23 @@
 // Comunicación del llamado de turnos con la pantalla de la TV y el servidor.
 import api from '@/config/api';
 
-// Publica el evento para la TV: localStorage y evento del navegador (misma máquina) y el servidor (SSE, otros dispositivos)
+const nuevoIdLlamado = () => (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+
+// Publica el evento para la TV por dos vías: el navegador (TV en la misma máquina: localStorage y evento) y el
+// servidor (TV en otros equipos: SSE y sondeo). Ambas llevan el mismo idLlamado para que la TV lo anuncie una vez.
+// La hora la pone el servidor.
 export async function notificarTV(clinica, accion, turno = null) {
-  const detalle = { clinica, timestamp: Date.now(), accion };
+  const idLlamado = nuevoIdLlamado();
+  const detalle = { clinica, accion, idLlamado, timestamp: Date.now() };
   try { localStorage.setItem('turnoActualizado', JSON.stringify(detalle)); } catch { /* sin almacenamiento */ }
   try { window.dispatchEvent(new CustomEvent('turnoActualizado', { detail: detalle })); } catch { /* sin eventos */ }
   try {
-    await api.post('/turnos/llamado', { clinica, accion, turnoId: turno?.id_turno_cod || null, turno: turno || null, ts: Date.now() });
-  } catch { /* la TV también se entera por el sondeo */ }
+    await api.post('/turnos/llamado', { clinica, accion, idLlamado, turnoId: turno?.id_turno_cod || null });
+  } catch { /* la TV también se entera por la consulta periódica del turno actual */ }
 }
 
-// Vuelve a anunciar el turno actual en la TV (solo la misma máquina, sin pasar por el servidor)
-export function volverALlamar(clinica) {
-  const detalle = { clinica, timestamp: Date.now(), accion: 're-llamar' };
-  try { localStorage.setItem('turnoActualizado', JSON.stringify(detalle)); } catch { /* sin almacenamiento */ }
-  try { window.dispatchEvent(new CustomEvent('turnoActualizado', { detail: detalle })); } catch { /* sin eventos */ }
-}
+// Vuelve a anunciar el turno actual en las TV (también en las de otros equipos)
+export const volverALlamar = (clinica, turno = null) => notificarTV(clinica, 're-llamar', turno);
 
 export const mensajeDeError = (error, porDefecto) =>
   error.response?.data?.message || error.response?.data?.error || porDefecto;
