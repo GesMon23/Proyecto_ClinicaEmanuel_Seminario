@@ -1,21 +1,20 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import logoClinica from '@/assets/logoClinica2.png';
-import api from '@/config/api';
 import { useAuth } from '@/contexts/auth-context';
 import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
 import { CAMPO, ETIQUETA } from '@/constants/formularios';
 import { cn } from '@/utils/cn';
 import Cargando from '@/components/Cargando';
+import {
+  NUEVO, ROL_VACIO, agruparPorModulo, alternarModulo as conModuloAlternado, alternarPermiso, cargarCatalogoYRoles,
+  cargarRoles, confirmarPassword, formDeRol, guardarRol, hayCambios as difiere, mensajeDeError,
+} from './permisosRoles/roles';
 
 // Gestión de Usuarios > Permisos de Roles: cada rol es un grupo de pestañas. Un usuario ve una pestaña si alguno
 // de sus roles activos la tiene. El backend aplica los cambios en la siguiente petición de cada usuario.
+// Las reglas y las llamadas al servidor están en permisosRoles/roles.js.
 
-const NUEVO = 'nuevo';
-const VACIO = { nombre: '', descripcion: '', estado: true, permisos: [] };
 const CASILLA = 'h-4 w-4 accent-green-700 cursor-pointer';
-
-const mensajeDeError = (e, porDefecto) => e?.response?.data?.error || porDefecto;
-const mismoConjunto = (a, b) => a.length === b.length && a.every((x) => b.includes(x));
 
 // Casilla de un módulo: marcada si tiene todas sus pestañas, a medias si tiene algunas
 function CasillaModulo({ marcadas, total, onCambio, etiqueta }) {
@@ -35,7 +34,7 @@ export default function PermisosRoles() {
   const [catalogo, setCatalogo] = useState([]);
   const [roles, setRoles] = useState([]);
   const [seleccion, setSeleccion] = useState(null); // id_rol, NUEVO o null
-  const [form, setForm] = useState(VACIO);
+  const [form, setForm] = useState(ROL_VACIO);
   const [aviso, setAviso] = useState(null); // { tipo: 'ok' | 'error', texto }
   const [cargando, setCargando] = useState(true);
   const [confirmando, setConfirmando] = useState(false);
@@ -44,50 +43,27 @@ export default function PermisosRoles() {
   const [guardando, setGuardando] = useState(false);
 
   const rolActual = roles.find((r) => r.id_rol === seleccion) || null;
-  const original = seleccion === NUEVO ? VACIO : rolActual
-    ? { nombre: rolActual.nombre, descripcion: rolActual.descripcion || '', estado: rolActual.estado, permisos: rolActual.permisos }
-    : null;
-  const hayCambios = Boolean(original) && (
-    form.nombre !== original.nombre || form.descripcion !== original.descripcion
-    || form.estado !== original.estado || !mismoConjunto(form.permisos, original.permisos));
-
-  // Pestañas agrupadas por módulo, en el orden del catálogo
-  const modulos = useMemo(() => {
-    const grupos = new Map();
-    catalogo.forEach((p) => { if (!grupos.has(p.modulo)) grupos.set(p.modulo, []); grupos.get(p.modulo).push(p); });
-    return [...grupos.entries()];
-  }, [catalogo]);
-
-  const cargar = async () => {
-    const [c, r] = await Promise.all([api.get('/permisos'), api.get('/roles')]);
-    setCatalogo(c.data || []);
-    setRoles(r.data || []);
-    return r.data || [];
-  };
+  const original = seleccion === NUEVO ? ROL_VACIO : rolActual ? formDeRol(rolActual) : null;
+  const hayCambios = difiere(form, original);
+  const modulos = useMemo(() => agruparPorModulo(catalogo), [catalogo]);
 
   useEffect(() => {
-    cargar()
+    cargarCatalogoYRoles()
+      .then((d) => { setCatalogo(d.catalogo); setRoles(d.roles); })
       .catch((e) => setAviso({ tipo: 'error', texto: mensajeDeError(e, 'No fue posible cargar los roles') }))
       .finally(() => setCargando(false));
   }, []);
 
   const elegir = (id) => {
     if (hayCambios && !window.confirm('Hay cambios sin guardar en este rol. ¿Descartarlos?')) return;
-    const rol = roles.find((r) => r.id_rol === id);
     setSeleccion(id);
     setAviso(null);
-    setForm(rol ? { nombre: rol.nombre, descripcion: rol.descripcion || '', estado: rol.estado, permisos: rol.permisos } : VACIO);
+    setForm(formDeRol(roles.find((r) => r.id_rol === id)));
   };
 
   const cambiar = (campo, valor) => setForm((f) => ({ ...f, [campo]: valor }));
-  const alternar = (codigo) => setForm((f) => ({
-    ...f, permisos: f.permisos.includes(codigo) ? f.permisos.filter((p) => p !== codigo) : [...f.permisos, codigo],
-  }));
-  const alternarModulo = (pestanas) => setForm((f) => {
-    const codigos = pestanas.map((p) => p.codigo);
-    const todas = codigos.every((c) => f.permisos.includes(c));
-    return { ...f, permisos: todas ? f.permisos.filter((p) => !codigos.includes(p)) : [...new Set([...f.permisos, ...codigos])] };
-  });
+  const alternar = (codigo) => setForm((f) => ({ ...f, permisos: alternarPermiso(f.permisos, codigo) }));
+  const alternarModulo = (pestanas) => setForm((f) => ({ ...f, permisos: conModuloAlternado(f.permisos, pestanas) }));
 
   const pedirConfirmacion = () => {
     if (form.nombre.trim().length < 3) {
@@ -103,22 +79,20 @@ export default function PermisosRoles() {
     setGuardando(true);
     setErrorConfirmar('');
     try {
-      await api.post('/auth/confirm-password', { password });
+      await confirmarPassword(password);
     } catch (e) {
       setErrorConfirmar(mensajeDeError(e, 'Contraseña incorrecta'));
       setGuardando(false);
       return;
     }
     try {
-      const cuerpo = { ...form, nombre: form.nombre.trim(), descripcion: form.descripcion.trim() };
-      let id = seleccion;
-      if (seleccion === NUEVO) id = (await api.post('/roles', cuerpo)).data.id_rol;
-      else await api.put(`/roles/${seleccion}`, cuerpo);
+      const id = await guardarRol(seleccion, form);
       setConfirmando(false);
-      const nuevos = await cargar();
+      const nuevos = await cargarRoles();
+      setRoles(nuevos);
       const guardado = nuevos.find((r) => r.id_rol === id);
       setSeleccion(id);
-      if (guardado) setForm({ nombre: guardado.nombre, descripcion: guardado.descripcion || '', estado: guardado.estado, permisos: guardado.permisos });
+      if (guardado) setForm(formDeRol(guardado));
       setAviso({ tipo: 'ok', texto: seleccion === NUEVO ? 'Rol creado. Ya puedes asignarlo en la pestaña Roles.' : 'Rol guardado.' });
       // Si el rol es uno de los propios, el menú y las pestañas se actualizan sin volver a entrar
       if (typeof recargar === 'function') recargar().catch(() => {});

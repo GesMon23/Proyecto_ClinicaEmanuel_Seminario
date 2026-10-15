@@ -1,5 +1,4 @@
 import React from 'react';
-import './TurnosNavButtons.css';
 import LlamadoTurnos from '@/components/LlamadoTurnos';
 import AsignarTurno from '@/components/AsignarTurno';
 import GestionTurno from '@/components/GestionTurno';

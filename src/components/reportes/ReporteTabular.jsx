@@ -7,7 +7,6 @@ import { CargandoFila } from '@/components/Cargando';
 import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
 import { useAviso } from '@/hooks/useAviso';
 import { cn } from '@/utils/cn';
-import '../NuevoIngresoReportes.css';
 import { FILTROS } from './definiciones';
 import { imprimirDetalle, imprimirListado } from './impresion';
 

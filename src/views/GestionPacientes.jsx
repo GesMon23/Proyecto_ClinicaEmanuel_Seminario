@@ -1,5 +1,4 @@
 import React from 'react';
-import './GestionPacientesNavButtons.css';
 import RegistroPacientes from '@/components/RegistroPacientes.jsx';
 import ReingresoPacientes from '@/components/ReingresoPacientes.jsx';
 import EgresoPacientes from '@/components/EgresoPacientes.jsx';

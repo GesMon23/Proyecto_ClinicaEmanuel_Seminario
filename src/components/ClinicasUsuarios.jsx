@@ -1,26 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import logoClinica from '@/assets/logoClinica2.png';
-import api from '@/config/api';
 import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
 import { CAMPO } from '@/constants/formularios';
 import { cn } from '@/utils/cn';
 import IconoClinica from './llamadoTurnos/IconoClinica';
 import Cargando from './Cargando';
+import {
+  FUNCIONES, alternarClinica as conClinicaAlternada, cambiarModo as conModo, cargarClinicas, cargarUsuarios,
+  eleccionDe, filtrarUsuarios, funcionVacia, guardarClinicas, ids, iguales, mensajeDeError,
+} from './clinicasUsuarios/clinicas';
 
 // Turnos > Clínicas por Usuario: en qué clínicas llama turnos cada usuario (pestaña Llamado) y para cuáles los
 // crea, edita o cancela (pestaña Crear). Sin restricción, el usuario usa todas las clínicas.
+// Las reglas y las llamadas al servidor están en clinicasUsuarios/clinicas.js.
 
-const FUNCIONES = [
-  { clave: 'llamado', titulo: 'Llamado de turnos', pestana: 'Llamado', tiene: 'tiene_llamado', clinicas: 'clinicas_llamado' },
-  { clave: 'crear', titulo: 'Creación de turnos', pestana: 'Crear', tiene: 'tiene_crear', clinicas: 'clinicas_crear' },
-];
 const CASILLA = 'h-4 w-4 accent-green-700 cursor-pointer';
-
-// Los ids llegan como texto (bigint de PostgreSQL); null = todas las clínicas
-const ids = (lista) => (Array.isArray(lista) ? lista.map(Number).sort((a, b) => a - b) : null);
-const eleccionDe = (u) => ({ llamado: ids(u.clinicas_llamado), crear: ids(u.clinicas_crear) });
-const iguales = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-const mensajeDeError = (e, porDefecto) => e?.response?.data?.error || e?.response?.data?.message || porDefecto;
 
 export default function ClinicasUsuarios() {
   const [clinicas, setClinicas] = useState([]);
@@ -38,15 +32,9 @@ export default function ClinicasUsuarios() {
   const nombreDe = (id) => clinicas.find((c) => Number(c.id_clinica) === id)?.descripcion || `#${id}`;
   const resumen = (lista) => (lista === null ? 'Todas' : lista.map(nombreDe).join(', '));
 
-  const cargarUsuarios = async () => {
-    const { data } = await api.get('/turnos/clinicas-usuarios');
-    setUsuarios(data || []);
-    return data || [];
-  };
-
   useEffect(() => {
-    Promise.all([api.get('/GclinicasT'), cargarUsuarios()])
-      .then(([c]) => setClinicas(c.data || []))
+    Promise.all([cargarClinicas(), cargarUsuarios()])
+      .then(([c, u]) => { setClinicas(c); setUsuarios(u); })
       .catch((e) => setAviso({ tipo: 'error', texto: mensajeDeError(e, 'No fue posible cargar los usuarios') }))
       .finally(() => setCargando(false));
   }, []);
@@ -58,25 +46,20 @@ export default function ClinicasUsuarios() {
     setAviso(null);
   };
 
-  const cambiarModo = (funcion, todas) => setEleccion((e) => ({
-    ...e, [funcion]: todas ? null : (e[funcion] ?? clinicas.map((c) => Number(c.id_clinica)).sort((a, b) => a - b)),
-  }));
-  const alternarClinica = (funcion, id) => setEleccion((e) => {
-    const actual = e[funcion] || [];
-    const nueva = actual.includes(id) ? actual.filter((x) => x !== id) : [...actual, id].sort((a, b) => a - b);
-    return { ...e, [funcion]: nueva };
-  });
+  const cambiarModo = (funcion, todas) => setEleccion((e) => conModo(e, funcion, todas, clinicas));
+  const alternarClinica = (funcion, id) => setEleccion((e) => conClinicaAlternada(e, funcion, id));
 
   const guardar = async () => {
-    const vacia = FUNCIONES.find((f) => Array.isArray(eleccion[f.clave]) && eleccion[f.clave].length === 0);
+    const vacia = funcionVacia(eleccion);
     if (vacia) {
       setAviso({ tipo: 'error', texto: `${vacia.titulo}: marca al menos una clínica o elige "Todas las clínicas".` });
       return;
     }
     setGuardando(true);
     try {
-      await api.put(`/turnos/clinicas-usuarios/${seleccion}`, eleccion);
+      await guardarClinicas(seleccion, eleccion);
       const nuevos = await cargarUsuarios();
+      setUsuarios(nuevos);
       const guardado = nuevos.find((u) => u.id_usuario === seleccion);
       if (guardado) setEleccion(eleccionDe(guardado));
       setAviso({ tipo: 'ok', texto: `Clínicas de ${usuario.nombre_usuario} guardadas. Se aplican en su siguiente acción.` });
@@ -87,8 +70,7 @@ export default function ClinicasUsuarios() {
     }
   };
 
-  const q = busqueda.trim().toLowerCase();
-  const visibles = q ? usuarios.filter((u) => `${u.nombre_usuario} ${u.empleado}`.toLowerCase().includes(q)) : usuarios;
+  const visibles = filtrarUsuarios(usuarios, busqueda);
 
   return (
     <div className="w-full">

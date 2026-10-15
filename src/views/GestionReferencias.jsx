@@ -1,5 +1,4 @@
 import React from "react";
-import "./GestionReferenciasNavButtons.css";
 import RegistroReferencias from "@/components/RegistroReferencias";
 import ConsultaReferencias from "@/components/ConsultaReferencias";
 import BarraPestanas from "@/components/BarraPestanas";

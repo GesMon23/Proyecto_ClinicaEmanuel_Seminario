@@ -1,5 +1,4 @@
 import React from "react";
-import './GestionReportesNavButtons.css';
 import PacientesReporte from "@/components/PacientesReporte";
 import NuevoIngresoReportes from "@/components/NuevoIngresoReportes";
 import EgresoReporte from "@/components/EgresoReporte";

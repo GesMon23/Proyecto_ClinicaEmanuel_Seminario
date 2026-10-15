@@ -1,5 +1,4 @@
 import React from "react";
-import "./GestionReferenciasNavButtons.css";
 import RegistroLaboratorios from "./RegistroLaboratorios.jsx";
 import ConsultaLaboratorios from "../components/ConsultaLaboratorios.jsx";
 import BarraPestanas from "@/components/BarraPestanas";

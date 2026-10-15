@@ -5,7 +5,6 @@ import logoClinica from '@/assets/logoClinica2.png';
 import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
 import { formatearFecha } from '@/utils/fechas';
 import { CargandoFila } from '@/components/Cargando';
-import './NuevoIngresoReportes.css';
 
 const ConsultaTurnos = () => {
     const [turnos, setTurnos] = useState([]);
