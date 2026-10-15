@@ -1,4 +1,5 @@
 // Reglas y transformaciones de los turnos de un paciente (sin React).
+import { formatearFecha } from '@/utils/fechas';
 
 // Fechas 'YYYY-MM-DD' en hora local, sin pasar por UTC (evita el desfase de un día)
 export function formatDateToYMDLocal(date) {
@@ -68,10 +69,11 @@ export const normalizarBusqueda = (v) => String(v ?? '').normalize('NFD').replac
 // Texto de la ventana con el detalle de un turno del calendario
 export function detalleDeEvento(evento) {
   const p = evento.extendedProps;
+  const ymd = evento.startStr || formatDateToYMDLocal(evento.start);
   return `Información del Turno:\n`
-    + `Turno: # ${p.turnoId}\n`
-    + `Paciente: ${p.paciente}\n`
-    + `No. Afiliación: ${p.noAfiliacion}\n`
-    + `Clínica: ${p.clinica}\n`
-    + `Fecha: ${evento.startStr || formatDateToYMDLocal(evento.start)}`;
+    + `Turno: # ${p.turnoId || '—'}\n`
+    + `Paciente: ${p.paciente || '—'}\n`
+    + `No. Afiliación: ${p.noAfiliacion || '—'}\n`
+    + `Clínica: ${p.clinica || '—'}\n`
+    + `Fecha: ${formatearFecha(ymd) || ymd}`;
 }

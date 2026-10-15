@@ -64,6 +64,14 @@ test('ficha del paciente: historial con fechas reales, todos los turnos y faltas
   });
 });
 
+test('Turnos > Crear: los turnos del paciente traen su nombre y afiliación (detalle del calendario)', async () => {
+  await conDatos(async (c) => {
+    const turnos = await cursor(c, 'CALL sp_mostrar_turnos_t($1, $2)', ['9100000001']);
+    assert.equal(turnos.length, 2, 'solo los turnos en estado Creada');
+    assert.ok(turnos.every((t) => t.nombrepaciente === 'ANA LUCÍA MORALES PÉREZ' && t.noafiliacion === '9100000001' && t.nombre_clinica));
+  });
+});
+
 test('Consulta de Turnos y reporte de Egresos: devuelven las columnas que muestran las tablas', async () => {
   await conDatos(async (c) => {
     const [turno] = await cursor(c, 'CALL sp_mostrar_turnos_todos($1, NULL, NULL, NULL, $2)', ['9100000002']);
