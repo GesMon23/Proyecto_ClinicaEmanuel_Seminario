@@ -67,18 +67,15 @@ async function definirCarnetPaciente(paciente, fotoPath, outputPath, baseFronten
     // Línea separadora verde (como en el reporte)
     doc.moveTo(ml, 95).lineTo(pageWidth - mr, 95).lineWidth(1.5).strokeColor('#2d6a4f').stroke();
 
-    // Foto del paciente (bajar para no superponer con encabezado/QR) y hacerla un poco más grande
+    // Foto del paciente a la derecha, debajo del encabezado
+    const frameX = 405, frameY = 110, frameW = 144, frameH = 110;
     try {
-        // +20% de tamaño y acercar la foto a la línea del encabezado
-        const frameX = 405, frameY = 110, frameW = 144, frameH = 110;
         if (fotoPath && fs.existsSync(fotoPath)) {
-            // Dibujar la foto ocupando exactamente el marco
-            try {
-                doc.image(fotoPath, frameX, frameY, { width: frameW, height: frameH });
-            } catch (_) {
-                // Fallback si falla dimensiones exactas
-                doc.image(fotoPath, frameX, frameY, { fit: [frameW, frameH] });
-            }
+            // La foto cubre el marco sin deformarse: se escala y se recorta centrada (antes se estiraba)
+            doc.save();
+            doc.rect(frameX, frameY, frameW, frameH).clip();
+            doc.image(fotoPath, frameX, frameY, { cover: [frameW, frameH], align: 'center', valign: 'center' });
+            doc.restore();
             // Borde verde por encima, pegado al contorno de la foto
             doc.lineWidth(1).strokeColor('#2d6a4f');
             doc.rect(frameX, frameY, frameW, frameH).stroke();
@@ -106,32 +103,28 @@ async function definirCarnetPaciente(paciente, fotoPath, outputPath, baseFronten
         return `${day}/${month}/${year}`;
     };
 
-    // Datos personales un poco más grandes
-    doc.font('Helvetica-Bold').fontSize(13).fillColor('#2d6a4f');
-    doc.text('Nombres:', 30, datosY, { continued: true });
-    doc.font('Helvetica').fontSize(13).fillColor('black').text(nombreCompleto, { continued: false });
-    datosY += 20;
-    doc.font('Helvetica-Bold').fillColor('#2d6a4f').text('Apellidos:', 30, datosY, { continued: true });
-    doc.font('Helvetica').fillColor('black').text(apellidoCompleto, { continued: false });
-    datosY += 20;
-    doc.font('Helvetica-Bold').fillColor('#2d6a4f').text('Dirección:', 30, datosY, { continued: true });
-    doc.font('Helvetica').fillColor('black').text(direccion || '', { continued: false });
-    datosY += 20;
-    doc.font('Helvetica-Bold').fillColor('#2d6a4f').text('Fecha Nacimiento:', 30, datosY, { continued: true });
-    doc.font('Helvetica').fillColor('black').text(formatFecha(fechanacimiento), { continued: false });
-    datosY += 20;
-    doc.font('Helvetica-Bold').fillColor('#2d6a4f').text('Fecha Ingreso:', 30, datosY, { continued: true });
-    doc.font('Helvetica').fillColor('black').text(formatFecha(fechaingreso), { continued: false });
-    datosY += 20;
-    doc.font('Helvetica-Bold').fillColor('#2d6a4f').text('No. Afiliación:', 30, datosY, { continued: true });
-    doc.font('Helvetica').fillColor('black').text(noafiliacion || '', { continued: false });
-    datosY += 20;
-    doc.font('Helvetica-Bold').fillColor('#2d6a4f').text('DPI:', 30, datosY, { continued: true });
-    doc.font('Helvetica').fillColor('black').text(dpi || '', { continued: false });
-    datosY += 20;
-    doc.font('Helvetica-Bold').fillColor('#2d6a4f').text('Sexo:', 30, datosY, { continued: true });
-    doc.font('Helvetica').fillColor('black').text(sexo || '', { continued: false });
-    datosY += 26;
+    // Datos personales en dos columnas (etiqueta | valor). El valor tiene un ancho fijo que termina antes de la
+    // foto: un texto largo (dirección, nombres) pasa a la línea siguiente en lugar de salirse por debajo de la foto.
+    const COL_ETIQUETA = 30, ANCHO_ETIQUETA = 118;
+    const COL_VALOR = COL_ETIQUETA + ANCHO_ETIQUETA;
+    const ANCHO_VALOR = frameX - 14 - COL_VALOR;
+    const fila = (etiqueta, valor) => {
+        const texto = String(valor || '').trim() || '—';
+        doc.font('Helvetica-Bold').fontSize(12).fillColor('#2d6a4f')
+           .text(etiqueta, COL_ETIQUETA, datosY, { width: ANCHO_ETIQUETA - 6, lineBreak: false });
+        doc.font('Helvetica').fontSize(12).fillColor('black').text(texto, COL_VALOR, datosY, { width: ANCHO_VALOR });
+        datosY += Math.max(doc.heightOfString(texto, { width: ANCHO_VALOR }), 14) + 6;
+    };
+    fila('Nombres:', nombreCompleto);
+    fila('Apellidos:', apellidoCompleto);
+    fila('Dirección:', direccion);
+    fila('Fecha Nacimiento:', formatFecha(fechanacimiento));
+    fila('Fecha Ingreso:', formatFecha(fechaingreso));
+    fila('No. Afiliación:', noafiliacion);
+    fila('DPI:', dpi);
+    fila('Sexo:', sexo);
+    // Lo que sigue empieza debajo del dato o de la foto, lo que quede más abajo
+    datosY = Math.max(datosY, frameY + frameH) + 6;
 
     // Línea divisoria (aún más cerca de los datos)
     doc.moveTo(30, datosY + 10).lineTo(540, datosY + 10).lineWidth(1).strokeColor('black').stroke();
