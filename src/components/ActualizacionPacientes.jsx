@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Spinner } from 'react-bootstrap';
+import { IconoCargando } from '@/components/Cargando';
 import { BrushCleaning, Camera, Edit, Image, Save, XIcon } from 'lucide-react';
 import CustomModal from '@/components/CustomModal.jsx';
 import WebcamFoto from '@/components/WebcamFoto.jsx';
@@ -17,9 +17,6 @@ import {
 const BUSQUEDA_VACIA = { noafiliacion: '', dpi: '' };
 const BOTON = 'flex-1 flex items-center justify-center gap-2 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-900';
 
-const Cargando = ({ texto }) => (
-  <div className="flex items-center justify-center gap-2"><Spinner animation="border" size="sm" />{texto}</div>
-);
 
 const ActualizacionPacientes = () => {
   const [busqueda, setBusqueda] = useState(BUSQUEDA_VACIA);
@@ -143,7 +140,7 @@ const ActualizacionPacientes = () => {
               ) : (
                 <>
                   <button onClick={handleGuardar} disabled={loading} className={cn(BOTON_PRINCIPAL, 'flex-1')}>
-                    {loading ? <Cargando texto="Guardando..." /> : <><Save />Guardar Cambios</>}
+                    {loading ? <><IconoCargando />Guardando...</> : <><Save />Guardar Cambios</>}
                   </button>
                   <button onClick={handleLimpiarTodo} className={`${BOTON} bg-red-600 hover:bg-red-700 focus:ring-gray-600`}>
                     <XIcon /> Cancelar

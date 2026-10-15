@@ -18,7 +18,7 @@ export function useLlamadoTurnos({ avisar }) {
   // Turno en atención del usuario; si el servidor no devuelve ninguno se limpia (evita mostrar turnos que ya no existen)
   const cargarTurnoActual = useCallback(async () => {
     try {
-      const { data } = await api.get('/Gturno-actual-usuario');
+      const { data } = await api.get('/Gturno-actual-usuario', { silenciosa: true });
       setTurnoActivo(data || null);
     } catch (error) {
       if (error.response?.status === 404) setTurnoActivo(null);
@@ -30,7 +30,7 @@ export function useLlamadoTurnos({ avisar }) {
   const cargarSiguientes = useCallback(async (clinica) => {
     if (!clinica) return;
     try {
-      const { data } = await api.get(`/Gsiguientes-turnosT/${encodeURIComponent(clinica)}`);
+      const { data } = await api.get(`/Gsiguientes-turnosT/${encodeURIComponent(clinica)}`, { silenciosa: true });
       setSiguientes(Array.isArray(data?.turnos) ? data.turnos : []);
     } catch (error) {
       console.error('Error al cargar los siguientes turnos:', error);

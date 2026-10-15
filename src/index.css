@@ -162,3 +162,9 @@
 .recharts-tooltip-item {
     @apply text-base font-medium !text-blue-500 dark:!text-blue-600;
 }
+
+/* Barra de actividad (BarraActividad.jsx): un tramo verde que recorre la parte superior */
+@keyframes barra-actividad {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(300%); }
+}

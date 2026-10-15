@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { AlertTriangle, RefreshCw, VolumeX } from 'lucide-react';
+import { AlertTriangle, VolumeX } from 'lucide-react';
+import Cargando from '@/components/Cargando';
 import logoClinica from "@/assets/logoClinica1Min.png";
 import TarjetaClinicaTV from './llamadoTV/TarjetaClinicaTV';
 import { useLlamadosTV } from './llamadoTV/useLlamadosTV';
@@ -21,11 +22,8 @@ const LlamadoTurnosTV = () => {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-screen bg-gradient-to-br from-green-50 to-emerald-50">
-                <div className="text-center">
-                    <RefreshCw className="animate-spin h-16 w-16 mx-auto text-green-600 mb-4" />
-                    <div className="text-3xl font-bold text-green-800">Cargando turnos...</div>
-                </div>
+            <div className="h-screen bg-gradient-to-br from-green-50 to-emerald-50">
+                <Cargando variante="pantalla" texto="Cargando turnos..." className="h-full [&_svg]:h-16 [&_svg]:w-16 [&_span]:text-3xl [&_span]:font-bold [&_span]:text-green-800" />
             </div>
         );
     }

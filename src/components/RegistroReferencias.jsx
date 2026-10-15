@@ -3,6 +3,7 @@ import { Container, Row, Col, Card } from 'react-bootstrap';
 import api from '../config/api';
 import logoClinica from "@/assets/logoClinica2.png"
 import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
+import { IconoCargando } from '@/components/Cargando';
 
 const RegistroReferencias = () => {
 
@@ -311,7 +312,7 @@ const RegistroReferencias = () => {
                 disabled={loading || !paciente}
                 className={BOTON_PRINCIPAL}
               >
-                {loading ? 'Guardando...' : 'Registrar Referencia'}
+                {loading ? <><IconoCargando />Guardando...</> : 'Registrar Referencia'}
               </button>
               <button
                 type="button"

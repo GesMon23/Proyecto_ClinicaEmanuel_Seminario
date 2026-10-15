@@ -4,6 +4,7 @@ import logoClinica from "@/assets/logoClinica2.png";
 import CustomModal from '@/components/CustomModal';
 import { BOTON_PRINCIPAL } from '@/constants/botones';
 import { cn } from '@/utils/cn';
+import { IconoCargando } from '@/components/Cargando';
 import CalendarioTurnos from "./gestionTurno/CalendarioTurnos";
 import TablaTurnos from "./gestionTurno/TablaTurnos";
 import { useTemaCalendario } from "./gestionTurno/temaCalendario";
@@ -220,7 +221,7 @@ const GestionTurno = () => {
             >
               {buscando ? (
                 <span className="inline-flex items-center gap-2">
-                  <span className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <IconoCargando />
                   Buscando...
                 </span>
               ) : 'Buscar'}

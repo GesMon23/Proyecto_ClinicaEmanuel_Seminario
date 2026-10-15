@@ -7,6 +7,7 @@ import CustomModal from '@/components/CustomModal';
 import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
 import Campo, { Etiqueta } from "./registroPacientes/Campo";
 import { cargarCatalogos } from "./registroPacientes/catalogos";
+import { IconoCargando } from "@/components/Cargando";
 import {
   FORM_VACIO, aplicarCambio, armarPaciente, descargarCarnetConReintento, mensajeDeError, validarFormulario, verificarUnicidad,
 } from "./registroPacientes/registro";
@@ -200,7 +201,7 @@ const RegistroPacientes = () => {
                       disabled={loading}
                       className={BOTON_PRINCIPAL}
                     >
-                      {loading ? "Registrando..." : "Registrar Paciente"}
+                      {loading ? <><IconoCargando />Registrando...</> : "Registrar Paciente"}
                     </button>
                     <button
                       type="button"

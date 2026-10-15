@@ -4,6 +4,7 @@ import logoClinica from "@/assets/logoClinica2.png";
 import CustomModal from '@/components/CustomModal';
 import { BOTON_PRINCIPAL } from '@/constants/botones';
 import { CAMPO, ETIQUETA } from '@/constants/formularios';
+import { CargandoFila, IconoCargando } from '@/components/Cargando';
 
 const normalizar = (v) =>
     String(v ?? '')
@@ -194,7 +195,7 @@ const AsignarTurno = () => {
                         disabled={loading}
                         className={BOTON_PRINCIPAL}
                     >
-                        {loading ? 'Actualizando...' : 'Actualizar'}
+                        {loading ? <><IconoCargando />Actualizando...</> : 'Actualizar'}
                     </button>
                 </div>
 
@@ -215,9 +216,7 @@ const AsignarTurno = () => {
                             </thead>
                             <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
                                 {loading && turnos.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">Cargando...</td>
-                                    </tr>
+                                    <CargandoFila colSpan={6} texto="Cargando turnos..." />
                                 ) : turnosFiltrados.length === 0 ? (
                                     <tr>
                                         <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">

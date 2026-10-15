@@ -8,6 +8,7 @@ import api from '../config/api';
 import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
 import NavegacionPestanas from './consultaPacientes/NavegacionPestanas';
 import FotoPaciente from './pacientes/FotoPaciente';
+import Cargando, { IconoCargando } from './Cargando';
 import { descargarCarnet } from './consultaPacientes/carnet';
 import { generarReportePaciente } from './consultaPacientes/reportePdf';
 import {
@@ -260,7 +261,7 @@ const ConsultaPacientes = () => {
                                                 type="submit"
                                                 disabled={loading}
                                             >
-                                                {loading ? 'Buscando...' : 'Buscar'}
+                                                {loading ? <><IconoCargando />Buscando...</> : 'Buscar'}
                                             </button>
                                             <button
                                                 className={BOTON_LIMPIAR}
@@ -281,7 +282,7 @@ const ConsultaPacientes = () => {
                                         <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
                                             <div className="w-48 h-48 sm:w-60 sm:h-60 md:w-72 md:h-72 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 border-4 border-green-700/70 shadow-xl flex items-center justify-center flex-shrink-0">
                                                 {fotoCargando ? (
-                                                    <span>Cargando foto...</span>
+                                                    <Cargando variante="linea" texto="Cargando foto..." />
                                                 ) : (
                                                     <FotoPaciente rutas={rutasFoto} alternativa={avatarDefault} className="w-full h-full object-cover" />
                                                 )}

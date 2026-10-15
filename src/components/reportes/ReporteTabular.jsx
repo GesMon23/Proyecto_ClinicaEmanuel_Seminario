@@ -3,6 +3,7 @@ import logoClinica from '@/assets/logoClinica2.png';
 import api, { descargarArchivo } from '@/config/api';
 import CustomModal from '@/components/CustomModal';
 import Paginador from '@/components/Paginador';
+import { CargandoFila } from '@/components/Cargando';
 import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
 import { useAviso } from '@/hooks/useAviso';
 import { cn } from '@/utils/cn';
@@ -196,10 +197,12 @@ export default function ReporteTabular({ reporte }) {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {cargando || sinDatos ? (
+                {cargando ? (
+                  <CargandoFila colSpan={columnasTotales} texto="Generando reporte..." />
+                ) : sinDatos ? (
                   <tr>
                     <td colSpan={columnasTotales} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                      {cargando ? 'Cargando...' : reporte.vacio}
+                      {reporte.vacio}
                     </td>
                   </tr>
                 ) : (

@@ -30,6 +30,28 @@ export async function descargarArchivo(ruta, nombre, params) {
   window.URL.revokeObjectURL(url);
 }
 
+// Peticiones en curso, para la barra de actividad (BarraActividad.jsx). Las consultas periódicas de fondo
+// se marcan con { silenciosa: true } para no encender la barra cada pocos segundos.
+let enCurso = 0;
+const oyentes = new Set();
+const avisar = () => oyentes.forEach((fn) => fn());
+export const peticionesEnCurso = () => enCurso;
+export function suscribirActividad(fn) {
+  oyentes.add(fn);
+  return () => oyentes.delete(fn);
+}
+const terminar = (config) => {
+  if (config?.__contada) { enCurso = Math.max(0, enCurso - 1); avisar(); }
+};
+api.interceptors.request.use((config) => {
+  if (!config.silenciosa) { config.__contada = true; enCurso += 1; avisar(); }
+  return config;
+});
+api.interceptors.response.use(
+  (response) => { terminar(response.config); return response; },
+  (error) => { terminar(error.config); return Promise.reject(error); },
+);
+
 // Interceptor para requests
 api.interceptors.request.use(config => {
     const token = localStorage.getItem('token');

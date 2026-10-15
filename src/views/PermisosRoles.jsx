@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
 import { CAMPO, ETIQUETA } from '@/constants/formularios';
 import { cn } from '@/utils/cn';
+import Cargando from '@/components/Cargando';
 
 // Gestión de Usuarios > Permisos de Roles: cada rol es un grupo de pestañas. Un usuario ve una pestaña si alguno
 // de sus roles activos la tiene. El backend aplica los cambios en la siguiente petición de cada usuario.
@@ -161,7 +162,7 @@ export default function PermisosRoles() {
             {/* Roles */}
             <div className="flex flex-col gap-2">
               <button type="button" className={cn(BOTON_PRINCIPAL, 'w-full')} onClick={() => elegir(NUEVO)}>+ Nuevo rol</button>
-              {cargando && <p className="text-sm text-slate-500 dark:text-slate-400">Cargando roles...</p>}
+              {cargando && <Cargando texto="Cargando roles..." />}
               {roles.map((r) => (
                 <button
                   key={r.id_rol}

@@ -2,6 +2,7 @@
 // index.css, así que siguen el modo oscuro sin lógica en los componentes.
 import React, { useState } from 'react';
 import { Bar, BarChart, Cell, LabelList, Pie, PieChart, ResponsiveContainer, Tooltip, Treemap, XAxis, YAxis } from 'recharts';
+import Cargando from '@/components/Cargando';
 
 const fmt = (v, decimales = 0) => (v === null || v === undefined || Number.isNaN(Number(v))
   ? '—'
@@ -41,7 +42,10 @@ export function Seccion({ titulo, subtitulo, filtros, cargando, error, children 
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
       <header className="mb-4 flex flex-col gap-1">
-        <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-50">{titulo}</h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-50">{titulo}</h2>
+          {cargando && <Cargando variante="linea" texto="Actualizando..." />}
+        </div>
         {subtitulo && <p className="text-sm text-slate-600 dark:text-slate-300">{subtitulo}</p>}
       </header>
       {filtros && <div className="mb-5">{filtros}</div>}

@@ -1,24 +1,34 @@
+import { lazy, Suspense } from "react";
 import { createBrowserRouter, RouterProvider } from "react-router-dom"
 import { ThemeProvider } from "@/contexts/theme-context"
 import Layout from "@/routes/layout"
 import DashboardPage from "@/routes/dashboard/page"
-import ConsultaPacientesView from "@/views/ConsultaPacientesView.jsx";
-import GestionPacientes from "@/views/GestionPacientes.jsx";
-import Turnos from "@/views/Turnos.jsx";
-import GestionReportes from "@/views/GestionReportes.jsx";
-import GestionReferencias from "@/views/GestionReferencias.jsx";
-import GestionLaboratorios from "@/views/GestionLaboratorios.jsx"; 
-import LoginComponent from "@/Login.jsx"; 
+import LoginComponent from "@/Login.jsx";
 import { AuthProvider } from "@/contexts/auth-context";
 import ProtectedRoute from "@/routes/ProtectedRoute";
 import RequirePermiso from "@/routes/RequirePermiso";
-import GestionUsuarios from "@/views/GestionUsuarios.jsx";
-import Nutricion from "@/views/Nutricion.jsx";
-import Psicologia from "@/views/Psicologia.jsx";
-import RestablecerPassword from "@/pages/RestablecerPassword.jsx";
-import Estadisticas from "@/views/estadisticas/Estadisticas.jsx";
-import TurnosTVPage from "@/routes/turnos-tv/page";
 import CerrarSesion from "@/routes/CerrarSesion";
+import Cargando from "@/components/Cargando";
+
+// Los módulos se descargan al abrirlos (la primera carga del sistema es más liviana); mientras tanto el layout
+// muestra la animación de carga (routes/layout.jsx)
+const ConsultaPacientesView = lazy(() => import("@/views/ConsultaPacientesView.jsx"));
+const GestionPacientes = lazy(() => import("@/views/GestionPacientes.jsx"));
+const Turnos = lazy(() => import("@/views/Turnos.jsx"));
+const GestionReportes = lazy(() => import("@/views/GestionReportes.jsx"));
+const GestionReferencias = lazy(() => import("@/views/GestionReferencias.jsx"));
+const GestionLaboratorios = lazy(() => import("@/views/GestionLaboratorios.jsx"));
+const GestionUsuarios = lazy(() => import("@/views/GestionUsuarios.jsx"));
+const Nutricion = lazy(() => import("@/views/Nutricion.jsx"));
+const Psicologia = lazy(() => import("@/views/Psicologia.jsx"));
+const Estadisticas = lazy(() => import("@/views/estadisticas/Estadisticas.jsx"));
+const RestablecerPassword = lazy(() => import("@/pages/RestablecerPassword.jsx"));
+const TurnosTVPage = lazy(() => import("@/routes/turnos-tv/page"));
+
+// Páginas fuera del layout (restablecer contraseña, TV)
+const conCarga = (elemento) => (
+    <Suspense fallback={<Cargando variante="pantalla" className="min-h-screen" />}>{elemento}</Suspense>
+);
 function App() {
     const router = createBrowserRouter([
         {
@@ -28,7 +38,7 @@ function App() {
         {
                 // Enlace del correo de recuperación de contraseña (pública: el token es la autorización)
                 path: "/restablecer-contrasena",
-                element: <RestablecerPassword />,
+                element: conCarga(<RestablecerPassword />),
         },
         {
             path: "layout/",
@@ -130,7 +140,7 @@ function App() {
         },
         {
             path: "/turnos-tv",
-            element: <TurnosTVPage />,
+            element: conCarga(<TurnosTVPage />),
         },
     ]);
 

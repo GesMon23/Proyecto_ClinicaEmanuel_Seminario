@@ -4,6 +4,7 @@ import api from '@/config/api';
 import { BOTON_PRINCIPAL } from '@/constants/botones';
 
 import { CAMPO, ETIQUETA } from '@/constants/formularios';
+import { IconoCargando } from '@/components/Cargando';
 const RolesUsuarios = () => {
   const [usuarioQuery, setUsuarioQuery] = useState('');
   const [user, setUser] = useState(null); // {id_usuario, nombre_usuario}
@@ -148,7 +149,7 @@ const RolesUsuarios = () => {
                 disabled={loading}
                 className={BOTON_PRINCIPAL}
               >
-                {loading ? 'Buscando...' : 'Buscar'}
+                {loading ? <><IconoCargando />Buscando...</> : 'Buscar'}
               </button>
             </div>
 

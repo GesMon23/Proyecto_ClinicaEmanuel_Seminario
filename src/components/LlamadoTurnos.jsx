@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { RefreshCw } from 'lucide-react';
+import Cargando from '@/components/Cargando';
 import logoClinica from "@/assets/logoClinica2.png";
 import CustomModal from '@/components/CustomModal';
 import Toast from '@/components/Toast';
@@ -19,16 +19,7 @@ const LlamadoTurnos = () => {
     const avisar = useCallback((tipo, mensaje) => mostrar(tipo, tipo === 'success' ? 'Éxito' : 'Error', mensaje), [mostrar]);
     const t = useLlamadoTurnos({ avisar });
 
-    if (t.loading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="text-center">
-                    <RefreshCw className="animate-spin h-12 w-12 mx-auto text-blue-600" />
-                    <p className="mt-4 text-lg dark:text-white">Cargando datos...</p>
-                </div>
-            </div>
-        );
-    }
+    if (t.loading) return <Cargando variante="pantalla" texto="Cargando turnos..." />;
 
     const clinica = t.selectedClinica;
     // Solo se muestra el turno en atención si es de la clínica seleccionada

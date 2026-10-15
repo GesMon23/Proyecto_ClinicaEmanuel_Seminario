@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import logoClinica from '@/assets/logoClinica2.png';
 import api from '@/config/api';
 import Paginador from '@/components/Paginador';
+import Cargando from '@/components/Cargando';
 import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
 import { imprimirListado } from '../reportes/impresion';
 
@@ -146,7 +147,7 @@ export default function ConsultaHistorial({ consulta }) {
         <div className="bg-white dark:bg-slate-800 shadow overflow-hidden sm:rounded-lg">
           <div className="overflow-x-auto">
             {loading ? (
-              <div className="text-center my-5"><span className="text-green-700">Cargando...</span></div>
+              <Cargando texto="Cargando registros..." />
             ) : (
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-slate-700">

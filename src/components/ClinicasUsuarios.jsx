@@ -5,6 +5,7 @@ import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
 import { CAMPO } from '@/constants/formularios';
 import { cn } from '@/utils/cn';
 import IconoClinica from './llamadoTurnos/IconoClinica';
+import Cargando from './Cargando';
 
 // Turnos > Clínicas por Usuario: en qué clínicas llama turnos cada usuario (pestaña Llamado) y para cuáles los
 // crea, edita o cancela (pestaña Crear). Sin restricción, el usuario usa todas las clínicas.
@@ -126,7 +127,7 @@ export default function ClinicasUsuarios() {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
-          {cargando && <p className="text-sm text-slate-500 dark:text-slate-400">Cargando usuarios...</p>}
+          {cargando && <Cargando texto="Cargando usuarios..." />}
           {!cargando && visibles.length === 0 && (
             <p className="text-sm text-slate-500 dark:text-slate-400">
               {usuarios.length === 0 ? 'Ningún usuario activo tiene las pestañas Llamado o Crear.' : 'Ningún usuario coincide con la búsqueda.'}

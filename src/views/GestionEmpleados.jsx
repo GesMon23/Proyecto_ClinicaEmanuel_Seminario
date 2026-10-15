@@ -4,6 +4,7 @@ import api from '@/config/api';
 import { BOTON_PRINCIPAL } from '@/constants/botones';
 
 import { CAMPO, ETIQUETA } from '@/constants/formularios';
+import { CargandoFila } from '@/components/Cargando';
 const GestionEmpleados = () => {
   const [empleados, setEmpleados] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -182,9 +183,7 @@ const GestionEmpleados = () => {
                 </thead>
                 <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {loading ? (
-                    <tr>
-                      <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">Cargando...</td>
-                    </tr>
+                    <CargandoFila colSpan={7} texto="Cargando empleados..." />
                   ) : filtrados.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">No hay empleados para mostrar.</td>

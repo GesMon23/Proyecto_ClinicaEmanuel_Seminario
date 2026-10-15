@@ -4,6 +4,7 @@ import { Table, Form, Row, Col, Button, Card } from 'react-bootstrap';
 import logoClinica from '@/assets/logoClinica2.png';
 import { BOTON_LIMPIAR, BOTON_PRINCIPAL } from '@/constants/botones';
 import { formatearFecha } from '@/utils/fechas';
+import { CargandoFila } from '@/components/Cargando';
 import './NuevoIngresoReportes.css';
 
 const ConsultaTurnos = () => {
@@ -256,14 +257,7 @@ const ConsultaTurnos = () => {
                         </thead>
                         <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
                             {loading ? (
-                                <tr>
-                                    <td colSpan="7" className="px-6 py-4 text-center">
-                                        <div className="flex justify-center items-center gap-2">
-                                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-600"></div>
-                                            <span className="text-gray-600 dark:text-gray-400">Cargando...</span>
-                                        </div>
-                                    </td>
-                                </tr>
+                                <CargandoFila colSpan={7} texto="Cargando turnos..." />
                             ) : turnos.length === 0 ? (
                                 <tr>
                                     <td colSpan="7" className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">

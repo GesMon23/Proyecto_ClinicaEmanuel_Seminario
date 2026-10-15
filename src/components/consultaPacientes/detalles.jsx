@@ -7,6 +7,7 @@ import {
 } from './documentos';
 import { useDetalleLaboratorio } from './useDetalleLaboratorio';
 import IndicadorIMC from '../IndicadorIMC';
+import Cargando from '../Cargando';
 
 function VentanaDetalle({ titulo, onClose, onPdf, children }) {
   return (
@@ -246,7 +247,7 @@ export function DetalleLaboratorio({ item, ultimos, onClose }) {
         <span className="font-semibold">Últimos parámetros previos:</span>
         <div className="mt-2">
           {ultimos.loading ? (
-            <div className="text-sm text-slate-600 dark:text-slate-300">Cargando últimos parámetros...</div>
+            <Cargando variante="linea" texto="Cargando últimos parámetros..." />
           ) : ultimos.error ? (
             <div className="text-sm text-red-600 dark:text-red-400">{ultimos.error}</div>
           ) : ultimos.data.length > 0 ? (
