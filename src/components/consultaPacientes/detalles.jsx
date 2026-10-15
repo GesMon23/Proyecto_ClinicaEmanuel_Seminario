@@ -9,14 +9,16 @@ import { useDetalleLaboratorio } from './useDetalleLaboratorio';
 import IndicadorIMC from '../IndicadorIMC';
 import Cargando from '../Cargando';
 
+// El color del texto se fija aquí: sin él se heredaba el color oscuro de Bootstrap y en modo oscuro las etiquetas
+// y los datos quedaban casi invisibles sobre el fondo de la ventana
 function VentanaDetalle({ titulo, onClose, onPdf, children }) {
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full mx-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div role="dialog" aria-modal="true" aria-label={titulo} className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto text-slate-700 dark:text-slate-200">
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-green-700 dark:text-green-300">{titulo}</h3>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">×</button>
+            <button onClick={onClose} aria-label="Cerrar" className="text-2xl leading-none text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">×</button>
           </div>
           <div className="space-y-4 text-sm">
             {children}
@@ -33,11 +35,13 @@ function VentanaDetalle({ titulo, onClose, onPdf, children }) {
 
 const Rejilla = ({ children }) => <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{children}</div>;
 const Dato = ({ etiqueta, children, ancho }) => (
-  <div className={ancho ? 'md:col-span-2' : undefined}><span className="font-semibold">{etiqueta}:</span> {children}</div>
+  <div className={ancho ? 'md:col-span-2' : undefined}>
+    <span className="font-semibold text-slate-900 dark:text-slate-100">{etiqueta}:</span> {children}
+  </div>
 );
 const Texto = ({ etiqueta, valor }) => (
   <div>
-    <span className="font-semibold">{etiqueta}:</span>
+    <span className="font-semibold text-slate-900 dark:text-slate-100">{etiqueta}:</span>
     <div className="mt-1 p-2 rounded bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-200">{valor || '—'}</div>
   </div>
 );
