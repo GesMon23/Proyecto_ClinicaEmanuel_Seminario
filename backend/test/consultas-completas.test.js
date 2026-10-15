@@ -17,9 +17,13 @@ test('datos de prueba: 8 pacientes en sus estados, con turnos, faltas, laborator
     assert.equal(await n(`SELECT count(*)::int n FROM tbl_turnos WHERE id_turno LIKE 'T-PRB-%'`), 17);
     assert.equal(await n(`SELECT count(*)::int n FROM tbl_egresos WHERE no_afiliacion LIKE '91000000%'`), 4);
     assert.equal(await n(`SELECT count(*)::int n FROM tbl_fallecimientos WHERE no_afiliacion = '9100000006'`), 1);
+    const medicos = `SELECT count(*)::int n FROM tbl_medicos WHERE estado AND nombre_medico IN
+      ('DR. JULIO ROBERTO CASTAÑEDA MÉNDEZ', 'DRA. ANDREA LUCÍA PAZ GODOY', 'DR. FERNANDO JOSÉ OLIVA RECINOS')`;
+    assert.equal(await n(medicos), 3, 'médicos del catálogo de Referencias');
     // Se puede volver a cargar sin duplicar
     await crearDatosPrueba(c);
     assert.equal(await n(`SELECT count(*)::int n FROM tbl_turnos WHERE id_turno LIKE 'T-PRB-%'`), 17);
+    assert.equal(await n(medicos), 3, 'los médicos no se duplican');
   });
 });
 

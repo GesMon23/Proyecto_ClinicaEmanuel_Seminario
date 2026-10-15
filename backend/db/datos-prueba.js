@@ -26,6 +26,13 @@ const PACIENTES = [
   ['9100000008', '2910000000808', ['LUIS', 'FERNANDO'], ['ORTIZ', 'MEJÍA'], 'Masculino', '1971-04-21', 'Activo', 4, 3, '01', [230, 81, 0]],
 ];
 
+// Médicos ficticios del catálogo de Referencias (los reales los registra la clínica)
+const MEDICOS = [
+  'DR. JULIO ROBERTO CASTAÑEDA MÉNDEZ',
+  'DRA. ANDREA LUCÍA PAZ GODOY',
+  'DR. FERNANDO JOSÉ OLIVA RECINOS',
+];
+
 // Imagen PNG de color sólido con una franja más clara (sin dependencias)
 function png(ancho, alto, [r, g, b]) {
   const crc = (buf) => {
@@ -197,12 +204,14 @@ async function crearDatosPrueba(c) {
       [`PSI-PRB-${naf}-${n}`, naf, kdqol, USUARIO, dias]);
   }
 
-  // 8. Referencias (con médicos de prueba si no hay ninguno)
-  if (!(await id('SELECT id_medico AS id FROM tbl_medicos LIMIT 1'))) {
+  // 8. Médicos ficticios para el catálogo de Referencias (se agregan si no existen) y una referencia.
+  // Los "DR. PRUEBA" de versiones anteriores de este script se desactivan (no se borran: pueden tener referencias).
+  for (const nombre of MEDICOS) {
     await c.query(`INSERT INTO tbl_medicos (nombre_medico, estado, usuario_creacion, fecha_creacion)
-      VALUES ('DR. PRUEBA NEFROLOGÍA', true, $1, now()), ('DRA. PRUEBA MEDICINA INTERNA', true, $1, now())`, [USUARIO]);
+      SELECT $1, true, $2, now() WHERE NOT EXISTS (SELECT 1 FROM tbl_medicos WHERE upper(nombre_medico) = upper($1))`, [nombre, USUARIO]);
   }
-  const medico = await id('SELECT id_medico AS id FROM tbl_medicos WHERE estado IS NOT FALSE ORDER BY id_medico LIMIT 1');
+  await c.query(`UPDATE tbl_medicos SET estado = false WHERE nombre_medico LIKE 'DR%. PRUEBA %' AND usuario_creacion = $1`, [USUARIO]);
+  const medico = await id('SELECT id_medico AS id FROM tbl_medicos WHERE nombre_medico = $1', [MEDICOS[0]]);
   await c.query(
     `INSERT INTO tbl_referencias (id_referencia, no_afiliacion, id_medico, fecha_referencia, motivo_traslado, especialidad_referencia,
        usuario_creacion, fecha_creacion)
