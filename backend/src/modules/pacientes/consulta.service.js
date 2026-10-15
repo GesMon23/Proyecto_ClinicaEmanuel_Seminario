@@ -6,8 +6,10 @@ const fotos = require('./fotos');
 const { definirCarnetPaciente } = require('./carnet');
 const { HttpError } = require('../../shared/http');
 
-// Homologa los nombres de columna de los laboratorios (con o sin guion bajo)
+// Homologa los nombres de columna de los laboratorios (con o sin guion bajo) sin perder las demás columnas
+// (causa, accesos, antígenos y observación las muestra el detalle)
 const normalizarLaboratorio = (r) => ({
+  ...r,
   no_afiliacion: r.no_afiliacion ?? r.noafiliacion ?? null,
   primer_nombre: r.primer_nombre ?? r.primernombre ?? null,
   segundo_nombre: r.segundo_nombre ?? r.segundonombre ?? null,

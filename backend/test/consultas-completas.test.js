@@ -88,6 +88,40 @@ test('Consulta de Turnos y reporte de Egresos: devuelven las columnas que muestr
   });
 });
 
+test('laboratorios: la consulta trae los nombres que leen las pantallas y el registro guarda el usuario', async () => {
+  await conDatos(async (c) => {
+    const filas = await cursor(c, 'CALL sp_laboratorios_historial_filtrado(NULL, NULL, $1, NULL, NULL, NULL, $2)', ['9100000001']);
+    assert.equal(filas.length, 2);
+    for (const campo of ['no_afiliacion', 'id_laboratorio', 'fecha_laboratorio', 'periodicidad', 'primer_nombre', 'infeccion_acceso', 'observacion']) {
+      assert.ok(filas[0][campo] != null, `consulta: falta ${campo}`);
+    }
+    assert.ok(Array.isArray(filas[0].parametros) && filas[0].parametros.length > 0);
+
+    await c.query(`SELECT set_config('app.current_user', 'usuario_prueba', true)`);
+    const [nuevo] = await cursor(c,
+      `CALL sp_laboratorios_insertar($1, 1, CURRENT_DATE, 'No', 'No', NULL, true, NULL, 'Negativo', false, false, 'Negativo', NULL, $2, $3)`,
+      ['9100000002', JSON.stringify([{ parametro: 'Sodio', valor: '139' }])]);
+    const guardado = (await c.query('SELECT usuario_creacion, fecha_creacion FROM tbl_laboratorios WHERE idlaboratorio = $1', [nuevo.idlaboratorio])).rows[0];
+    assert.equal(guardado.usuario_creacion, 'usuario_prueba');
+    assert.ok(guardado.fecha_creacion);
+  });
+});
+
+test('laboratorios: últimos parámetros = valor más reciente de cada uno, con su fecha', async () => {
+  await conDatos(async (c) => {
+    // 9100000001 tiene dos laboratorios: Creatinina 7.4 (hace 40 días) y 7.1 (hace 10); Fósforo solo en el primero
+    const ultimos = await cursor(c, 'CALL sp_laboratorios_parametros_ultimo($1, $2)', ['9100000001']);
+    const de = Object.fromEntries(ultimos.map((u) => [u.parametro, u]));
+    assert.equal(de.Creatinina.valor, '7.1', 'el más reciente');
+    assert.equal(de['Fósforo mg/dl'].valor, '5.6', 'se conserva aunque el último laboratorio no lo tenga');
+    assert.ok(ultimos.every((u) => u.fecha_laboratorio), 'cada valor trae la fecha de su laboratorio');
+    // Un laboratorio "no realizado" posterior no borra los valores anteriores
+    await c.query(`INSERT INTO tbl_laboratorios (no_afiliacion, idperlaboratorio, fecha_laboratorio, examen_realizado, causa_no_realizado)
+      VALUES ('9100000001', 1, CURRENT_DATE, false, 'NO ASISTIÓ')`);
+    assert.equal((await cursor(c, 'CALL sp_laboratorios_parametros_ultimo($1, $2)', ['9100000001'])).length, ultimos.length);
+  });
+});
+
 test('fotos: el nombre del archivo solo admite afiliaciones seguras y nunca sale de la carpeta', () => {
   assert.equal(nombreSeguro('123AA'), '123AA');
   assert.equal(nombreSeguro('9100000001'), '9100000001');

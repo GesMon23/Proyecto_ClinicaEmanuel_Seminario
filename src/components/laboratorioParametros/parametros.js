@@ -133,7 +133,8 @@ export const armarLaboratorio = (noAfiliacion, v, parametros) => ({
   virologia: texto(v.virologia),
   antigeno_hepatitis_c: positivoNegativoABoolean(v.antigeno_hepatitis_c),
   antigeno_superficie: positivoNegativoABoolean(v.antigeno_superficie),
-  hiv: positivoNegativoABoolean(v.hiv),
+  // La columna hiv es texto: se guarda 'Positivo' / 'Negativo' (antes llegaba true/false y se mostraba así)
+  hiv: texto(v.hiv),
   parametros,
 });
 

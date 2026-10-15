@@ -5,7 +5,7 @@ import api from '@/config/api';
 import { formatearFecha } from '@/utils/fechas';
 import { estadoNutricional } from '@/utils/imc';
 import { EtiquetaIMC } from '../IndicadorIMC';
-import { nombreCompleto } from '../consultaPacientes/calculos';
+import { nombreCompleto, textoPositivoNegativo } from '../consultaPacientes/calculos';
 import {
   DetalleLaboratorioAuto, DetalleNutricion, DetallePsicologia, DetalleReferencia,
 } from '../consultaPacientes/detalles';
@@ -98,7 +98,7 @@ const laboratorios = {
     { titulo: 'Periodicidad', valor: texto('periodicidad') },
     { titulo: 'Examen', valor: (r) => (r.examen_realizado ? 'Sí' : 'No') },
     { titulo: 'Virología', valor: texto('virologia') },
-    { titulo: 'HIV', valor: texto('hiv') },
+    { titulo: 'HIV', valor: (r) => (r.hiv == null || r.hiv === '' ? '' : textoPositivoNegativo(r.hiv)) },
     { titulo: 'Usuario', valor: texto('usuario_creacion') },
   ],
   clave: (r, i) => r.id_laboratorio || i,

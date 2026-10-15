@@ -167,7 +167,7 @@ async function crearDatosPrueba(c) {
        RETURNING idlaboratorio AS id`,
       [naf, periodicidad, dias, realizado ? 'No' : null, realizado ? 'No' : null, realizado ? 'CONTROL DE RUTINA' : null,
         realizado, realizado ? null : 'PACIENTE NO SE PRESENTÓ A LA TOMA DE MUESTRA', realizado ? 'Negativo' : null,
-        realizado ? false : null, realizado ? false : null, realizado ? 'false' : null, USUARIO]);
+        realizado ? false : null, realizado ? false : null, realizado ? 'Negativo' : null, USUARIO]);
     for (const [parametro, valor] of Object.entries(parametros)) {
       await c.query(
         'INSERT INTO tbl_parametros_laboratorio (idlaboratorio, parametro, valor, usuario_creacion, fecha_creacion) VALUES ($1, $2, $3, $4, now())',
