@@ -26,6 +26,16 @@ export function nombreCompleto(fila) {
   ].filter(Boolean).join(' ');
 }
 
+// Resultado de una prueba (HIV, antígenos) guardado como booleano o texto: 'Positivo' | 'Negativo' | '—'
+export function textoPositivoNegativo(valor) {
+  if (valor === true) return 'Positivo';
+  if (valor === false) return 'Negativo';
+  const s = String(valor ?? '').trim().toLowerCase();
+  if (['true', 't', '1', 'positivo', 'reactivo'].includes(s)) return 'Positivo';
+  if (['false', 'f', '0', 'negativo', 'no reactivo'].includes(s)) return 'Negativo';
+  return s ? String(valor) : '—';
+}
+
 const DIMENSIONES_KDQOL = [
   { key: 'fisico_mental', label: 'Físico y Mental' },
   { key: 'enfermedad_renal', label: 'Enfermedad Renal' },
@@ -44,6 +54,8 @@ const DIMENSIONES_KDQOL = [
 export function resumenKdqol(informe) {
   let kdqol = null;
   try { kdqol = typeof informe?.kdqol === 'string' ? JSON.parse(informe.kdqol) : (informe?.kdqol ?? null); } catch { kdqol = null; }
+  // Los informes guardan los puntajes como columnas del propio informe (fisico_mental, vida_diaria, ...)
+  if (!kdqol && informe && DIMENSIONES_KDQOL.some((d) => informe[d.key] != null)) kdqol = informe;
   const filas = [];
   if (kdqol && typeof kdqol === 'object') {
     for (const d of DIMENSIONES_KDQOL) {

@@ -1,7 +1,7 @@
 // Ventanas de detalle de cada sección de la ficha del paciente.
 import React, { useEffect } from 'react';
 import { formatearFecha } from '@/utils/fechas';
-import { nombreCompleto, resumenKdqol } from './calculos';
+import { nombreCompleto, resumenKdqol, textoPositivoNegativo } from './calculos';
 import {
   imprimirFaltista, imprimirFormulario, imprimirLaboratorio, imprimirNutricion, imprimirPsicologia, imprimirReferencia, imprimirTurno,
 } from './documentos';
@@ -87,7 +87,7 @@ export function DetallePsicologia({ item, onClose }) {
       <Texto etiqueta="Observaciones" valor={it.observaciones} />
       <div>
         <span className="font-semibold">KDQOL:</span>
-        {kdqol && (
+        {kdqol?.id_kdqol != null && (
           <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             <span className="mr-2">ID KDQOL: {kdqol.id_kdqol ?? '—'}</span>
             <span>Fecha aplicación: {formatearFecha(kdqol.fecha_aplicacion) || '—'}</span>
@@ -127,13 +127,14 @@ export function DetalleFormulario({ item, onClose }) {
     <VentanaDetalle titulo="Detalle Formulario" onClose={onClose} onPdf={() => imprimirFormulario(item)}>
       <Rejilla>
         <Dato etiqueta="No. Formulario">{it.numero_formulario ?? ''}</Dato>
-        <Dato etiqueta="ID Historial">{it.id_historial ?? ''}</Dato>
+        <Dato etiqueta="Registrado por">{it.usuario_creacion ?? ''}</Dato>
         <Dato etiqueta="Sesiones Autorizadas">{it.sesiones_autorizadas_mes ?? ''}</Dato>
-        <Dato etiqueta="Sesiones Realizadas">{it.sesiones_realizadas_mes ?? ''}</Dato>
-        <Dato etiqueta="No Realizadas">{it.sesiones_no_realizadas_mes ?? ''}</Dato>
+        <Dato etiqueta="Sesiones Realizadas">{it.sesiones_realizadas_mes ?? '—'}</Dato>
+        <Dato etiqueta="No Realizadas">{it.sesiones_no_realizadas_mes ?? '—'}</Dato>
         <Dato etiqueta="Inicio Prest.">{formatearFecha(it.inicio_prest_servicios) || ''}</Dato>
         <Dato etiqueta="Fin Prest.">{formatearFecha(it.fin_prest_servicios) || ''}</Dato>
       </Rejilla>
+      <Texto etiqueta="Observaciones" valor={it.observaciones} />
     </VentanaDetalle>
   );
 }
@@ -148,6 +149,8 @@ export function DetalleTurno({ item, onClose }) {
         <Dato etiqueta="Paciente" ancho>{it.nombrepaciente || ''}</Dato>
         <Dato etiqueta="Clínica">{it.nombre_clinica || ''}</Dato>
         <Dato etiqueta="Fecha">{formatearFecha(it.fecha_turno)}</Dato>
+        <Dato etiqueta="Estado">{it.estado_descripcion || ''}</Dato>
+        <Dato etiqueta="Fecha Asignación">{formatearFecha(it.fecha_asignacion) || '—'}</Dato>
       </Rejilla>
     </VentanaDetalle>
   );
@@ -166,7 +169,9 @@ export function DetalleFaltista({ item, onClose }) {
         <Dato etiqueta="Departamento">{it.departamento ?? ''}</Dato>
         <Dato etiqueta="Clínica">{it.clinica ?? ''}</Dato>
         <Dato etiqueta="Fecha Falta">{formatearFecha(it.fechafalta)}</Dato>
+        <Dato etiqueta="Registrado por">{it.usuario_creacion ?? ''}</Dato>
       </Rejilla>
+      <Texto etiqueta="Motivo de la falta" valor={it.motivo_falta} />
     </VentanaDetalle>
   );
 }
@@ -210,9 +215,9 @@ export function DetalleLaboratorio({ item, ultimos, onClose }) {
         <Dato etiqueta="Examen Realizado">{it.examen_realizado ? 'Sí' : 'No'}</Dato>
         <Dato etiqueta="Causa No Realizado">{it.causa_no_realizado || '—'}</Dato>
         <Dato etiqueta="Virología">{it.virologia || '—'}</Dato>
-        <Dato etiqueta="Ag. Hepatitis C">{it.antigeno_hepatitis_c ? 'Positivo' : 'Negativo'}</Dato>
-        <Dato etiqueta="Ag. Superficie">{it.antigeno_superficie ? 'Positivo' : 'Negativo'}</Dato>
-        <Dato etiqueta="HIV">{it.hiv || '—'}</Dato>
+        <Dato etiqueta="Ag. Hepatitis C">{textoPositivoNegativo(it.antigeno_hepatitis_c)}</Dato>
+        <Dato etiqueta="Ag. Superficie">{textoPositivoNegativo(it.antigeno_superficie)}</Dato>
+        <Dato etiqueta="HIV">{textoPositivoNegativo(it.hiv)}</Dato>
       </Rejilla>
       <Texto etiqueta="Observaciones" valor={it.observacion} />
       {it.examen_realizado && (

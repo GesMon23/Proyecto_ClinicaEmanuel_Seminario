@@ -8,7 +8,8 @@
     "dev": "nodemon server.js",
     "test": "node --test \"test/*.test.js\"",
     "migrar": "node db/migrar.js",
-    "crear-admin": "node db/crear-admin.js"
+    "crear-admin": "node db/crear-admin.js",
+    "datos-prueba": "node db/datos-prueba.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

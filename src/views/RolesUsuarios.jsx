@@ -37,7 +37,8 @@ const RolesUsuarios = () => {
         api.get(`/usuarios/${data.id_usuario}/roles`),
       ]);
       setRolesActivos(rActivos.data || []);
-      setRolesUsuario((rUsuario.data || []).map(r => r.id_rol));
+      // El servidor devuelve todos los roles activos con "asignado": solo se marcan los del usuario
+      setRolesUsuario((rUsuario.data || []).filter((r) => r.asignado === true).map((r) => r.id_rol));
     } catch (e) {
       setMensaje(e?.response?.data?.error || e.message || 'No fue posible buscar');
     } finally {

@@ -65,7 +65,7 @@ const LlamadoTurnos = () => {
                 <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
                     <ul className="flex flex-wrap -mb-px text-sm font-medium text-center text-gray-500 dark:text-gray-400">
                         {t.clinicas.map((c) => (
-                            <li key={c.idsala} className="me-2">
+                            <li key={c.id_clinica} className="me-2">
                                 <button
                                     onClick={() => seleccionar(c.descripcion)}
                                     className={`inline-flex items-center justify-center p-4 border-b-2 rounded-t-lg group ${clinica === c.descripcion

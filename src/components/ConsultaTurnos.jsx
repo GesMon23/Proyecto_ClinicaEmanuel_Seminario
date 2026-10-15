@@ -165,7 +165,7 @@ const ConsultaTurnos = () => {
                             >
                                 <option value="">Todas</option>
                                 {clinicas.map(clinica => (
-                                    <option key={clinica.idclinica || clinica.idsala} value={clinica.descripcion}>
+                                    <option key={clinica.id_clinica} value={clinica.descripcion}>
                                         {clinica.descripcion}
                                     </option>
                                 ))}

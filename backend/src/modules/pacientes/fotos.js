@@ -8,6 +8,19 @@ if (!fs.existsSync(FOTOS_DIR)) {
   fs.mkdirSync(FOTOS_DIR, { recursive: true });
 }
 
+// El nombre del archivo sale del No. de afiliación (que llega en la URL y Express decodifica, p. ej. %2F -> /):
+// solo letras, dígitos, guion y guion bajo, para que nunca apunte fuera de la carpeta de fotos
+const AFILIACION_SEGURA = /^[A-Za-z0-9_-]{1,40}$/;
+function nombreSeguro(noAfiliacion) {
+  const id = String(noAfiliacion ?? '').trim();
+  if (!AFILIACION_SEGURA.test(id)) throw new HttpError(400, { detail: 'Número de afiliación inválido para la foto.' });
+  return id;
+}
+
+// Devuelve la ruta solo si queda dentro de FOTOS_DIR
+const RAIZ = path.resolve(FOTOS_DIR) + path.sep;
+const dentroDeFotos = (ruta) => (path.resolve(ruta).startsWith(RAIZ) ? ruta : null);
+
 // Registro de paciente: acepta una data URL (png/jpeg/jpg/webp) o base64 crudo. Si algo falla devuelve
 // null (el registro continúa sin foto).
 function guardarFotoRegistro(noAfiliacion, raw) {
@@ -24,7 +37,7 @@ function guardarFotoRegistro(noAfiliacion, raw) {
       base64 = texto;
     }
     if (!['jpg', 'jpeg', 'png', 'webp'].includes(ext)) ext = 'jpg';
-    const nombre = `${noAfiliacion}.${ext}`;
+    const nombre = `${nombreSeguro(noAfiliacion)}.${ext}`;
     fs.writeFileSync(path.join(FOTOS_DIR, nombre), Buffer.from(base64, 'base64'));
     return nombre;
   } catch (err) {
@@ -39,7 +52,7 @@ function guardarFotoActualizacion(noAfiliacion, imagenBase64) {
   const m = String(imagenBase64).match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/);
   if (!m) throw new HttpError(400, { detail: 'Formato de imagen inválido.' });
   const ext = m[1] === 'jpeg' ? 'jpg' : m[1];
-  const nombre = `${noAfiliacion}.${ext}`;
+  const nombre = `${nombreSeguro(noAfiliacion)}.${ext}`;
   fs.writeFileSync(path.join(FOTOS_DIR, nombre), Buffer.from(m[2], 'base64'));
   return nombre;
 }
@@ -54,7 +67,8 @@ function existeFoto(filename) {
       return false;
     }
   }
-  return fs.existsSync(path.join(FOTOS_DIR, nombre));
+  const ruta = dentroDeFotos(path.join(FOTOS_DIR, nombre));
+  return Boolean(ruta) && fs.existsSync(ruta);
 }
 
 // Ruta de la foto de un paciente tolerando sufijos/espacios en el nombre ("id AF.jpg"); null si no hay
@@ -63,10 +77,10 @@ function rutaFotoPorId(id) {
     const archivos = fs.readdirSync(FOTOS_DIR);
     for (const ext of ['jpg', 'jpeg', 'png', 'JPG', 'JPEG', 'PNG']) {
       const nombre = `${id}.${ext}`;
-      if (archivos.includes(nombre)) return path.join(FOTOS_DIR, nombre);
+      if (archivos.includes(nombre)) return dentroDeFotos(path.join(FOTOS_DIR, nombre));
     }
     const hit = archivos.find((f) => path.parse(f).name.startsWith(id));
-    if (hit) return path.join(FOTOS_DIR, hit);
+    if (hit) return dentroDeFotos(path.join(FOTOS_DIR, hit));
   } catch (_) { /* sin carpeta legible: no hay foto */ }
   return null;
 }
@@ -100,9 +114,9 @@ function resolverRutaFoto(paciente, noafiliacion) {
         if (hit) candidates.push(path.join(baseDir, hit));
     } catch (_) {}
     for (const cand of candidates) {
-        try { if (cand && fs.existsSync(cand)) return cand; } catch (_) {}
+        try { if (cand && dentroDeFotos(cand) && fs.existsSync(cand)) return cand; } catch (_) {}
     }
     return null;
 }
 
-module.exports = { FOTOS_DIR, guardarFotoRegistro, guardarFotoActualizacion, existeFoto, rutaFotoPorId, resolverRutaFoto };
+module.exports = { FOTOS_DIR, guardarFotoRegistro, guardarFotoActualizacion, existeFoto, rutaFotoPorId, resolverRutaFoto, nombreSeguro };

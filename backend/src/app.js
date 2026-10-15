@@ -64,6 +64,16 @@ function crearApp(opciones = {}) {
   app.use('/api/laboratorios', registros.laboratorios);
   enRaizYApi(reportes.faltistas, reportes.egreso);
 
+  // Errores que no atendió ninguna ruta (p. ej. JSON malformado): respuesta JSON, sin la página HTML de Express
+  // con la traza y las rutas del servidor
+  // eslint-disable-next-line no-unused-vars
+  app.use((err, req, res, next) => {
+    if (err.type === 'entity.parse.failed') return res.status(400).json({ error: 'El cuerpo de la petición no es un JSON válido' });
+    if (err.type === 'entity.too.large') return res.status(413).json({ error: 'La petición es demasiado grande' });
+    console.error('Error no controlado:', err);
+    return res.status(err.status || 500).json({ error: 'Error interno del servidor' });
+  });
+
   return app;
 }
 

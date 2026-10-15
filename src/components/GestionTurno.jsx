@@ -273,7 +273,7 @@ const GestionTurno = () => {
             >
               <option value="">Seleccione una clínica</option>
               {clinicas.map((clinica) => (
-                <option key={clinica.idsala} value={clinica.descripcion}>{clinica.descripcion}</option>
+                <option key={clinica.id_clinica} value={clinica.descripcion}>{clinica.descripcion}</option>
               ))}
             </select>
           </div>

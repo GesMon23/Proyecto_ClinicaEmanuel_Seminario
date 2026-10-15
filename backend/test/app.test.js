@@ -172,6 +172,20 @@ test('laboratorios: el registro responde bajo /api/laboratorios (antes daba 404)
   assert.equal((await pedir('POST', '/api/laboratorios', { cuerpo: {} })).status, 400, 'llega al handler (valida antes de escribir)');
 });
 
+test('un JSON malformado responde 400 en JSON, sin la traza ni las rutas del servidor', async () => {
+  const r = await new Promise((ok, fallo) => {
+    const req = http.request({
+      host: 'localhost', port: puerto, path: '/api/laboratorios', method: 'POST',
+      headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+    }, (res) => { let b = ''; res.on('data', (d) => { b += d; }); res.on('end', () => ok({ status: res.statusCode, body: b })); });
+    req.on('error', fallo);
+    req.end('{no_afiliacion:sin comillas}');
+  });
+  assert.equal(r.status, 400);
+  assert.deepEqual(JSON.parse(r.body), { error: 'El cuerpo de la petición no es un JSON válido' });
+  assert.ok(!/node_modules|at JSON\.parse/.test(r.body));
+});
+
 test('salud: responde ok con la BD disponible', async () => {
   for (const ruta of ['/health', '/api/health']) {
     const r = await pedir('GET', ruta, { sinSesion: true });

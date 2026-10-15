@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { formatearFecha, calcularEstanciaRango } from '@/utils/fechas';
 import { useDetalleLaboratorio } from './useDetalleLaboratorio';
-import { calcularEdad } from './calculos';
+import { calcularEdad, textoPositivoNegativo } from './calculos';
 import TablaPaginada, { BotonDetalle } from './TablaPaginada';
 import { EtiquetaIMC } from '../IndicadorIMC';
 import {
@@ -150,14 +150,14 @@ export function Formularios({ items }) {
     <>
       <TablaPaginada
         id="Formularios" marcador="Buscar en formularios..." items={items} altoMax={420}
-        filaKey={(f, i) => f.id_historial || i}
-        claves={['numero_formulario', 'sesiones_autorizadas_mes', 'sesiones_realizadas_mes', 'sesiones_no_realizadas_mes', 'inicio_prest_servicios', 'fin_prest_servicios', 'id_historial']}
+        filaKey={(f, i) => `${f.numero_formulario || ''}-${i}`}
+        claves={['numero_formulario', 'sesiones_autorizadas_mes', 'sesiones_realizadas_mes', 'sesiones_no_realizadas_mes', 'inicio_prest_servicios', 'fin_prest_servicios', 'observaciones']}
         columnas={[
           { titulo: 'Número Formulario', celda: (f) => f.numero_formulario || '' },
           { titulo: 'Sesiones Autorizadas (Mensuales)', celda: (f) => f.sesiones_autorizadas_mes ?? '' },
+          { titulo: 'Sesiones Realizadas', celda: (f) => f.sesiones_realizadas_mes ?? '—' },
           { titulo: 'Inicio Prestaciones Servicios', celda: (f) => formatearFecha(f.inicio_prest_servicios) || '' },
           { titulo: 'Fin Prestaciones Servicios', celda: (f) => formatearFecha(f.fin_prest_servicios) || '' },
-          { titulo: 'ID Historial', celda: (f) => f.id_historial ?? '' },
           { titulo: 'Acciones', celda: (f) => <BotonDetalle onClick={() => setDetalle(f)} /> },
         ]}
       />
@@ -173,11 +173,12 @@ export function Turnos({ items }) {
       <TablaPaginada
         id="Turnos" marcador="Buscar en turnos..." items={items} tamanos={[3, 5, 10, 15]}
         filaKey={(t, i) => t.id_turno || i}
-        claves={['noafiliacion', 'nombrepaciente', 'id_turno_cod', 'id_turno', 'nombre_clinica', 'fecha_turno']}
+        claves={['noafiliacion', 'nombrepaciente', 'id_turno_cod', 'id_turno', 'nombre_clinica', 'fecha_turno', 'estado_descripcion']}
         columnas={[
           { titulo: 'Código Turno', celda: (t) => t.id_turno_cod || t.id_turno },
           { titulo: 'Clínica', celda: (t) => t.nombre_clinica },
           { titulo: 'Fecha', celda: (t) => formatearFecha(t.fecha_turno) },
+          { titulo: 'Estado', celda: (t) => t.estado_descripcion || '' },
           { titulo: 'Acciones', celda: (t) => <BotonDetalle onClick={() => setDetalle(t)} /> },
         ]}
       />
@@ -193,10 +194,12 @@ export function Faltistas({ items }) {
       <TablaPaginada
         id="Faltistas" marcador="Buscar en faltistas..." items={items} tamanos={[5, 10, 20]}
         filaKey={(f, i) => (f.noafiliacion || '') + (f.fechafalta || '') + i}
-        claves={['noafiliacion', 'nombres', 'apellidos', 'sexo', 'jornada', 'accesovascular', 'departamento', 'clinica', 'fechafalta']}
+        claves={['noafiliacion', 'nombres', 'apellidos', 'sexo', 'jornada', 'accesovascular', 'departamento', 'clinica', 'fechafalta', 'motivo_falta']}
         columnas={[
           { titulo: 'Clínica', celda: (f) => f.clinica || '' },
           { titulo: 'Fecha Falta', celda: (f) => formatearFecha(f.fechafalta) },
+          { titulo: 'Motivo', celda: (f) => f.motivo_falta || '' },
+          { titulo: 'Acciones', celda: (f) => <BotonDetalle onClick={() => setDetalle(f)} /> },
         ]}
       />
       {detalle && <DetalleFaltista item={detalle} onClose={() => setDetalle(null)} />}
@@ -219,7 +222,7 @@ export function Laboratorios({ items }) {
           { titulo: 'Periodicidad', celda: (it) => it.periodicidad || '' },
           { titulo: 'Examen', celda: (it) => (it.examen_realizado ? 'Sí' : 'No') },
           { titulo: 'Virología', celda: (it) => it.virologia || '' },
-          { titulo: 'HIV', celda: (it) => it.hiv || '' },
+          { titulo: 'HIV', celda: (it) => textoPositivoNegativo(it.hiv) },
           { titulo: 'Acciones', celda: (it) => <BotonDetalle onClick={() => abrir(it)} /> },
         ]}
       />

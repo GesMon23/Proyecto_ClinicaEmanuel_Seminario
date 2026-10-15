@@ -20,18 +20,12 @@ export function motivoNoActualizable(p) {
   return null;
 }
 
-// Ruta de la API para la foto: la primera extensión que exista para el No. de afiliación (solo dígitos) y,
-// si no, la ruta que resuelve el backend (se muestra con FotoPaciente, que envía la sesión)
-export async function urlDeFoto(paciente) {
-  const naf = (paciente?.no_afiliacion || '').toString().replace(/\D+/g, '').trim();
-  if (!naf) return null;
-  for (const ext of ['jpg', 'jpeg', 'png']) {
-    try {
-      const { data } = await api.get(`/Acheck-photo/${encodeURIComponent(`${naf}.${ext}`)}`);
-      if (data && data.exists) return `/fotos/${naf}.${ext}`;
-    } catch { /* se prueba con la siguiente extensión */ }
-  }
-  return `/Afoto/${encodeURIComponent(naf)}`;
+// Ruta de la API para la foto (se muestra con FotoPaciente, que envía la sesión). El backend la resuelve con la
+// url_foto guardada o el archivo <afiliación>.<ext>. El No. de afiliación va completo: antes se le quitaban las
+// letras (123AA -> 123) y se buscaba la foto de otro paciente.
+export function urlDeFoto(paciente) {
+  const naf = String(paciente?.no_afiliacion || '').trim();
+  return naf ? `/foto/${encodeURIComponent(naf)}?v=${Date.now()}` : null;
 }
 
 // Busca el paciente y lo deja listo para editar. Devuelve { paciente } o { mensaje } si no se puede continuar.
@@ -47,8 +41,8 @@ export async function buscarParaActualizar({ noafiliacion, dpi }) {
   const motivo = motivoNoActualizable(paciente);
   if (motivo) return { mensaje: motivo };
 
-  // Solo se conserva la URL si el archivo existe: evita un 404 en la imagen
-  const url = await urlDeFoto(paciente);
+  // Ruta para mostrar la foto actual (si no existe, FotoPaciente muestra el avatar)
+  const url = urlDeFoto(paciente);
   paciente.url_foto = url || null;
   paciente.urlfoto = url || null;
   return { paciente };
@@ -93,8 +87,8 @@ export const armarActualizacion = (f) => ({
 
 // Sube la foto tomada con la cámara (data URL); devuelve la URL guardada o lanza Error
 export async function subirFoto(noAfiliacion, dataUrl) {
-  const naf = String(noAfiliacion || '').replace(/\D+/g, '');
-  const { data } = await api.post(`/Aupload-foto/${naf}`, { imagenBase64: dataUrl });
+  const naf = String(noAfiliacion || '').trim();
+  const { data } = await api.post(`/Aupload-foto/${encodeURIComponent(naf)}`, { imagenBase64: dataUrl });
   if (!data || !data.success) throw new Error('Error al subir la foto.');
   return data.url;
 }
