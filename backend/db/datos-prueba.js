@@ -4,8 +4,9 @@
 // sin tocar los demás. Las fechas son relativas a hoy (turnos de hoy para Asignación y Llamado).
 //
 // Uso:   npm run datos-prueba                      (local)
-//        docker compose exec backend node db/datos-prueba.js   (preproducción)
-// No corre con NODE_ENV=production (los pacientes son ficticios).
+//        docker compose exec -e NODE_ENV=development backend node db/datos-prueba.js   (preproducción)
+// No corre con NODE_ENV=production (los pacientes son ficticios); la imagen de Docker usa production en todos los
+// entornos, por eso en preproducción se indica development solo para este comando. Nunca en el servidor de producción.
 const fs = require('node:fs');
 const path = require('node:path');
 const zlib = require('node:zlib');
@@ -250,7 +251,9 @@ module.exports = { crearDatosPrueba, AFILIACIONES };
 if (require.main === module) {
   require('dotenv').config({ path: path.join(__dirname, '..', '.env'), quiet: true });
   if (process.env.NODE_ENV === 'production') {
-    console.error('No se cargan datos de prueba con NODE_ENV=production.');
+    console.error('No se cargan datos de prueba con NODE_ENV=production (los pacientes son ficticios).\n'
+      + 'La imagen de Docker usa production también en preproducción. Si este servidor NO es el de producción:\n'
+      + '  docker compose exec -e NODE_ENV=development backend node db/datos-prueba.js');
     process.exit(1);
   }
   const pool = require('./pool');
